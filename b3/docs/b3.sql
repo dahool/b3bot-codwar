@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS aliases (
   id int(10) unsigned NOT NULL auto_increment,
   num_used int(10) unsigned NOT NULL default '0',
   alias varchar(32) NOT NULL default '',
+  ip VARCHAR( 16 ) NOT NULL default '',
   client_id int(10) unsigned NOT NULL default '0',
   time_add int(10) unsigned NOT NULL default '0',
   time_edit int(10) unsigned NOT NULL default '0',
@@ -114,3 +115,10 @@ CREATE TABLE IF NOT EXISTS penalties (
   KEY client_id (client_id)
 ) TYPE=MyISAM;
         
+CREATE TABLE IF NOT EXISTS disabledcmd (
+  id int(11) NOT NULL auto_increment,
+  cmd varchar(50) NOT NULL,
+  until int(11) NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY cmd (cmd)
+) TYPE=MyISAM ;

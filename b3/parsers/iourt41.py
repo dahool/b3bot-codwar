@@ -412,7 +412,7 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
         #self.debug('gameTypeInt: %s' % gameTypeInt)
 
         if gameTypeInt == '0':
-            _gameType = 'dm'
+            _gameType = 'ffa'
         elif gameTypeInt == '1':   # Dunno what this one is
             _gameType = 'dm'
         elif gameTypeInt == '2':   # Dunno either

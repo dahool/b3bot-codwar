@@ -17,6 +17,9 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   2010/05/22 - SGT
+#   * add check disabled command
+#   * notify user when is added to a group
 #   2010/04/10 - 1.7 - Bakes
 #   * new '&' command prefix can be used to say messages in the middle of the screen.
 #     has the same settings as '@', this may change in the future.
@@ -296,7 +299,11 @@ class AdminPlugin(b3.plugin.Plugin):
                     event.client.message('^7You do not have sufficient access to do silent commands')
                     return False
 
+            command.setConsole(self.console)
             if command.canUse(event.client):
+                if not command.isEnabled(event.client):
+                     event.client.message('^7%s%s command is disabled' % (self.cmdPrefix, cmd))
+                     return
                 try:
                     if event.data[:1] == self.cmdPrefixLoud and event.client.maxLevel >= 9:
                         results = command.executeLoud(data, event.client)
@@ -871,7 +878,7 @@ class AdminPlugin(b3.plugin.Plugin):
             else:
                 sclient.setGroup(group)
                 sclient.save()
-
+                sclient.message(self.getMessage('groups_put', sclient.exactName, group.name))
                 cmd.sayLoudOrPM(client, self.getMessage('groups_put', sclient.exactName, group.name))
                 return True
 
@@ -1858,7 +1865,8 @@ class Command:
     prefix = '!'
     prefixLoud = '@'
     prefixBig = '&'
-
+    console = None
+	
     PLAYER_DATA = re.compile(r'^([\w\d\s-]+|@\d+|\d+)$', re.I)
     _reType = type(re.compile('.*'))
 
@@ -1890,6 +1898,9 @@ class Command:
         #commandstxt.write('%s (%s) %s, levels %s - %s\n' % (self.command, self.alias, self.help, self.level[0], self.level[1]))
         #commandstxt.flush()
 
+    def setConsole(self, console):
+        self.console = console
+		
     def canUse(self, client):
         if self.level == None:
             return False
@@ -1897,6 +1908,20 @@ class Command:
             return True
         else:
             return False
+			
+    def isEnabled(self, client):
+        if client.maxLevel >= 90:
+            return True
+        if self.console:
+            sql = "SELECT until FROM disabledcmd WHERE cmd = '%s' or cmd = '%s'" % (self.command, self.alias)
+            cursor = self.console.storage.query(sql)
+            if cursor.rowcount > 0:
+                until = cursor.getRow()['until']
+                if until == 0 or until > self.console.time():
+                    return False
+            return True
+        else:
+            return True
 
     def execute(self, data, client):
         self.func(data, client, copy.copy(self))

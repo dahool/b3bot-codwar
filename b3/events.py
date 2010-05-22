@@ -62,7 +62,10 @@ class Events:
             ('EVT_GAME_ROUND_START', 'Game Round Start'),
             ('EVT_GAME_ROUND_END', 'Game Round End'),
             ('EVT_GAME_WARMUP', 'Game Warmup'),
-            ('EVT_GAME_EXIT', 'Game Exit')
+            ('EVT_GAME_EXIT', 'Game Exit'),
+            ('EVT_CLIENT_PUBLIC','Server Public Mode Changed'),
+            ('EVT_CLIENT_UNBAN', 'Client Unbanned'),
+            ('EVT_SURVIVOR_WIN', 'Survivor Winner'),
         ))        
 
     def createEvent(self, key, name=None):

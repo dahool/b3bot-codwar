@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   20/05/2010 - 1.7.2 - SGT
+#   add IP to aliasses
 #   27/03/2010 - 1.7.1 - xlr8or
 #   enable setting different port for mysql connections
 #   02/13/2010 - 1.7.0 - xlr8or
@@ -42,7 +44,7 @@
 #   Added data column to penalties table
 
 __author__  = 'ThorN'
-__version__ = '1.7.1'
+__version__ = '1.7.2'
 
 import re, time, traceback, sys, thread
 
@@ -407,6 +409,7 @@ class DatabaseStorage(Storage):
         id  int(10)  UNSIGNED No    auto_increment              
         num_used  int(10)  UNSIGNED No  0                
         alias  varchar(32)   No                  
+        ip varchar(16) YES   NULL   
         client_id  int(10)  UNSIGNED No  0                
         time_add  int(10)  UNSIGNED No  0                
         time_edit  int(10)  UNSIGNED No  0            
@@ -419,7 +422,8 @@ class DatabaseStorage(Storage):
             'alias',
             'client_id',
             'time_add',
-            'time_edit'
+            'time_edit',
+            'ip'
         )
     
         if alias.id:
@@ -464,7 +468,7 @@ class DatabaseStorage(Storage):
         alias.timeEdit = int(g['time_edit'])
         alias.clientId = int(g['client_id'])
         alias.numUsed = int(g['num_used'])
-    
+        alias.ip = g['ip']
         return alias
 
     def getClientAliases(self, client):

@@ -127,8 +127,9 @@ def getInstance(logfile='b3.log', loglevel=21, log2console=False):
         if log2console:
             handler = logging.StreamHandler()
         else:
-            handler = handlers.RotatingFileHandler(logfile, 'a', 10485760, 5)
-            handler.doRollover()
+            handler = logging.FileHandler(logfile)
+            #handler = handlers.RotatingFileHandler(logfile, 'a', 10485760, 5)
+            #handler.doRollover()
         handler.setFormatter(logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s', '%y%m%d %H:%M:%S'))
         
         __output.addHandler(handler)

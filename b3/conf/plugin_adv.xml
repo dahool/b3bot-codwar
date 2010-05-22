@@ -13,13 +13,14 @@
 		<!-- <set name="ads">c:/somewhere/my_ads.txt</set> -->
 	</settings>
 	<ads>
-		<ad>^2Big Brother Bot is watching you... ^9BigBrotherBot.com</ad>
-		<ad>/spam#rule1</ad>
-		<ad>^2Do not poke b3 with a stick</ad>
-		<ad>^2b3 is not responsible for damaged reputation</ad>
-		<ad>^2Do not stare directly at b3</ad>
-		<ad>^2Do not expose b3 to sunlight</ad>
-		<ad>@time</ad>
-		<ad>@nextmap</ad>
+	<ad>^7Server Survivor --> ^9WD Argentina II</ad>
+	<ad>@nextmap</ad>
+        <ad>/spam#rule1</ad>
+      	<ad>^7Visitanos en ^2www.clanwd.com.ar</ad>
+        <ad>/spam#rule3</ad>
+	<ad>^7Server Survivor --> ^9WD Argentina II</ad>
+        <ad>/spam#rule4</ad>
+	<ad>@time</ad>
+        <ad>/spam#rule12</ad>
 	</ads>
 </configuration>

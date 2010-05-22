@@ -1,7 +1,6 @@
 <configuration plugin="censor">
 	<settings name="settings">
 		<set name="max_level">40</set>
-		<!-- ignore bad words that have equal or less characters: -->
 		<set name="ignore_length">3</set>
 	</settings>
 	<badwords>
@@ -17,14 +16,15 @@
 			<word>ass</word>
 		</badword>
 		<badword name="asshole" lang="en">
+		    <penalty type="tempban" reasonkeyword="cuss" duration="2m"/>
 			<regexp>[a@][s$]{2}h[o0]le</regexp>
 		</badword>
 		<badword name="fuck" lang="en">
-			<penalty type="tempban" reasonkeyword="cuss" duration="2m"/>
+			<penalty type="tempban" reasonkeyword="cuss" duration="1m"/>
 			<regexp>f[uo0\*]ck</regexp>
 		</badword>
 		<badword name="fuc" lang="en">
-			<penalty type="tempban" reasonkeyword="cuss" duration="2m"/>
+			<penalty type="tempban" reasonkeyword="cuss" duration="1m"/>
 			<regexp>f[uo0\*][ck]\s</regexp>
 		</badword>
 		<badword name="cunt" lang="en">
@@ -46,6 +46,7 @@
 			<regexp>\sf[a@]g\s</regexp>
 		</badword>
 		<badword name="nigger" lang="en">
+		    <penalty type="tempban" reasonkeyword="cuss" duration="15m"/>
 			<regexp>n[i!1]gger</regexp>
 		</badword>
 		<badword name="pussy" lang="en">
@@ -105,21 +106,30 @@
 		<badword name="huora" lang="skandinavian">
 			<regexp>hu[o0]r[a@]</regexp>
 		</badword>
-		<badword name="spica" lang="pt">
+		<badword name="spica" lang="es">
 			<regexp>\sp[i!1]ca\s</regexp>
 		</badword>
-		<badword name="piroca" lang="pt">
+		<badword name="piroca" lang="es">
 			<regexp>p[i!1]r[o0]ca</regexp>
 		</badword>
-		<badword name="caralho" lang="pt">
+		<badword name="caralho" lang="es">
 			<regexp>c[a@]r[a@]lh[o0]</regexp>
 		</badword>
 		<badword name="puta" lang="es">
 			<comment>From {AS}Gringo: "puto" is the same but directed towards a man.</comment>
 			<regexp>\sput[a@o]\s</regexp>
 		</badword>
-		<badword name="cabra" lang="es">
-			<regexp>c[a@]br[a@]</regexp>
+		<badword name="chupa" lang="es">
+			<regexp>\schupa\s</regexp>
+		</badword>
+        <badword name="concha" lang="es">
+             <regexp>\sconcha\s</regexp>
+        </badword>
+		<!--badword name="trolo" lang="es">
+			<regexp>\strol[a@o]\s</regexp>
+		</badword-->
+		<badword name="sorete" lang="es">
+			<regexp>\ssorete\s</regexp>
 		</badword>
 		<badword name="maricon" lang="es">
 			<comment>From {AS}Gringo: "maricon" has only one "r".</comment>
@@ -272,7 +282,10 @@
 			<regexp>hu[o0]r[a@]</regexp>
 		</badname>
 		<badname name="puta">
-			<regexp>put[a@]</regexp>
+			<regexp>put[a@o]</regexp>
 		</badname>
+		<badname name="pelotudo">
+			<regexp>pelotud[a@o]</regexp>
+		</badname>		
 	</badnames>
 </configuration>

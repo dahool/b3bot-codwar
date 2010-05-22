@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    20/05/2010 - 1.2.11 - SGT
+#    add ip to aliasses
 #    08/01/2010 - 1.2.10 - xlr8or
 #    * disabled adding aliasses for world
 #    01/01/2001 - 1.2.9 - Courgette
@@ -621,6 +623,8 @@ class Client(object):
         else:
             alias = Alias(clientId=self.id, alias=name)
 
+        alias.ip = self.ip
+
         alias.save(self.console)
         self.console.bot('New alias for %s: %s', str(self.id), alias.alias)
 
@@ -784,6 +788,7 @@ class ClientKick(Penalty):
 #-----------------------------------------------------------------------------------------------------------------------
 class Alias(Struct):
     alias    = ''
+    ip       = ''
     timeAdd  = 0
     timeEdit = 0
     numUsed  = 1

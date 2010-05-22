@@ -17,6 +17,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA    02110-1301    USA
 #
 # CHANGELOG
+# 22/05/2010 - 1.4.2 - SGT
+# * some cvar names fixes
+# * add custom update interval for match mode
+# * add scores
 # 21/03/2010 - 1.4.1 - Courgette
 # * does not fail if there is no player score available
 # * make errors more verbose
@@ -58,6 +62,7 @@ class StatusPlugin(b3.plugin.Plugin):
     _cronTab = None
     _ftpstatus = False
     _ftpinfo = None
+    _matchMode = False
     
     def onLoadConfig(self):
         if self.config.get('settings','output_file')[0:6] == 'ftp://':
@@ -68,6 +73,7 @@ class StatusPlugin(b3.plugin.Plugin):
                 
         self._tkPlugin = self.console.getPlugin('tk')
         self._interval = self.config.getint('settings', 'interval')
+        self._matchinterval = self.config.getint('settings', 'match_interval')
 
         if self._cronTab:
             # remove existing crontab
@@ -87,6 +93,22 @@ class StatusPlugin(b3.plugin.Plugin):
             self.writeXML(xml.toprettyxml(indent="        "))
 
     def update(self):
+        
+        if self.console.getCvar('g_matchmode').getBoolean():
+            if not self._matchMode:
+                # install new crontab
+                self.console.cron - self._cronTab
+                self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % self._matchinterval)
+                self.console.cron + self._cronTab
+                self._matchMode = True
+        else:
+            if self._matchMode:
+                # install new crontab
+                self.console.cron - self._cronTab
+                self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % self._interval)
+                self.console.cron + self._cronTab            
+                self._matchMode = False
+            
         clients = self.console.clients.getList()
         scoreList = self.console.getPlayerScores() 
                  
@@ -118,6 +140,7 @@ class StatusPlugin(b3.plugin.Plugin):
                 client.setAttribute("Connections", str(c.connections))
                 client.setAttribute("CID", str(c.cid))
                 client.setAttribute("Level", str(_level))
+                client.setAttribute("State", str(c.state))
                 if c.guid:
                     client.setAttribute("GUID", c.guid)
                 else:
@@ -132,7 +155,6 @@ class StatusPlugin(b3.plugin.Plugin):
                 client.setAttribute("Updated", str(time.ctime(c.timeEdit)))
                 if scoreList and c.cid in scoreList:
                     client.setAttribute("Score", str(scoreList[c.cid]))
-                client.setAttribute("State", str(c.state))
                 b3clients.appendChild(client)
 
                 for k,v in c.data.iteritems():
@@ -140,7 +162,7 @@ class StatusPlugin(b3.plugin.Plugin):
                     data.setAttribute("Name", str(k))
                     data.setAttribute("Value", str(sanitizeMe(v)))
                     client.appendChild(data)
-                        
+
                 if self._tkPlugin:
                     if hasattr(c, 'tkplugin_points'):
                         tkplugin = xml.createElement("TkPlugin")
@@ -175,10 +197,10 @@ class StatusPlugin(b3.plugin.Plugin):
             gametype = c.gameType
         if c.mapName:
             mapname = c.mapName
-        if c.timelimit:
-            timelimit = c.timelimit
-        if c.fraglimit:
-            fraglimit = c.fraglimit
+        if c.timeLimit:
+            timelimit = c.timeLimit
+        if c.fragLimit:
+            fraglimit = c.fragLimit
         if c.captureLimit:
             capturelimit = c.captureLimit
         if c.rounds:
@@ -198,8 +220,18 @@ class StatusPlugin(b3.plugin.Plugin):
             data.setAttribute("Name", str(k))
             data.setAttribute("Value", str(v))
             game.appendChild(data)
-                
-
+        
+        # SGT - Scores
+        scores = self.console.getCvar( 'g_teamScores' )
+        if scores:
+            scores = scores.getString()
+        else:
+            scores = '--:--'
+        data = xml.createElement("Data")
+        data.setAttribute("Name", "g_teamScores")
+        data.setAttribute("Value", scores)
+        game.appendChild(data)
+            
         self.writeXML(xml.toprettyxml(indent="        "))
 
     def writeXML(self, xml):
