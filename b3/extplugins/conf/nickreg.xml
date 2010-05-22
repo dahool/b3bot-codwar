@@ -1,0 +1,7 @@
+<configuration plugin="nickreg">
+	<settings name="settings">
+		<set name="min_level_reg">20</set>
+		<set name="max_nicks">3</set>
+	</settings>
+</configuration>
+ 

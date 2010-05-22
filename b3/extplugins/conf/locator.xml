@@ -1,0 +1,5 @@
+<configuration plugin="locator">
+	<settings name="settings">
+		<set name="level">20</set>
+	</settings>
+</configuration>

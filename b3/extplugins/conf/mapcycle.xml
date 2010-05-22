@@ -1,0 +1,5 @@
+<configuration plugin="mapcycle">
+	<settings name="settings">
+		<set name="enabled">True</set>
+	</settings>
+</configuration>

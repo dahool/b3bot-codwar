@@ -1,0 +1,6 @@
+<configuration plugin="status">
+	<settings name="settings">
+		<set name="interval">60</set>
+		<set name="output_file">~/status2.xml</set>
+	</settings>
+</configuration>

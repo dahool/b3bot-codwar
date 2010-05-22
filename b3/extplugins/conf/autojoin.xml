@@ -1,0 +1,10 @@
+<configuration plugin="autojoin">
+	<settings name="settings">
+        <set name="teamdifference">1</set>
+        <set name="maxlevel">40</set>
+        <set name="announce">2</set>
+        <set name="check_gametypes">tdm,ctf,ts</set>
+        <set name="lock">False</set>
+        <set name="warnUser">False</set>
+	</settings>
+</configuration>

@@ -1,0 +1,6 @@
+<configuration plugin="ipdb">
+	<settings name="settings">
+		<set name="interval">1</set>
+		<set name="key">-----</set>
+	</settings>
+</configuration>

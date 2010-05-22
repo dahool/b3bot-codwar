@@ -1,0 +1,7 @@
+<configuration plugin="xmaps">
+    <settings name="commands">
+        <set name="zmap">60</set>
+        <set name="zsetnextmap">60</set>
+        <set name="zmaps">60</set>
+    </settings>
+</configuration>

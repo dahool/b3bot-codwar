@@ -1,0 +1,25 @@
+<configuration plugin="extraadmin">
+    <settings name="settings">
+      <set name="announce">2</set>
+      <set name="load_location">/home/gabriel/.q3a/q3ut4/configs.list</set>
+    </settings>
+
+    <settings name="commands">
+      <set name="pamap-map">40</set>
+      <set name="pasetnextmap-setnextmap">40</set>
+      <set name="pashuffleteams-shuffleteams">40</set>
+      <set name="pasetpassword">60</set>
+      <set name="pasetteamname-setteamname">80</set>
+      <set name="pabandetail-bandetail">80</set>
+      <set name="paunreg-unreg">40</set>
+      <set name="paload">40</set>
+      <set name="paslapall-slapall">80</set>
+      <set name="groups">90</set>
+    </settings>
+
+    <settings name="maprotation">
+      <set name="enable">True</set>
+      <set name="use_random">True</set>
+    </settings>
+  
+</configuration>

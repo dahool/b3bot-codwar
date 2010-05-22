@@ -1,0 +1,85 @@
+<configuration plugin="geowelcome">
+    <settings name="commands">
+        <set name="greeting">1</set>
+        <set name="whereis">20</set>
+    </settings>
+	<settings name="settings">
+		<!--
+		who to welcome
+		1 = welcome newb
+		2 = welcome announce_user
+		4 = welcome first
+		8 = welcome announce_first
+		16 = welcome user
+		32 = custom greetings
+		add numbers, 63 = all
+		-->
+		<set name="flags">63</set>
+		<!-- Maximum number of connections a user has to be considere a newb for the newb message -->
+		<set name="newb_connections">30</set>
+		<!-- Time in seconds after connection to display the message (range: 15-90) -->
+		<set name="delay">30</set>
+		<set name="broadcast">True</set>
+		<set name="country_format">%(city)s (%(country_name)s)</set>
+		
+        <!--
+        You can limit the connection by using cf_allow_from,
+        cf_deny_from, and cf_order. Please specify this by the country
+        code of two characters. Basically, it is the same as the
+        mod_access module of Apache. See this URL:
+    
+        http://httpd.apache.org/docs/mod/mod_access.html
+    
+        Examples:
+        
+        Allowing only NL and US. Others are denied:
+        <set name="cf_order">deny,allow</set>
+        <set name="cf_deny_from">all</set>
+        <set name="cf_allow_from">NL US</set>
+        
+        Denying only US. Others are allowed:
+        <set name="cf_order">allow,deny</set>
+        <set name="cf_allow_from">all</set>
+        <set name="cf_deny_from">US</set>
+    
+        If you want to find country codes, refer to this page.
+        http://www.maxmind.com/app/iso3166
+        -->    
+        <set name="cf_order">deny,allow</set>
+        <set name="cf_allow_from">AR BO JM BR GT GP PR HN PY PA UY PE MX CO CL CR SV DO VE</set>
+        <set name="cf_deny_from">all</set>
+	</settings>
+    <settings name="ignore">
+      <!--
+      Add a list of IP's of players that will be able to allways connect.
+      Seperate ip's with a ,
+      -->    
+        <set name="ips"></set>
+    </settings>	
+	<settings name="messages">
+		<!--
+		Welcome messages
+		$name = player name
+		$id = player id
+		$lastVisit = last visit time (only on welcome_user and welcome_newb)
+		$group = players group (only on welcome_user)
+		$connections = number of times a user has connected (only on welcome_user and welcome_announce_user)
+		-->
+		<!-- displayed to admins and regs -->
+		<set name="user">^7[^2Authed^7] Welcome back $name ^7(^3@$id^7), last visit ^3$lastVisit^7, you're a ^2$group^7, played $connections times</set>
+		<!-- displayed to users who have not yet registered -->
+		<set name="newb">^7[^2Authed^7] Welcome back $name ^7(^3@$id^7), last visit ^3$lastVisit. Type !register in chat to register. Type !help for help</set>
+		<!-- displayed to everyone when a player with less than 15 connections joins -->
+		<set name="announce_user">^7Everyone welcome back $name^7, player number ^3#$id^7, to the server, played $connections times</set>
+		<!-- displayed to a user on his first connection -->
+		<set name="first">^7Welcome $name^7, this must be your first visit, you are player ^3#$id. Type !help for help</set>
+		<!-- displayed to everyone when a player joins for the first time -->
+		<set name="announce_first">^7Everyone welcome $name^7, player number ^3#$id^7, to the server</set>
+		<!-- displayed if a user has a greeting -->
+		<set name="greeting">^7$name^7 joined: $greeting</set>		
+		<set name="announce_user_geo">^7Everyone welcome back $name^7, from ^3$country^7. Player number ^3#$id^7, played $connections times</set>
+		<set name="announce_first_geo">^7Everyone welcome $name^7, from ^3$country^7. Player number ^3#$id^7</set>
+		<set name="broadcast">^7Connected ^3$name^7 from ^3$country^7.</set>
+		<set name="cf_deny_message">^7$name ^1(Country: $country)^7 connection rejected.</set>
+	</settings>
+</configuration>
