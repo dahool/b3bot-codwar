@@ -1,0 +1,14 @@
+<configuration plugin="flagstats">
+
+	<settings name="settings">
+		<!-- Reset spree stats for all clients at map rotation -->
+		<set name="reset_flagstats">yes</set>
+    
+		<!-- The minimum level to be able to use the !flag/@flag command. -->
+		<set name="min_level_flag_cmd">2</set>
+    
+		<!-- Show awards -->
+		<set name="show_awards">yes</set>
+	</settings>
+
+</configuration>
