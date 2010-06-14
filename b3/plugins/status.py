@@ -17,10 +17,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA    02110-1301    USA
 #
 # CHANGELOG
-# 22/05/2010 - 1.4.2 - SGT
-# * some cvar names fixes
-# * add custom update interval for match mode
-# * add scores
 # 21/03/2010 - 1.4.1 - Courgette
 # * does not fail if there is no player score available
 # * make errors more verbose

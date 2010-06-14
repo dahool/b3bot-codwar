@@ -111,7 +111,7 @@ class PingwatchPlugin(b3.plugin.Plugin):
             for cid,ping in self.console.getPlayerPings().items():
                 if cid == sclient.cid:
                     if ping > self._maxCiPing:
-                        sclient.kick(self.getReason('ci'), 'ci', client)
+                        sclient.kick(self._adminPlugin.getReason('ci'), 'ci', client)
                     else:
                         client.message('^7%s ^7is not CI' % sclient.exactName)
                     break

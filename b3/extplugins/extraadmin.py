@@ -27,7 +27,7 @@
 # 03-13-2010 - SGT
 # Random team shuffle
 
-__version__ = '1.1.2'
+__version__ = '1.1.4'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -42,6 +42,7 @@ import random
 import string
 import traceback
 import datetime
+from b3 import maplist as mplist
 
 #--------------------------------------------------------------------------------------------------
 class ExtraadminPlugin(b3.plugin.Plugin):
@@ -56,7 +57,11 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             # something is wrong, can't start without admin plugin
             self.error('Could not find admin plugin')
             return False
-    
+        self._padminPlugin = self.console.getPlugin('poweradminurt')
+        if not self._padminPlugin:
+            self.error('Could not find power admin plugin')
+            self._padminPlugin = None
+            
         # register our commands
         if 'commands' in self.config.sections():
             for cmd in self.config.options('commands'):
@@ -73,9 +78,15 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
         self.registerEvent(b3.events.EVT_SURVIVOR_WIN)
-        
-        self._survivorEnd = False
+        self.registerEvent(b3.events.EVT_GAME_ROUND_END)
+	try:
+	    self.registerEvent(b3.events.EVT_VOTEMAP_COMMAND)
+	except:
+        self.warning("Unable to register event VOTEMAP")
 
+        self._survivorEnd = False
+        self._matchmode = False
+        
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
         if hasattr(self, cmd):
@@ -93,13 +104,27 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             self._enable_rotation = self.config.getboolean('maprotation','enable')
         except:
             self._enable_rotation = True
-
+        try:
+            self._enable_autobalance = self.config.getboolean('settings','auto_balance')
+        except:
+            self._enable_autobalance = True
+        try:
+            self._min_maps_level = self.config.getint('settings','min_maps_level')
+        except:
+            self._min_maps_level = False
+        try:
+            self._min_reg_connections = self.config.getint('settings','min_reg_connections')
+        except:
+            self._min_reg_connections = False
+        try:
+            self._super_reg_level = self.config.getint('settings','super_reg_level')
+        except:
+            self._super_reg_level = False                        
         try:
             self._config_location = self.config.get('settings','load_location')
         except:
             self._config_location = False
             self.debug('paload disabled')
-        
         try:
             self._announce = self.config.getint('settings','announce')
         except:
@@ -121,6 +146,11 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             self.checkRoundStart()
         elif event.type == b3.events.EVT_SURVIVOR_WIN:
             self._survivorEnd = True
+            self.do_autobalance()
+        elif event.type == b3.events.EVT_GAME_ROUND_END:
+            self.debug("GAME_ROUND_END EVENT")
+        elif event.type == EVT_VOTEMAP_COMMAND:
+            self.find_next_map_rotation(event.data[0])
 
     def checkRoundStart(self):
         if self._survivorEnd:
@@ -139,14 +169,28 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         self.console.game.startMap()
         self.console.game.rounds = 0
         self.console.setCvar('g_teamScores','0:0')
-                          
+
+    def teambalance(self):
+        if self._padminPlugin:
+            self._padminPlugin.teambalance()
+        else:
+            self.debug("Teambalance not available")
+        
+    def do_autobalance(self):
+        if not self._enable_autobalance or self._matchmode:
+            self.debug("Skip autobalance")
+            return
+        self.debug("Try autobalance")
+        self.teambalance()
+        
     def raisethedead(self):
         self.debug("Raise the dead")
         for client in self.console.clients.getList():
             client.state = b3.STATE_ALIVE
             
     def is_matchmode(self):
-        return self.console.getCvar('g_matchmode').getBoolean()
+        self._matchmode = self.console.getCvar('g_matchmode').getBoolean()
+        return self._matchmode
         
     def handle_rotation(self, event):
         self.debug("Handle rotation")
@@ -235,9 +279,20 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                     self.debug("Use first map")
                     self._nextMap = firstmap
         self.debug("Next map in rotation %s" % self._nextMap)
-          
-    def getMapsSoundingLike(self, mapname):
-        maplist = self.console.getMaps()
+         
+    def _getMapList(self, client=None):
+        if client:
+            if client.maxLevel >= self._min_maps_level:
+                maplist = self.console.getMaps()
+            else:
+                maplist = mplist.listCycleMaps(self.console)
+        else:
+            maplist = mplist.listCycleMaps(self.console)
+        return maplist
+        
+    def getMapsSoundingLike(self, mapname, client=None):
+        maplist = self._getMapList(client)
+                
         data = mapname.strip()
 
         soundex1 = soundex(string.replace(string.replace(data, 'ut4_',''), 'ut_',''))
@@ -278,9 +333,9 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """
         if not data:
             client.message('^7You must supply a map to change to.')
-            return
+            return False
         
-        match = self.getMapsSoundingLike(data)
+        match = self.getMapsSoundingLike(data, client)
 
         if len(match) > 1:
             client.message('do you mean : %s' % string.join(match,', '))
@@ -293,7 +348,6 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             return False
     
         self.find_next_map_rotation(mapname)
-    
         self.console.changeMap(mapname)
         return True
 
@@ -305,10 +359,10 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             client.message('^7Invalid or missing data, try !help setnextmap')
             return False
         else:
-            match = self.getMapsSoundingLike(data)
+            match = self.getMapsSoundingLike(data, client)
             if len(match) > 1:
                 client.message('do you mean : %s ?' % string.join(match,', '))
-                return True
+                return False
             if len(match) == 1:
                 mapname = match[0]
                 self.find_next_map_rotation(mapname)
@@ -318,6 +372,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             else:
                 client.message('^7cannot find any map like [^4%s^7].' % data)
                 return False
+		return True
 
     def cmd_pashuffleteams(self, data, client, cmd=None):
         """\
@@ -367,10 +422,12 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
         if not data:
             client.message("^7Invalid or missing data, try !help setteamname")
-        else:
-            input = data.split(' ',1)
-            team = "g_teamname%s" % input[0]
-            self.console.setCvar(team,input[1])
+            return False
+        
+        input = data.split(' ',1)
+        team = "g_teamname%s" % input[0]
+        self.console.setCvar(team,input[1])
+        return True
 
     def cmd_pabandetail(self, data, client, cmd=None):
         m = self._adminPlugin.parseUserCmd(data)
@@ -395,6 +452,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                         cmd.sayLoudOrPM(client, '^7Permanent banned. Reason: %s' % penalty.reason)
             else:
                 cmd.sayLoudOrPM(client, '^7%s ^7has no active bans' % sclient.exactName)
+        return True
 
     def timetodate(self, value):
         return datetime.datetime.fromtimestamp(float(value)).strftime('%d-%m-%Y')
@@ -415,6 +473,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                                 if os.path.exists(os.path.join(self.console.game.fs_homepath,self.console.game.fs_game,'%s.cfg' % cfg)):
                                     self.debug('Executing configfile = [%s]',cfg)
                                     self.console.write('exec %s.cfg' % cfg)
+                                    return True
                                 else:
                                     client.message('^7File not found!')
                                 found = True
@@ -427,6 +486,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                     client.message('^7Command disabled')
         else:
             client.message('^7This command is enabled in match mode only')
+        return False
 
     def cmd_paslapall(self, data, client, cmd=None):
         """\
@@ -443,7 +503,6 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             else:
                 slist.append(sclient)
         thread.start_new_thread(self.threadedpunish, (slist, client, 'slap'))
-
         return True
 
     def cmd_groups(self, data, client, cmd=None):
@@ -462,9 +521,9 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                 for group in lclient.groups:
                     glist.append(group.keyword);
                 cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_in', lclient.exactName, string.join(glist, ', ')))
-                return True
             else:
                 cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_none', lclient.exactName))
+        return True
 
     def threadedpunish(self, sclients, client, cmd):
         self.debug('Entering threadedpunish...')
@@ -503,6 +562,58 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                 return True
             else:
                 client.message('^7%s ^7is not a regular user' % sclient.exactName)
-                              
+        return False
+
+    def cmd_pamaps(self, data, client=None, cmd=None):
+        """\
+        - list the server's map rotation
+        """
+        if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
+            client.message('^7Do not spam commands')
+            return False
+
+        maps = self._getMapList(client)
+        if maps:
+            cmd.sayLoudOrPM(client, '^7Map Rotation: ^2%s' % string.join(maps, '^7, ^2'))
+        else:
+            client.message('^7Error: could not get map list')
+            return False
+        return True
+
+    def cmd_makereg(self, data, client, cmd=None):
+        """\
+        <name> <group> - make a name a regular
+        """
+
+        m = self._adminPlugin.parseUserCmd(data)
+        if not m:
+            client.message('^7Invalid parameters')
+            return False
+
+        cid = m[0]
+
+        try:
+            group = clients.Group(keyword='reg')
+            group = self.console.storage.getGroup(group)
+        except:
+            client.message('^7Group reg does not exist')
+            return False
+
+        sclient = self._adminPlugin.findClientPrompt(cid, client)
+        if sclient:
+            if sclient.inGroup(group):
+                client.message(self.getMessage('groups_already_in', sclient.exactName, group.name))
+            elif sclient.maxLevel >= group.level:
+                client.message('^7%s ^7is already in a higher level group' % sclient.exactName)
+            else:
+				if client.maxLevel >= self._super_reg_level or sclient.connections >= self._min_reg_connections:
+					sclient.setGroup(group)
+					sclient.save()
+					cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_put', sclient.exactName, group.name))
+					return True
+				else:
+					client.message('^7Client with %s connections cannot be regular' % sclient.connections)
+        return False
+                                              
 if __name__ == '__main__':
   print '\nThis is version '+__version__+' by '+__author__+' for BigBrotherBot.\n'

@@ -38,7 +38,7 @@ class Rcon:
     socket = None
     queue = None
     console = None
-    socket_timeout = 0.80
+    socket_timeout = 0.30
 
     def __init__(self, console, host, password):
         self.console = console

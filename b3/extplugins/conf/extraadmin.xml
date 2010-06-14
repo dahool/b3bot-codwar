@@ -2,6 +2,10 @@
     <settings name="settings">
       <set name="announce">2</set>
       <set name="load_location">/home/gabriel/.q3a/q3ut4/configs.list</set>
+      <set name="min_maps_level">90</set>
+      <set name="auto_balance">True</set>
+      <set name="min_reg_connections">50</set>
+      <set name="super_reg_level">90</set>
     </settings>
 
     <settings name="commands">
@@ -15,6 +19,8 @@
       <set name="paload">40</set>
       <set name="paslapall-slapall">80</set>
       <set name="groups">90</set>
+      <set name="pamaps-maps">2</set>
+      <set name="makereg-mr">40</set>
     </settings>
 
     <settings name="maprotation">

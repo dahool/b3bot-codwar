@@ -33,7 +33,7 @@
         <set name="pateams-teams">2</set>
         
         <!--  by Courgette -->
-        <set name="pamoon-moon">20</set>
+        <set name="pamoon-moon">40</set>
         <set name="papublic-public">60</set>
         <set name="pamatch-match">60</set>
         <set name="pagear-gear">60</set>
@@ -124,7 +124,9 @@
   </gametype_tdm>
 
   <pamatch_settings>
-    <cvar name="timelimit">20</cvar>
+    <cvar name="timelimit" status="on">20</cvar>
+    <cvar name="g_mapcycle" status="on">mapcycle_std.txt</cvar>
+    <cvar name="g_mapcycle" status="off">mapcycle.txt</cvar>
     <cvar name="g_waverespawns" status="on">1</cvar>
     <cvar name="g_waverespawns" status="off">0</cvar>
   </pamatch_settings>

@@ -9,19 +9,19 @@
         <set name="unmask">100</set>
         <set name="runas-su">100</set>
 
-	<set name="pause">90</set>
-	<set name="rebuild">90</set>
-	<set name="clientinfo">80</set>
-	<set name="putgroup">90</set>
-	<set name="ungroup">90</set>
+        <set name="pause">90</set>
+	    <set name="rebuild">90</set>
+	    <set name="clientinfo">80</set>
+	    <set name="putgroup">90</set>
+	    <set name="ungroup">90</set>
 
-        <set name="permban-pb">60</set>
+        <set name="permban-pb">90</set>
         <!--set name="map">60</set-->
-        <set name="maprotate">80</set>
+        <set name="maprotate">90</set>
         <set name="warnclear-wc">60</set>
         <set name="clear-kiss">80</set>
         <set name="lookup-l">40</set>
-        <set name="makereg-mr">40</set>
+        <!--set name="makereg-mr">40</set-->
         <set name="spankall-sall">80</set>
         <set name="banall-ball">90</set>
         <set name="kickall-kall">80</set>
@@ -57,14 +57,14 @@
         <set name="b3">9</set>
 
         <set name="seen">2</set>
-        <set name="maps">2</set>
+        <!--set name="maps">20</set-->
         <set name="nextmap">2</set>
 
         <set name="regtest">1</set>
         <set name="time">1</set>
 
         <set name="help-h">0</set>
-	<set name="register">0</set>
+	    <set name="register">0</set>
         <set name="rules-r">0</set>
     </settings>
     <settings name="settings">
@@ -74,8 +74,8 @@
         <set name="long_tempban_max_duration">99w</set>
         <set name="command_prefix">!</set>
         <set name="command_prefix_loud">@</set>
-	<set name="admins_level">20</set>
-        <set name="ban_duration">520w</set>
+	    <set name="admins_level">20</set>
+        <set name="ban_duration">999w</set>
     </settings>
     <settings name="messages">
         <set name="ban_denied">^7Hey %s^7, you're no Elvis, can't ban %s</set>

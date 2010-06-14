@@ -39,7 +39,7 @@ class FollowPlugin(b3.plugin.Plugin):
     _adminPlugin = None
     _following = {}
 
-    _SELECT_QUERY = "SELECT client_id, reason FROM following WHERE client_id = %s"
+    _SELECT_QUERY = "SELECT client_id, reason, admin_id FROM following WHERE client_id = %s"
     _ADD_QUERY = "INSERT INTO following (client_id, admin_id, time_add, reason) VALUES ('%s','%s',%d,'%s')"
     _DEL_QUERY = "DELETE FROM following WHERE client_id = %s"
     _LIST_QUERY = "SELECT client_id FROM following"

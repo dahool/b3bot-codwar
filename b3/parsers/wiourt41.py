@@ -22,11 +22,62 @@
 __author__  = 'SGT'
 __version__ = '1.0.0'
 
+import os
+
 import b3
 import b3.events
 import b3.parsers.iourt41
 
 class Wiourt41Parser(b3.parsers.iourt41.Iourt41Parser):
-    
-    def OnSurvivorWinner(self, action, data, match=None):
+          
+    def OnSurvivorwinner(self, action, data, match=None):
+        self.debug('EVENT: OnSurvivorwinner')
         return b3.events.Event(b3.events.EVT_SURVIVOR_WIN, data)  
+
+    def getMapsCycle(self):
+        mapcycle = self.getCvar('g_mapcycle').getString()
+        if self.game.fs_game is None:
+            try:
+                self.game.fs_game = self.getCvar('fs_game').getString().rstrip('/')
+            except:
+                self.game.fs_game = None
+                self.warning("Could not query server for fs_game")
+        if self.game.fs_basepath is None:
+            try:
+                self.game.fs_basepath = self.getCvar('fs_basepath').getString().rstrip('/')
+            except:
+                self.game.fs_basepath = None
+                self.warning("Could not query server for fs_basepath")
+        mapfile = self.game.fs_basepath + '/' + self.game.fs_game + '/' + mapcycle
+        if not os.path.isfile(mapfile):
+            if self.game.fs_homepath is None:
+                try:
+                    self.game.fs_homepath = self.getCvar('fs_homepath').getString().rstrip('/')
+                except:
+                    self.game.fs_homepath = None
+                    self.warning("Could not query server for fs_homepath")
+            mapfile = self.game.fs_homepath + '/' + self.game.fs_game + '/' + mapcycle
+        if not os.path.isfile(mapfile):
+            self.error("Unable to find mapcycle file %s" % mapcycle)
+            return None
+
+        cyclemapfile = open(mapfile, 'r')
+        lines = cyclemapfile.readlines()
+
+        if len(lines) == 0:
+            return None
+
+        # get maps
+        maps = []
+        try:
+            while True:
+                tmp = lines.pop(0).strip()
+                if tmp[0] == '{':
+                    while tmp[0] != '}':
+                        tmp = lines.pop(0).strip()
+                    tmp = lines.pop(0).strip()
+                maps.append(tmp)
+        except IndexError:
+            pass
+
+        return maps

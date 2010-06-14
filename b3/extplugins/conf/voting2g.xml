@@ -3,7 +3,7 @@
 	<settings name="settings">
 		<set name="min_level_vote">2</set>
 		<set name="vote_times">3</set>
-		<set name="vote_interval">3</set>
+		<set name="vote_interval">30</set>
 	</settings>
 	
 	<settings name="votes">
@@ -11,26 +11,23 @@
 	  <set name="votemap-vm">MapVote</set>
 	  <set name="votenextmap-vx">NextMapVote</set>
 	  <set name="voteshuffle-vs">ShuffleVote</set>
+	  <set name="votecycle-vc">CycleMapVote</set>
 	</settings>
 	
 	<settings name="votekick">   
-		<set name="min_level_vote">2</set>
-		<set name="tempban_percent_diff">51</set>
-		<set name="tempban_interval">10</set>
+		<set name="tempban_percent_diff">60</set>
+		<set name="tempban_interval">5</set>
 		<set name="tempban_percent">90</set>
 	</settings>	
 	
 	<settings name="votemap">
-		<set name="min_level_vote">2</set>		
 	</settings>
 
 	<settings name="votenextmap">
-		<set name="min_level_vote">2</set>		
 	</settings>
 
 	<settings name="voteshuffle">
-		<set name="min_level_vote">2</set>	
-		<set name="shuffle_percent">50</set>	
+		<set name="shuffle_percent">40</set>	
 		<set name="shuffle_diff_percent">70</set>
 	</settings>
 	

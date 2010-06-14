@@ -24,11 +24,9 @@
 #    display a user friendly error message when a plugin config file as broken XML
 #    29/11/2009 - 1.4.0 - Courgette
 #    constructor now also accepts an instance of Config in place of a config file name
-#    22/05/2010 - 1.4.1 - SGT
-#    plugin now extends object
 
 __author__  = 'ThorN'
-__version__ = '1.4.1'
+__version__ = '1.4.0'
 
 import os
 import b3.config

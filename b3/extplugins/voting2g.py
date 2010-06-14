@@ -23,8 +23,13 @@
 # 2010-02-05
 # Update shuffle votes to add min percent
 # add players able to vote
+# 2010-06-07
+# Minor fix on clear event
+# Some flags changes
+# Add cyclemap vote
+# Change shuffle func
 
-__version__ = '1.0.1'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import sys
@@ -40,7 +45,7 @@ from b3.extrafunctions import ShuffleMaster
 class Voting2GPlugin(b3.plugin.Plugin):
     _adminPlugin = None
     _currentVote = None
-
+    
     _caller = None
 
     _in_progress = False
@@ -65,7 +70,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
             self.error('Could not find admin plugin')
             return False
         
-        self.registerEvent(b3.events.EVT_GAME_ROUND_START)
+        self.registerEvent(b3.events.EVT_GAME_WARMUP)
+	self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
 
         self._vote_times = self.config.getint('settings', 'vote_times')
         self._vote_interval = self.config.getint('settings', 'vote_interval')
@@ -84,7 +90,10 @@ class Voting2GPlugin(b3.plugin.Plugin):
             alias = None
             if len(sp) == 2:
                 cmd, alias = sp
-            level = self.config.getint(cmd,'min_level_vote')
+            try:
+                level = self.config.getint(cmd,'min_level_vote')
+            except:
+                level = self.minLevel_vote
             try:
                 self.debug("Registering vote %s" % cmd)
                 self._votes[cmd] = self.load_instance(claz)()
@@ -95,7 +104,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
 		raise
                 
     def onEvent(self, event):
-        if event.type == b3.events.EVT_GAME_ROUND_START:
+        if event.type == b3.events.EVT_GAME_WARMUP:
+            self.debug("Cleanning votes")
             self._in_progress = False
             self._currentVote = None
 
@@ -112,7 +122,9 @@ class Voting2GPlugin(b3.plugin.Plugin):
             client.message("A vote is already in progress, wait until it finishes")
             return False
         
-        if client.var(self,  'holding_vote').value:
+        hv = client.var(self, 'holding_vote').value
+        if hv and hv > self.console.time():
+            self.debug("Client cannot call a vote right now")
             client.message("You have to wait between failed votes!")
             return False
         return True
@@ -123,11 +135,13 @@ class Voting2GPlugin(b3.plugin.Plugin):
         self._times = self._vote_times
         self._no = 0
         self._vetoed = 0
-        
         self._yes = 1
-        client.var(self,  'voted').value = True #The caller of the vote votes yes by default
+        self._votedmark = 'voted_%s' % self.console.time()
+        
+        client.var(self, self._votedmark).value = True #The caller of the vote votes yes by default
         
         reason = self._currentVote.vote_reason()
+        self.debug("Calling a vote " + reason)
         self.console.say("Calling a vote " + reason)
         self.console.say("Type ^1!vy ^7to vote ^1yes^7, ^2!vn ^7to vote ^2no")
         self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
@@ -157,26 +171,23 @@ class Voting2GPlugin(b3.plugin.Plugin):
     def end_vote(self):
         self.console.say("Vote ended")
         self.console.say("^1Yes: %s^7, ^2No: %s" %(self._yes,  self._no))
+        self.debug("Vote results: Yes: %s^7, No: %s" %(self._yes,  self._no))
         #if self._yes > 1 and self._yes > self._no:
         if self._yes > self._no:
             self._currentVote.end_vote_yes(self._yes,  self._no)
         else:
             self._currentVote.end_vote_no(self._yes,  self._no)
             #The vote failed, the caller can't call another vote for a while
-            self._caller.var(self, 'holding_vote').value = True
-            self._caller.var(self, 'voted').value = False
-            temp = self._caller
-            def let_caller_vote():
-                self.debug("clearing %s" % temp.exactName)
-                temp.var(self,  'holding_vote').value = False
+            self._caller.var(self, 'holding_vote').value = self.console.time() + self._vote_interval
+#            temp = self._caller
+#            def let_caller_vote():
+#                self.debug("clearing %s" % temp.exactName)
+#                temp.var(self,  'holding_vote').value = False
             
-            self.console.cron + b3.cron.OneTimeCronTab(let_caller_vote,  0, "*/%s" % self._vote_interval)
+#            self.console.cron + b3.cron.OneTimeCronTab(let_caller_vote,  0, "*/%s" % self._vote_interval)
         
         self._in_progress = False
         self._currentVote = None
-    
-        for c in self.console.clients.getList():
-            c.var(self,  'voted').value = False
 
     def cmd_voteyes(self, data, client, cmd=None):
         if self.vote(client,  cmd):
@@ -190,8 +201,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
     
     def vote(self,  client,  cmd):
         if self._in_progress:
-            if not client.var(self,  'voted').value:
-                client.var(self,  'voted').value = True
+            if not client.var(self, self._votedmark).value:
+                client.var(self, self._votedmark).value = True
                 return True
             else:
                 cmd.sayLoudOrPM(client,  "You already voted!")
@@ -222,7 +233,8 @@ class Vote(object):
             return False
         
         self._parent._currentVote = self
-        
+	self.client = client
+
         if not self.start_vote(data,  client):
             return False
         
@@ -277,9 +289,10 @@ class KickVote(Vote):
         if not m[1]:
             client.message('^7Invalid parameters, must provide a reason!')
             return False            
-        if len(m[1]) < 3:
+        if len(m[1]) < 2:
             client.message("^7You should write a better reason")
-        
+            return False
+            
         cid = m[0]
         sclient = self._adminPlugin.findClientPrompt(cid, client)
         if not sclient:
@@ -342,7 +355,11 @@ class MapVote(Vote):
         return "to change map to ^3%s" % (self._map)
 
     def end_vote_yes(self,  yes,  no):
-        self.console.say("^1Changing map to ^3%s" %self._map)
+	if (yes==1):
+	    self.console.say("^7Not enough votes for change map")
+	    return
+	self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
+        self.console.say("^1Changing map to ^3%s" % self._map)
         time.sleep(1)
         self.console.write("map %s" %self._map)
 
@@ -361,6 +378,7 @@ class NextMapVote(MapVote):
         return "to set ^6NEXT MAP ^7to ^3%s" % (self._map)
 
     def end_vote_yes(self,  yes,  no):
+	self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
         self.console.write( 'g_nextmap "%s"' % self._map)
         self.console.say("^1Next map is ^3%s" %self._map)
 
@@ -371,20 +389,28 @@ class NextMapVote(MapVote):
 
 class ShuffleVote(Vote):
 
-    _shuffleMaster = None
-    
     def startup(self, parent, adminPlugin,  console,  config):
         super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config)
         self._schedullerPlugin = self.console.getPlugin('eventscheduller')
         if not self._schedullerPlugin:
             self.error('Could not find scheduller plugin')
             return False
-        if not self._shuffleMaster:
-            self._shuffleMaster = ShuffleMaster(console)
+        self._extraAdminPlugin = self.console.getPlugin('extraadmin')
+        if not self._extraAdminPlugin:
+            self.debug('Extra admin not available')
+            
+#        if not self._shuffleMaster:
+#            self._shuffleMaster = ShuffleMaster(console)
 
         self._shuffle_percent = self.config.getint('voteshuffle', 'shuffle_percent')
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
-        
+    
+    def _shuffle(self):
+        if self._extraAdminPlugin:
+            self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
+        else:
+            self.console.write('shuffleteams')
+                     
     def run_vote(self, data, client, cmd=None):
         """\
         call a vote to shuffle teams on next round
@@ -403,8 +429,27 @@ class ShuffleVote(Vote):
             self.console.say("^7Sholud be at least %s%% of positive votes to shuffle" % self._shuffle_diff_percent)
         else:
             self.console.say("Teams will be shuffled at the start of the next match")
-            self._schedullerPlugin.add_event(b3.events.EVT_GAME_ROUND_END,self._shuffleMaster.compute_players())
-            self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffleMaster.perform())
+            #self._schedullerPlugin.add_event(b3.events.EVT_GAME_EXIT,self._shuffleMaster.compute_players)
+            self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
 
     def end_vote_no(self,  yes,  no):
         self.console.say("Teams will be kept as is.")
+
+class CycleMapVote(Vote):
+
+    def run_vote(self, data, client, cmd=None):
+        """\
+        call a vote to cycle maps
+        """
+        super(CycleMapVote, self).run_vote(data, client, cmd)
+
+    def vote_reason(self):
+        return "to ^6cycle map"
+
+    def end_vote_yes(self,  yes,  no):
+        self.console.say("^1Cycling map")
+        time.sleep(1)
+        self.console.write('cyclemap')
+
+    def end_vote_no(self,  yes,  no):
+        self.console.say("Map ^2stays!")
