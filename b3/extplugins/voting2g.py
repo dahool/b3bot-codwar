@@ -28,8 +28,14 @@
 # Some flags changes
 # Add cyclemap vote
 # Change shuffle func
+# 2010-06-14 - 1.0.4
+# Next map can be issued one time per map
+# 2010-08-30 - 1.0.5
+# Admins should be allowed to vote again
+# Add min positive votes params
+# Configurable messages
 
-__version__ = '1.0.3'
+__version__ = '1.0.5'
 __author__  = 'SGT'
 
 import sys
@@ -55,7 +61,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _times = 0
     _vote_times = 3
     _vote_interval = 0
-    
+
     _votes = {}
     
     def startup(self):
@@ -71,18 +77,21 @@ class Voting2GPlugin(b3.plugin.Plugin):
             return False
         
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
-	self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
+        self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
 
         self._vote_times = self.config.getint('settings', 'vote_times')
         self._vote_interval = self.config.getint('settings', 'vote_interval')
-        self.minLevel_vote = self.config.getint('settings', 'min_level_vote')
-        modLevel = self._adminPlugin.config.getint('settings','admins_level')  
+        self._minLevel_vote = self.config.getint('settings', 'min_level_vote')
+        self._veto_level = self.config.getint('settings', 'veto_level')
+        self._cancel_level = self.config.getint('settings', 'cancel_level')
+        self._min_votes = self.config.getint('settings', 'min_votes')
+        self._admin_level = self._adminPlugin.config.getint('settings','admins_level')
         
-        self._adminPlugin.registerCommand(self, 'voteyes', self.minLevel_vote,  self.cmd_voteyes,  'vy')
-        self._adminPlugin.registerCommand(self, 'voteno', self.minLevel_vote, self.cmd_voteno,  'vn')
-        self._adminPlugin.registerCommand(self, 'voteveto', modLevel, self.cmd_veto,  'vveto')
-        self._adminPlugin.registerCommand(self, 'votecancel', modLevel, self.cmd_cancel, 'vcancel')
-        self._adminPlugin.registerCommand(self, 'maplist', self.minLevel_vote, self.cmd_maplist,  'mapl')
+        self._adminPlugin.registerCommand(self, 'voteyes', self._minLevel_vote,  self.cmd_voteyes,  'vy')
+        self._adminPlugin.registerCommand(self, 'voteno', self._minLevel_vote, self.cmd_voteno,  'vn')
+        self._adminPlugin.registerCommand(self, 'voteveto', self._veto_level, self.cmd_veto,  'vveto')
+        self._adminPlugin.registerCommand(self, 'votecancel', self._cancel_level, self.cmd_cancel, 'vcancel')
+        self._adminPlugin.registerCommand(self, 'maplist', self._minLevel_vote, self.cmd_maplist,  'mapl')
 
         for cmd in self.config.options('votes'):
             claz = self.config.get('votes', cmd)
@@ -93,11 +102,11 @@ class Voting2GPlugin(b3.plugin.Plugin):
             try:
                 level = self.config.getint(cmd,'min_level_vote')
             except:
-                level = self.minLevel_vote
+                level = self._minLevel_vote
             try:
                 self.debug("Registering vote %s" % cmd)
                 self._votes[cmd] = self.load_instance(claz)()
-                self._votes[cmd].startup(self, self._adminPlugin,  self.console,  self.config)
+                self._votes[cmd].startup(self, self._adminPlugin,  self.console,  self.config, cmd)
                 self._adminPlugin.registerCommand(self, cmd, level, self._votes[cmd].run_vote, alias)
             except Exception, e:
                 self.error("Unable to load vote for %s" % cmd)
@@ -105,27 +114,36 @@ class Voting2GPlugin(b3.plugin.Plugin):
                 
     def onEvent(self, event):
         if event.type == b3.events.EVT_GAME_WARMUP:
-            self.debug("Cleanning votes")
-            self._in_progress = False
-            self._currentVote = None
+            self._cleanup(True)
 
+    def _cleanup(self, init=False):
+        self.debug("Cleanning votes")
+        self._in_progress = False
+        self._currentVote = None
+        if init:
+            for vote in self._votes.values():
+                vote.cleanup()
+    
     def load_instance(self, claz):
         modname = globals()['__name__']
         mod = sys.modules[modname]
         return getattr(mod,claz)
         
     def cmd_maplist(self,  data,  client,  cmd=None):
+        """\
+        list maps available to vote
+        """
         client.message("Maps available: " + ", ".join(maplist.listCycleMaps(self.console)))
     
     def pre_vote(self,  client):
         if self._in_progress:
-            client.message("A vote is already in progress, wait until it finishes")
+            client.message(self.getMessage('vote_in_progress'))
             return False
         
         hv = client.var(self, 'holding_vote').value
         if hv and hv > self.console.time():
             self.debug("Client cannot call a vote right now")
-            client.message("You have to wait between failed votes!")
+            client.message(self.getMessage('wait_vote'))
             return False
         return True
 
@@ -142,62 +160,71 @@ class Voting2GPlugin(b3.plugin.Plugin):
         
         reason = self._currentVote.vote_reason()
         self.debug("Calling a vote " + reason)
-        self.console.say("Calling a vote " + reason)
-        self.console.say("Type ^1!vy ^7to vote ^1yes^7, ^2!vn ^7to vote ^2no")
+        self.console.say(self.getMessage('call_vote', reason))
+        self.console.say(self.getMessage('vote_notice'))
         self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
 
     def cmd_veto(self, data, client, cmd=None):
-        self._vetoed = 1
-
+        """\
+        veto current vote
+        """      
+        self.hold_vote()
+        self._cleanup()
+        self.console.say(self.getMessage('vote_veto'))
+        
     def cmd_cancel(self, data, client, cmd=None):
-        self._in_progress = False
-        self._currentVote = None
-        self.console.say("Vote ^1cancelled!")
+        """\
+        cancel current vote and cleanup
+        """
+        self._cleanup()
+        self.console.say(self.getMessage('vote_cancel'))
 
     def update_vote(self):
-        if not self._vetoed:
+        if not self._vetoed and self._in_progress:
             reason = self._currentVote.vote_reason()
-            self.console.say("^7[%d/%d] Voting " % (self._vote_times - self._times + 1,  self._vote_times) + reason)
-            self.console.say("Type ^1!vy ^7to vote ^1yes^7, ^2!vn ^7to vote ^2no")
-            self.console.say("^1Yes: %s^7, ^2No: %s" %(self._yes,  self._no))
+            self.console.say(self.getMessage('voting', str(self._vote_times - self._times + 1), str(self._vote_times), reason))
+            self.console.say(self.getMessage('vote_notice'))
+            self.console.say(self.getMessage('vote_status', self._yes, self._no))
             self._times -= 1
             if self._times > 0:
                 self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
             else:
                 self.console.cron + b3.cron.OneTimeCronTab(self.end_vote,  "*/1")
         else:
-            self.cmd_cancel(None, None)
-    
+            if self._in_progress:
+                self.cmd_cancel(None, None)
+
+    def hold_vote(self):
+        if self._caller.maxLevel < self._admin_level:
+            self._caller.var(self, 'holding_vote').value = self.console.time() + self._vote_interval
+        
     def end_vote(self):
-        self.console.say("Vote ended")
-        self.console.say("^1Yes: %s^7, ^2No: %s" %(self._yes,  self._no))
+        self.console.say(self.getMessage('vote_end'))
+        self.console.say(self.getMessage('vote_status', self._yes, self._no))
         self.debug("Vote results: Yes: %s^7, No: %s" %(self._yes,  self._no))
-        #if self._yes > 1 and self._yes > self._no:
         if self._yes > self._no:
             self._currentVote.end_vote_yes(self._yes,  self._no)
         else:
             self._currentVote.end_vote_no(self._yes,  self._no)
-            #The vote failed, the caller can't call another vote for a while
-            self._caller.var(self, 'holding_vote').value = self.console.time() + self._vote_interval
-#            temp = self._caller
-#            def let_caller_vote():
-#                self.debug("clearing %s" % temp.exactName)
-#                temp.var(self,  'holding_vote').value = False
-            
-#            self.console.cron + b3.cron.OneTimeCronTab(let_caller_vote,  0, "*/%s" % self._vote_interval)
+            self.hold_vote()
         
-        self._in_progress = False
-        self._currentVote = None
+        self._cleanup()
 
     def cmd_voteyes(self, data, client, cmd=None):
+        """\
+        vote yes
+        """
         if self.vote(client,  cmd):
             self._yes += 1
-            cmd.sayLoudOrPM(client,  "Voted ^1YES")
+            cmd.sayLoudOrPM(client, self.getMessage('vote_yes'))
 
     def cmd_voteno(self, data, client, cmd=None):
+        """\
+        vote no
+        """
         if self.vote(client,  cmd):
             self._no += 1
-            cmd.sayLoudOrPM(client,  "Voted ^2NO")
+            cmd.sayLoudOrPM(client, self.getMessage('vote_no'))
     
     def vote(self,  client,  cmd):
         if self._in_progress:
@@ -205,9 +232,9 @@ class Voting2GPlugin(b3.plugin.Plugin):
                 client.var(self, self._votedmark).value = True
                 return True
             else:
-                cmd.sayLoudOrPM(client,  "You already voted!")
+                cmd.sayLoudOrPM(client, self.getMessage('already_vote'))
         else:
-            cmd.sayLoudOrPM(client,  "No vote in progress")
+            cmd.sayLoudOrPM(client, self.getMessage('no_vote'))
         return False
 
 class Vote(object):
@@ -216,7 +243,7 @@ class Vote(object):
     console = None
     config = None
     
-    def startup(self, parent, adminPlugin,  console,  config):
+    def startup(self, parent, adminPlugin,  console,  config, cmd):
         """\
         Initialize plugin settings
         """
@@ -224,6 +251,10 @@ class Vote(object):
         self._adminPlugin = adminPlugin
         self.console = console
         self.config = config
+        try:
+            self.min_votes = self.config.getint(cmd, 'min_votes')
+        except:
+            self.min_votes = self._parent._min_votes
     
     def run_vote(self, data, client, cmd=None):
         """
@@ -233,7 +264,7 @@ class Vote(object):
             return False
         
         self._parent._currentVote = self
-	self.client = client
+        self.client = client
 
         if not self.start_vote(data,  client):
             return False
@@ -241,11 +272,14 @@ class Vote(object):
         self._parent.go_vote(client)
     
     def get_players_able_to_vote(self):
-        return self.console.clients.getClientsByLevel(min=self._parent.minLevel_vote)
+        return self.console.clients.getClientsByLevel(min=self._parent._minLevel_vote)
         
     def start_vote(self,  data,  client):
         return True
 
+    def cleanup(self):
+        return True
+        
     def vote_reason(self):
         raise Exception('Not implemented.')
 
@@ -260,17 +294,13 @@ class KickVote(Vote):
     _caller = None
     _reason = None
 
-    _modLevel = 20
-
     _tempban_interval = 0
     _tempban_percent    = 0
     _tempban_minvotes = 0
 
-    def startup(self, parent, adminPlugin,  console,  config):
-        super(KickVote, self).startup(parent, adminPlugin,  console,  config)
+    def startup(self, parent, adminPlugin,  console,  config, cmd):
+        super(KickVote, self).startup(parent, adminPlugin,  console,  config, cmd)
 
-        self._modLevel = self._adminPlugin.config.getint("settings","admins_level")  
-        
         self._tempban_percent_diff = self.config.getint('votekick', 'tempban_percent_diff')
         self._tempban_interval = self.config.getint('votekick', 'tempban_interval')
         self._tempban_percent = self.config.getint('votekick', 'tempban_percent')
@@ -284,13 +314,13 @@ class KickVote(Vote):
     def start_vote(self,  data,  client):
         m = self._adminPlugin.parseUserCmd(data)
         if not m:
-            client.message('^7Invalid parameters')
+            client.message(self._parent.getMessage('param_invalid'))
             return False
         if not m[1]:
-            client.message('^7Invalid parameters, must provide a reason!')
+            client.message(self._parent.getMessage('param_invalid_reason'))
             return False            
         if len(m[1]) < 2:
-            client.message("^7You should write a better reason")
+            client.message(self._parent.getMessage('param_invalid_reason2'))
             return False
             
         cid = m[0]
@@ -298,8 +328,8 @@ class KickVote(Vote):
         if not sclient:
             return False
             
-        if sclient.maxLevel >= self._modLevel:
-            client.message("You can't kick an admin!")
+        if sclient.maxLevel >= self._parent._admin_level:
+            client.message(self._parent.getMessage('cant_kick'))
             return False
         
         self._caller = client
@@ -308,21 +338,25 @@ class KickVote(Vote):
         return True
 
     def vote_reason(self):
-        return "against ^3%s because ^3%s" % (self._victim.exactName,  self._reason)
+        return self._parent.getMessage('reason_kick', self._victim.exactName, self._reason)
     
     def end_vote_yes(self,  yes,  no):
-        self.console.say("^1KICKING ^3%s" % self._victim.exactName)
-        self._victim.kick("by popular vote (%s)" % self._reason,  None)
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return
+        if self._victim.connected:
+            self.console.say("^1KICKING ^3%s" % self._victim.exactName)
+            self._victim.kick("by popular vote (%s)" % self._reason,  None)
 
-        player_count = int(round(len(self.get_players_able_to_vote()) * 
-                            (self._tempban_percent / 100.0)))
-        if (self._tempban_interval and (yes + no) >= player_count and
-            yes >= int(round(((yes + no) * self._tempban_percent_diff / 100.0)))):
-            self._victim.tempban("Voted out (%s)" % self._reason, duration=self._tempban_interval)
-        self._victim = None
+            player_count = int(round(len(self.get_players_able_to_vote()) * 
+                                (self._tempban_percent / 100.0)))
+            if (self._tempban_interval and (yes + no) >= player_count and
+                yes >= int(round(((yes + no) * self._tempban_percent_diff / 100.0)))):
+                self._victim.tempban("Voted out (%s)" % self._reason, duration=self._tempban_interval)
+            self._victim = None
 
     def end_vote_no(self,  yes,  no):
-        self.console.say("Player is ^2safe!")
+        self.console.say(self._parent.getMessage('no_kick'))
         self._victim = None
 
 class MapVote(Vote):
@@ -332,10 +366,10 @@ class MapVote(Vote):
     def start_vote(self,  data,  client):
         m = self._adminPlugin.parseUserCmd(data)
         if not m:
-            client.message('^7Invalid parameters')
+            client.message(self._parent.getMessage('param_invalid'))
             return False
         if not m[0]:
-            client.message('^7Invalid parameters, must provide a map to vote!')
+            client.message(self._parent.getMessage('param_invalid_map'))
             return False
         s = m[0]
         try:
@@ -352,45 +386,59 @@ class MapVote(Vote):
         super(MapVote, self).run_vote(data, client, cmd)
         
     def vote_reason(self):
-        return "to change map to ^3%s" % (self._map)
+        return self._parent.getMessage('reason_map', self._map)
 
     def end_vote_yes(self,  yes,  no):
-	if (yes==1):
-	    self.console.say("^7Not enough votes for change map")
-	    return
-	self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
-        self.console.say("^1Changing map to ^3%s" % self._map)
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return
+        self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
+        self.console.say(self._parent.getMessage('change_map', self._map))
         time.sleep(1)
         self.console.write("map %s" %self._map)
 
     def end_vote_no(self,  yes,  no):
-        self.console.say("Map ^2stays!")
+        self.console.say(self._parent.getMessage('no_map'))
     
 class NextMapVote(MapVote):
 
+    _voted = None
+    
     def run_vote(self, data, client, cmd=None):
         """\
         <map> - call a vote to change next map
         """
+        if self._voted:
+            client.message(self._parent.getMessage('nx_map_done'))
+            return False
+
         super(NextMapVote, self).run_vote(data, client, cmd)
 
+    def cleanup(self):
+        self._voted = False
+        return True
+        
     def vote_reason(self):
-        return "to set ^6NEXT MAP ^7to ^3%s" % (self._map)
+        return self._parent.getMessage('reason_nx_map', self._map)
 
     def end_vote_yes(self,  yes,  no):
-	self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return
+        self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
+        self._voted = True
         self.console.write( 'g_nextmap "%s"' % self._map)
-        self.console.say("^1Next map is ^3%s" %self._map)
+        self.console.say(self._parent.getMessage('next_map', self._map))
 
     def end_vote_no(self,  yes,  no):
         map = self.console.getNextMap()
         if map:
-            self.console.say("Next map stays in ^2%s" % map)
+            self.console.say(self._parent.getMessage('next_map_stay', map))
 
 class ShuffleVote(Vote):
 
-    def startup(self, parent, adminPlugin,  console,  config):
-        super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config)
+    def startup(self, parent, adminPlugin,  console,  config, cmd):
+        super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config, cmd)
         self._schedullerPlugin = self.console.getPlugin('eventscheduller')
         if not self._schedullerPlugin:
             self.error('Could not find scheduller plugin')
@@ -418,22 +466,24 @@ class ShuffleVote(Vote):
         super(ShuffleVote, self).run_vote(data, client, cmd)
 
     def vote_reason(self):
-        return "to ^6shuffle teams ^3on NEXT MATCH"
+        return self._parent.getMessage('reason_shuffle')
 
     def end_vote_yes(self,  yes,  no):
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return        
         player_count = int(round(len(self.get_players_able_to_vote()) * 
                             (self._shuffle_percent / 100.0)))
         if (yes + no) < player_count:
-            self.console.say("^7At least %d players should vote for shuffle" % player_count)
+            self.console.say(self._parent.getMessage('cant_shuffle', str(player_count)))
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
-            self.console.say("^7Sholud be at least %s%% of positive votes to shuffle" % self._shuffle_diff_percent)
+            self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
-            self.console.say("Teams will be shuffled at the start of the next match")
-            #self._schedullerPlugin.add_event(b3.events.EVT_GAME_EXIT,self._shuffleMaster.compute_players)
+            self.console.say(self._parent.getMessage('shuffle'))
             self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
 
     def end_vote_no(self,  yes,  no):
-        self.console.say("Teams will be kept as is.")
+        self.console.say(self._parent.getMessage('no_shuffle'))
 
 class CycleMapVote(Vote):
 
@@ -444,12 +494,15 @@ class CycleMapVote(Vote):
         super(CycleMapVote, self).run_vote(data, client, cmd)
 
     def vote_reason(self):
-        return "to ^6cycle map"
+        return self._parent.getMessage('reason_cycle')
 
     def end_vote_yes(self,  yes,  no):
-        self.console.say("^1Cycling map")
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return
+        self.console.say(self._parent.getMessage('cycle'))
         time.sleep(1)
         self.console.write('cyclemap')
 
     def end_vote_no(self,  yes,  no):
-        self.console.say("Map ^2stays!")
+        self.console.say(self._parent.getMessage('no_map'))

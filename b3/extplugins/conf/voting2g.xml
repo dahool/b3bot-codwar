@@ -1,9 +1,12 @@
-<configuration plugin="voting">
+<configuration plugin="voting2g">
 
 	<settings name="settings">
 		<set name="min_level_vote">2</set>
 		<set name="vote_times">3</set>
-		<set name="vote_interval">30</set>
+		<set name="vote_interval">600</set>
+		<set name="veto_level">20</set>
+		<set name="cancel_level">40</set>
+        <set name="min_votes">2</set>
 	</settings>
 	
 	<settings name="votes">
@@ -31,4 +34,45 @@
 		<set name="shuffle_diff_percent">70</set>
 	</settings>
 	
+	<settings name="votecycle">
+	</settings>
+    
+    <settings name="messages">
+        <set name="vote_in_progress">^7A vote is already in progress, wait until it finishes</set>
+        <set name="wait_vote">^7You have to wait between failed votes!</set>
+        <set name="call_vote">^7Calling a vote %s</set>
+        <set name="vote_notice">^7Type ^1!vy ^7to vote ^1yes^7, ^2!vn ^7to vote ^2no</set>
+        <set name="vote_veto">^7Vote ^1vetoed!</set>
+        <set name="vote_cancel">^7Vote ^1cancelled!</set>
+        <set name="voting">^7[%s/%s] Voting %s</set>
+        <set name="vote_status">^1Yes: %s^7, ^2No: %s</set>
+        <set name="vote_end">^7Vote ended</set>
+        <set name="vote_yes">^7Voted ^1YES</set>
+        <set name="vote_no">^7Voted ^2NO</set>
+        <set name="already_vote">^7You already voted!</set>
+        <set name="no_vote">^7No vote in progress</set>
+        <set name="param_invalid">^7Invalid parameters</set>
+        <set name="param_invalid_reason">^7Invalid parameters, must provide a reason!</set>
+        <set name="param_invalid_reason2">^7You should write a better reason</set>
+        <set name="cant_kick">^7You can't kick that user noob!</set>
+        <set name="reason_kick">^7against ^3%s because ^3%s</set>
+        <set name="novotes">^7No enough positive votes</set>
+        <set name="no_kick">^7Player is ^2safe!</set>
+        <set name="param_invalid_map">^7Invalid parameters, must provide a map to vote!</set>
+        <set name="reason_map">^7to change map to ^3%s</set>
+        <set name="change_map">^1Changing map to ^3%s</set>
+        <set name="no_map">^7Map ^2stays!</set>
+        <set name="nx_map_done">^7Next map already voted. Cannot change until next map</set>
+        <set name="reason_nx_map">^7to set ^6NEXT MAP ^7to ^3%s</set>
+        <set name="next_map">^1Next map is ^3%s</set>
+        <set name="next_map_stay">^7Next map stays in ^2%s</set>
+        <set name="reason_shuffle">^7to ^6shuffle teams ^3on NEXT MATCH</set>
+        <set name="cant_shuffle">^7At least %s players should vote for shuffle</set>
+        <set name="cant_shuffle2">^7Need at least %s%% of positive votes to shuffle</set>
+        <set name="shuffle">^7Teams will be shuffled at the start of the next match</set>
+        <set name="no_shuffle">^7Teams will be kept untouched</set>
+        <set name="reason_cycle">^7to ^6cycle map</set>
+        <set name="cycle">^1Cycling map</set>
+    </settings>
+    
 </configuration>

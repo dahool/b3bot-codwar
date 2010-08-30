@@ -52,7 +52,7 @@ class StatsPlugin(b3.plugin.Plugin):
 
         if self._adminPlugin:
             self._adminPlugin.registerCommand(self, 'mapstats', self._minLevel, self.cmd_mapstats, 'mstats')
-            self._adminPlugin.registerCommand(self, 'testscore', self._minLevel, self.cmd_testscore, 'ts')
+            self._adminPlugin.registerCommand(self, 'testscore', self._minLevel, self.cmd_testscore, 'tsc')
             self._adminPlugin.registerCommand(self, 'topstats', 9, self.cmd_topstats, 'tstats')
 
     def onEvent(self, event):

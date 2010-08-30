@@ -25,8 +25,10 @@
 # 04-22-2010 - 1.1.1
 # Changed notification message and show admin name
 # message can be changed through conf file
+# 07-26-2010 - 1.1.2
+# Do sync on a thread
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __author__  = 'SGT'
 
 import b3, threading
@@ -51,7 +53,6 @@ class FollowPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
-        #self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
 
     def onLoadConfig(self):
@@ -88,9 +89,8 @@ class FollowPlugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             self.process_ban(event)
         elif event.type == b3.events.EVT_GAME_ROUND_START:
-            self.sync_list(event)
-        #elif event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
-        #    self.process_name_change(event)
+            b = threading.Timer(10, self.sync_list, (event,))
+            b.start()
             
     def sync_list(self, event):
         self._following = {}
@@ -127,8 +127,8 @@ class FollowPlugin(b3.plugin.Plugin):
     def _show_message(self, client, player):
         data = {'client_name': player.name,
                 'client_id': player.id,
-                'admin_name': player.var(self, 'follow_admin').name,
-                'admin_id': player.var(self, 'follow_admin').id,
+                'admin_name': player.var(self, 'follow_admin').value.name,
+                'admin_id': player.var(self, 'follow_admin').value.id,
                 'reason': player.var(self, 'follow_reason').value}
         client.message(self._NOTIFY_MSG % data)
         
@@ -162,7 +162,7 @@ class FollowPlugin(b3.plugin.Plugin):
                     reason = r['reason']
                 else:
                     reason = self._DEFAULT_REASON
-                admin = self._adminPlugin.findClientPrompt("@" % r['admin_id'], client)
+                admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
                 client.setvar(self, 'follow_reason', reason)
                 client.setvar(self, 'follow_admin', admin)
                 self._following[client.id] = client
@@ -240,7 +240,8 @@ class FollowPlugin(b3.plugin.Plugin):
         else:
             self.debug("User already in watch list")
             client.message("^7User already exists in watch list.")
-        cursor.close() 
+        cursor.close()
+        self.sync_list(None)
         
     def cmd_delfollow(self, data, client, cmd=None):
         """\
@@ -256,6 +257,7 @@ class FollowPlugin(b3.plugin.Plugin):
         cursor.close()
         self.debug("User removed from watch list")
         client.message("^7User removed from the watch list.")
+        self.sync_list(None)
 
     def cmd_followinfo(self, data, client, cmd=None):
         """\
@@ -276,3 +278,14 @@ class FollowPlugin(b3.plugin.Plugin):
         else:
             client.message('No follow info for %s' % sclient.name)
         cursor.close()
+
+if __name__ == '__main__':
+    from b3.fake import fakeConsole
+    from b3.fake import superadmin as user
+    
+    p = FollowPlugin(fakeConsole, '@b3/extplugins/conf/follow.xml')
+    p.onStartup()
+    
+    user.authed = True
+    user.says('!listfollow')
+    time.sleep(2)

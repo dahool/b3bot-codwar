@@ -17,8 +17,14 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    21/05/2010 - 1.2.12 - xlr8or
+#    * Catch ValueError in clients.getByCID to allow names as CID's, but still
+#      fix the previous exploit in q3a based games 
 #    20/05/2010 - 1.2.11 - SGT
 #    add ip to aliasses
+#    11/05/2010 - 1.2.11 - Courgette
+#    * fix exploit by using player cid prefixed with '0' for commands making use
+#      of clients.getByCID
 #    08/01/2010 - 1.2.10 - xlr8or
 #    * disabled adding aliasses for world
 #    01/01/2001 - 1.2.9 - Courgette
@@ -45,7 +51,7 @@
 #     Added data parameter to Client.tempban()
 
 __author__  = 'ThorN'
-__version__ = '1.2.10'
+__version__ = '1.2.12'
 
 import b3, string, re, time, functions, threading, traceback, sys
 
@@ -978,14 +984,21 @@ class Clients(dict):
 
     def getByCID(self, cid):
         try:
-            c = self[str(cid)]
+            cleanedCid = int(cid)
+        except ValueError:
+            # Must ba a game using names or other strings as cid's, allow it.
+            # this will obviously fail for a nickname like '007'
+            cleanedCid = cid
+
+        try:
+            c = self[str(cleanedCid)]
         except KeyError:
             return None
         except Exception, e:
             self.console.error('Unexpected error getByCID(%s) - %s', cid, e)
         else:
             #self.console.debug('Found client by CID %s = %s', cid, c.name)
-            if c.cid == str(cid): 
+            if c.cid == str(cleanedCid):
                 return c
             else: 
                 return None

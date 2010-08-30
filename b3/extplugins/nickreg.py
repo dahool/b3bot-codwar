@@ -97,7 +97,9 @@ class NickregPlugin(b3.plugin.Plugin):
             cursor.close()
 
     def cmd_listnick(self, data, client, cmd=None):
-    
+        """\
+        <name> - list registered nicknames
+        """
         cursor = self.console.storage.query("""
             SELECT n.nickid,n.name
             FROM nicks n
@@ -122,7 +124,7 @@ class NickregPlugin(b3.plugin.Plugin):
         
     def cmd_regnick(self, data, client, cmd=None):
         """\
-        Register your current name as yours
+        Register current name as yours
         """
         
         #Todo: Strip the colors from the names?
@@ -161,7 +163,7 @@ class NickregPlugin(b3.plugin.Plugin):
         else:
            max = long(max)+1
 
-	query = "INSERT INTO nicks (nickid, clientid, name, time_add) VALUES ('%d', '%d', '%s',  '%d')" % (max, client.id, self._process_name(client.name), self.console.time())
+        query = "INSERT INTO nicks (nickid, clientid, name, time_add) VALUES ('%d', '%d', '%s',  '%d')" % (max, client.id, self._process_name(client.name), self.console.time())
         self.debug(query)
         cursor = self.console.storage.query(query)
 

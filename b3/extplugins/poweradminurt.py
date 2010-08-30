@@ -659,7 +659,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
       self._ncronTab = b3.cron.PluginCronTab(self, self.namecheck, 0, '*/%s' % (self._ninterval))
       self.console.cron + self._ncronTab
     if self._tinterval > 0:
-      self._tcronTab = b3.cron.PluginCronTab(self, self.teamcheck, 0, '*/%s' % (self._tinterval))
+      self._tcronTab = b3.cron.PluginCronTab(self, self.teamcheck, '*/%s' % (self._tinterval))
       self.console.cron + self._tcronTab
     if self._sinterval > 0:
       self._scronTab = b3.cron.PluginCronTab(self, self.speccheck, 0, '*/%s' % (self._sinterval))

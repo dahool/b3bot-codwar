@@ -82,7 +82,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 	try:
 	    self.registerEvent(b3.events.EVT_VOTEMAP_COMMAND)
 	except:
-        self.warning("Unable to register event VOTEMAP")
+            self.warning("Unable to register event VOTEMAP")
 
         self._survivorEnd = False
         self._matchmode = False
@@ -149,7 +149,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             self.do_autobalance()
         elif event.type == b3.events.EVT_GAME_ROUND_END:
             self.debug("GAME_ROUND_END EVENT")
-        elif event.type == EVT_VOTEMAP_COMMAND:
+        elif event.type == b3.events.EVT_VOTEMAP_COMMAND:
             self.find_next_map_rotation(event.data[0])
 
     def checkRoundStart(self):
@@ -194,6 +194,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         
     def handle_rotation(self, event):
         self.debug("Handle rotation")
+        self._currentMap = self.console.game.mapName
         if self._enable_rotation:
             if self._nextMap:
                 self.debug("Set next map to %s" % self._nextMap)
@@ -202,24 +203,27 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                 self._nextMap = None
             else:
                 self.debug("No next map setted")
-        self._currentMap = self.console.game.mapName
   
     def find_next_map_rotation(self, chmap):
         self.debug("Find next map in rotation")
         currentmap = self.console.game.mapName
-        if not self._nextMap or currentmap == self._nextMap:
-            nmap = self.console.getCvar('g_nextmap').getString()
-            self.debug('g_nextmap: %s' % nmap)
-            if nmap != "":
-                self._nextMap = nmap
-                self.debug("Next map already set. Skipping")
-                return
+        if self._nextMap:
+            self.debug("Next map already set. Skipping")
+            return
+#        if not self._nextMap or currentmap == self._nextMap:
+#            nmap = self.console.getCvar('g_nextmap').getString()
+#            self.debug('g_nextmap: %s' % nmap)
+#            if nmap != "":
+#                self._nextMap = nmap
+#                self.debug("Next map already set. Skipping")
+#                return
      
           # seek the next map from the mapcyle file
         if not currentmap:
             self.debug("No current map set")
             return None
-        
+        self.debug("Current map %s" % currentmap)
+ 
         mapcycle = self.console.getCvar('g_mapcycle').getString()
         mapfile = self.console.game.fs_basepath + '/' + self.console.game.fs_game + '/' + mapcycle
         if not os.path.isfile(mapfile):
@@ -255,31 +259,45 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         mapl = []
         mapl.extend(maps)
       
+        # remove unselectable maps
         try:
-            tmp = maps.pop(0)
-            while currentmap != tmp:
-                tmp = maps.pop(0)
-                if currentmap == tmp:
-                    if len(maps) > 0:
-                        self._nextMap = maps.pop(0)
-                        break
-                    else:
-                        self._nextMap = firstmap
-                        break
-        except IndexError:
+            maps.remove(chmap)
+        except:
+            pass
+      
+        try:
+            cur = maps.index(currentmap)
+            if cur == len(maps)-1:
+                self._nextMap = maps[1]
+            else:
+                try:
+                    self._nextMap = maps[cur+2]
+                except IndexError:
+                    self._nextMap = firstmap
+#            tmp = maps.pop(0)
+#            while currentmap != tmp:
+#                tmp = maps.pop(0)
+#                if currentmap == tmp:
+#                    if len(maps) > 0:
+#                        self._nextMap = maps.pop(0)
+#                        break
+#                    else:
+#                        self._nextMap = firstmap
+#                        break
+        except (IndexError, ValueError):
             self.debug("Current map not found")
             if self._random_rotation:
                 self.debug("Select a random map")
                 try:
-                    i = random.randint(1,len(mapl)-1)
+                    i = random.randint(0,len(mapl)-1)
                     self._nextMap = mapl[i]
                 except:
                     self.debug("Something went wrong with random selection")
-                else:
-                    self.debug("Use first map")
-                    self._nextMap = firstmap
+            else:
+                self.debug("Use first map")
+                self._nextMap = firstmap
         self.debug("Next map in rotation %s" % self._nextMap)
-         
+    
     def _getMapList(self, client=None):
         if client:
             if client.maxLevel >= self._min_maps_level:
@@ -326,6 +344,10 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                     return match[0]
         
         return match
+
+    def cmd_who(self, data, client, cmd=None):
+        client.message('^7Your id is ^3@%s' % client.id)
+        return True
                   
     def cmd_pamap(self, data, client, cmd=None):
         """\
@@ -406,7 +428,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
     def cmd_pasetpassword(self, data, client, cmd=None): 
         """\
-        set the server password
+        set the server public password
         """
         if not data:
             client.message("^7You must suply a password")
@@ -419,7 +441,6 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """\
         <team: red/blue> <name> - Set the team name
         """
-
         if not data:
             client.message("^7Invalid or missing data, try !help setteamname")
             return False
@@ -430,6 +451,9 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         return True
 
     def cmd_pabandetail(self, data, client, cmd=None):
+        """\
+        <name> - more detailed ban info
+        """      
         m = self._adminPlugin.parseUserCmd(data)
         if not m:
             client.message('^7Invalid parameters')
@@ -458,7 +482,9 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         return datetime.datetime.fromtimestamp(float(value)).strftime('%d-%m-%Y')
 
     def cmd_paload(self, data, client, cmd=None):
-        
+        """\
+        <conf> Load specific configuration file. Only available on match mode
+        """        
         if self.is_matchmode():
             if not data:
                 client.message('^7Invalid or missing data.')
@@ -533,7 +559,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
     def cmd_paunreg(self, data, client, cmd=None):
         """\
-        <name> <group> - remove a regular user
+        <name> - remove a regular user
         """
 
         m = self._adminPlugin.parseUserCmd(data)
@@ -553,12 +579,12 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
         sclient = self._adminPlugin.findClientPrompt(cid, client)
         if sclient:
-            if sclient.maxLevel >= group.level:
+            if sclient.maxLevel > group.level:
                 client.message('^7%s ^7is in a higher level group' % sclient.exactName)
             elif sclient.inGroup(group):
                 sclient.remGroup(group)
                 sclient.save()
-                client.message("Client removed.")
+                client.message("^7Unregistered client %s" % sclient.exactName)
                 return True
             else:
                 client.message('^7%s ^7is not a regular user' % sclient.exactName)
@@ -616,4 +642,17 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         return False
                                               
 if __name__ == '__main__':
-  print '\nThis is version '+__version__+' by '+__author__+' for BigBrotherBot.\n'
+    from b3.fake import fakeConsole
+    from b3.fake import joe
+ 
+    fakeConsole.setCvar('g_mapcycle','mapcycle.txt')
+    setattr(fakeConsole.game,'fs_basepath','/home/gabriel/urbanterror')
+    setattr(fakeConsole.game,'fs_game','q3ut4')
+
+    p = ExtraadminPlugin(fakeConsole, '@b3/extplugins/conf/extraadmin.xml')
+    p.onStartup()
+    
+    print p._nextMap
+    print p._currentMap
+    p.find_next_map_rotation('ut4_tejen_beta3')
+    print p._nextMap

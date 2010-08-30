@@ -22,16 +22,17 @@
 # add unban event
 # 01/15/2010 - 1.0.0 - SGT
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import twitter as tw
 import re
+import time
 
 import b3, threading, time
 import b3.events
 import b3.plugin
-import b3.plugins.poweradminurt as padmin
+import poweradminurt as padmin
 
 #--------------------------------------------------------------------------------------------------
 class TwityPlugin(b3.plugin.Plugin): 
@@ -41,11 +42,13 @@ class TwityPlugin(b3.plugin.Plugin):
         self._adminPlugin = self.console.getPlugin('admin')
         self.servername = self.console.getCvar("sv_hostname").getString()
         self.api = None
-        self.post_update("Started")
+
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
         self.registerEvent(b3.events.EVT_CLIENT_PUBLIC)
+
+        self.post_update("Started")
 
     def onLoadConfig(self):
         self._username = self.config.get('settings','username')
@@ -68,14 +71,32 @@ class TwityPlugin(b3.plugin.Plugin):
         p = threading.Thread(target=self._twitthis, args=(message,))
         p.start()
         
-    def _twitthis(self, message):
-        try:
-            if self.api is None:
+    def _get_connection(self):
+        # try to connect two times before raise error
+        for i in range(0,2):
+            try:
+                self.debug("Get Twitter connection [%d]" % i)
                 self.api = tw.Api(self._username, self._password)
-            self.api.PostUpdate(message)
-            self.debug("Message posted!")
-        except Exception, e:
-            self.error(e)
+            except:
+                time.sleep(1)
+                self.error(e)
+            else:
+                return True
+        return False
+        
+    def _twitthis(self, message):
+        if not self.api:
+            if not self._get_connection():
+                return
+        for i in range(0,2):
+            try:
+                self.debug("Post update [%d]" % i)
+                self.api.PostUpdate(message)
+                self.debug("Message posted!")
+                return
+            except Exception, e:
+                time.sleep(2)
+                self.error(e)
 
     def _unban_event(self, event):
         message = "%s [%s] was unbanned by %s [%s]" % (event.client.name, event.client.id,event.data.name, event.data.id)

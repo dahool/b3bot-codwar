@@ -72,6 +72,9 @@ class EventschedullerPlugin(b3.plugin.Plugin):
         self._events[type].append(cmd)
     
     def cmd_clearevents(self, data, client, cmd=None):
+        """\
+        clear all events
+        """       
         self._events = {}
         client.message("Events cleared")
         

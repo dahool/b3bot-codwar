@@ -23,7 +23,7 @@
 #
 
 __author__  = 'ThorN, xlr8or'
-__version__ = '2.0.0'
+__version__ = '2.0.1'
 
 
 import ez_setup, os, shutil, sys
@@ -32,7 +32,7 @@ from setuptools import setup, find_packages
 
 _setupinfo = {
     'name' : "b3",
-    'version' : "1.3",
+    'version' : "1.3.2",
     'packages' : find_packages(),
     'extras_require' : { 'mysql' : 'MySQL-python' },
     'package_data' : {
@@ -77,4 +77,6 @@ if len(sys.argv) == 1 or sys.argv[1] == 'release':
     setup(**_setupinfo)
     shutil.copy ('b3.egg-info/PKG-INFO', 'b3/PKG-INFO')
     sys.argv = ['setup.py', 'release']
+    setup(**_setupinfo)
+else:
     setup(**_setupinfo)

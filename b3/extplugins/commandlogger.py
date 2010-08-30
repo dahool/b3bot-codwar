@@ -47,17 +47,21 @@ class CommandloggerPlugin(b3.plugin.Plugin):
         
     def onLoadConfig(self):
         self._min_level = self.config.getint('settings', 'min_level')
+        self._min_cmd_level = self.config.getint('settings', 'min_command_level')
         
     def onEvent(self,  event):
         if event.type == b3.events.EVT_ADMIN_COMMAND:
-            if event.client.maxLevel >= self._min_level:
-                data = event.data[1]
-                if self._adminPlugin:
-                    cid, params = self._adminPlugin.parseUserCmd(data)
-                    cli = self._adminPlugin.findClientPrompt(cid)
-                    if cli:
-                        data = "%s [%s - %s]" % (data,cli.id,cli.name)
-                self.log(event.data[0],event.client, data)
+            command, data, res = event.data
+            if event.client.maxLevel >= self._min_level and command.level >= self._min_cmd_level:
+                try:
+                    if self._adminPlugin and data:
+                        cid, params = self._adminPlugin.parseUserCmd(data)
+                        cli = self._adminPlugin.findClientPrompt(cid)
+                        if cli:
+                            data = "%s [%s - %s]" % (data,cli.id,cli.name)
+                except:
+                    pass
+                self.log(command,event.client, data)
             
     def log(self, command, client, data=None):
         cursor = self.console.storage.query(self._INSERT_QUERY % (command.command, data, client.id, self.console.time()))

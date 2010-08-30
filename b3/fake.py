@@ -71,7 +71,12 @@ if __name__ == '__main__':
     time.sleep(2)
 """
 
-__version__ = '1.2'
+# CHANGELOG
+# 1.3
+#    * add FakeConsole.saybig(msg)
+#    * FakeConsole.write() do not fail when arg is not a string
+
+__version__ = '1.3'
 
 
 import thread
@@ -81,6 +86,7 @@ from b3.plugins.admin import AdminPlugin
 import b3.parsers.punkbuster
 import b3.parser
 import b3.events
+import b3.cvar
 from sys import stdout
 import Queue
 import StringIO
@@ -105,6 +111,8 @@ class FakeConsole(b3.parser.Parser):
         self.storage = FakeStorage()
         self.clients  = b3.clients.Clients(self)
         self.game = b3.game.Game(self, "fakeGame")
+        self.game.mapName = 'ut4_turnpike'
+        self.cvars = {}
         
         if not self.config.has_option('server', 'punkbuster') or self.config.getboolean('server', 'punkbuster'):
             self.PunkBuster = b3.parsers.punkbuster.PunkBuster(self)
@@ -137,9 +145,17 @@ class FakeConsole(b3.parser.Parser):
         """send text to the server"""
         print ">>> %s" % re.sub(re.compile('\^[0-9]'), '', msg).strip()
     
-    def write(self, msg):
+    def saybig(self, msg):
+        """send bigtext to the server"""
+        print "+++ %s" % re.sub(re.compile('\^[0-9]'), '', msg).strip()
+    
+    def write(self, *msg):
         """send text to the console"""
-        print "### %s" % re.sub(re.compile('\^[0-9]'), '', msg).strip()
+        if type(msg) == str:
+            print "### %s" % re.sub(re.compile('\^[0-9]'), '', msg).strip()
+        else:
+            # which happens for BFBC2
+            print "### %s" % msg
     
     def tempban(self, client, reason, duration, admin, silent):
         """tempban a client"""
@@ -173,6 +189,15 @@ class FakeConsole(b3.parser.Parser):
         else:
             print "sending msg to %s: %s" % (client.name, re.sub(re.compile('\^[0-9]'), '', text).strip())
     
+    def getCvar(self, key):
+        print "get cvar %s" % key
+        return self.cvars.get(key)
+
+    def setCvar(self, key, value):
+        print "set cvar %s" % key
+        c = b3.cvar.Cvar(name=key,value=value)
+        self.cvars[key] = c
+        
     ##############################
     
     def error(self, msg, *args, **kwargs):
@@ -403,8 +428,8 @@ class FakeClient(b3.clients.Client):
 
 #####################################################################################
 
-print "creating fakeConsole with @b3/conf/b3.xml"
-fakeConsole = FakeConsole('@b3/conf/b3.xml')
+print "creating fakeConsole with @b3/conf/b3.distribution.xml"
+fakeConsole = FakeConsole('@b3/conf/b3.distribution.xml')
 
 print "creating fakeAdminPlugin with @b3/conf/plugin_admin.xml"
 fakeAdminPlugin = AdminPlugin(fakeConsole, '@b3/conf/plugin_admin.xml')
@@ -413,4 +438,5 @@ fakeAdminPlugin.onStartup()
 joe = FakeClient(fakeConsole, name="Joe", exactName="Joe", guid="zaerezarezar", groupBits=1, team=b3.TEAM_UNKNOWN)
 simon = FakeClient(fakeConsole, name="Simon", exactName="Simon", guid="qsdfdsqfdsqf", groupBits=0, team=b3.TEAM_UNKNOWN)
 moderator = FakeClient(fakeConsole, name="Moderator", exactName="Moderator", guid="sdf455ezr", groupBits=8, team=b3.TEAM_UNKNOWN)
+admin = FakeClient(fakeConsole, name="Level-40-Admin", exactName="Level-40-Admin", guid="875sasda", groupBits=16, team=b3.TEAM_UNKNOWN)
 superadmin = FakeClient(fakeConsole, name="God", exactName="God", guid="f4qfer654r", groupBits=128, team=b3.TEAM_UNKNOWN)

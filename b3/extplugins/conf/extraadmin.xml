@@ -21,6 +21,7 @@
       <set name="groups">90</set>
       <set name="pamaps-maps">2</set>
       <set name="makereg-mr">40</set>
+      <set name="who">1</set>
     </settings>
 
     <settings name="maprotation">

@@ -1,0 +1,4 @@
+<configuration plugin="chatlogger">
+	<settings name="settings">
+	</settings>
+</configuration>

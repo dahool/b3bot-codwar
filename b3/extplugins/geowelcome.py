@@ -32,8 +32,13 @@
 # 04-28-2010 - 1.1.0 - SGT
 # Move whereis command from locator plugin
 # Add country filter from countryfilter plugin
+# 1.1.1 - SGT
+# fix minor error in !wis
+# 08-24-2010 - 1.1.2 - SGT
+# Change in broadcast for cod servers
+# Added some more debugs logs
 
-__version__ = '1.1.0'
+__version__ = '1.1.2'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -198,9 +203,18 @@ class GeowelcomePlugin(WelcomePlugin):
                 info = {
                     'name'  : client.exactName,
                     'country'  : translate(self._country_format % self.get_client_location(client)),
-                }        
-                self.console.write(self.getMessage('broadcast', info))
-    
+                }
+                self.debug('Connected %s from %s' % (client.ip,info['country']))
+                self.debug('Broadcasting location')
+                if self.console.gameName.startswith('cod'):
+                    self.console.say(self.getMessage('broadcast', info))
+                else:
+                    self.console.write(self.getMessage('broadcast', info))
+            else:
+                self.debug('Broadcasting disable or client doesn\'t have location data')
+        else:
+            self.debug('Broadcasting location')
+            
     def welcome(self, client):
         _timeDiff = 0
         if client.lastVisit:
@@ -234,6 +248,7 @@ class GeowelcomePlugin(WelcomePlugin):
                 info['country'] = translate(self._country_format % self.get_client_location(client))
             
             if client.connections >= 2:
+                self.debug('Newb welcome')
                 if client.maskedGroup:
                     if self._welcomeFlags & 16:
                         client.message(self.getMessage('user', info))
@@ -246,6 +261,7 @@ class GeowelcomePlugin(WelcomePlugin):
                     else:
                         self.console.say(self.getMessage('announce_user', info))
             else:
+                self.debug('User welcome')
                 if self._welcomeFlags & 4:
                     client.message(self.getMessage('first', info))
                 if self._welcomeFlags & 8:
@@ -261,8 +277,13 @@ class GeowelcomePlugin(WelcomePlugin):
         else:
             if _timeDiff <= 3600:
                 self.debug('Client already welcomed in the past hour')
-
+            else:
+                self.debug('Client disconnected')
+                
     def cmd_locate(self, data, client, cmd=None):
+        """\
+        <name> - show where the user is connected from
+        """
         input = self._adminPlugin.parseUserCmd(data)
         if input:
             # input[0] is the player id
@@ -275,7 +296,7 @@ class GeowelcomePlugin(WelcomePlugin):
             client.message('^7Invalid data, try !help whereis')
             return False
       
-        country = translate(self._country_format % self.get_client_location(client))
+        country = translate(self._country_format % self.get_client_location(sclient))
         if country:
             client.message('^3%s [@%s] ^7is connected from ^3%s' % (sclient.name,str(sclient.id),country)) 
         else:

@@ -157,7 +157,6 @@ class CensorPlugin(b3.plugin.Plugin):
 
             if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
                 self.checkBadName(event.client)
-
             elif len(event.data) > self._ignoreLength:
                 if event.type == b3.events.EVT_CLIENT_SAY or \
                    event.type == b3.events.EVT_CLIENT_TEAM_SAY:
@@ -234,15 +233,17 @@ if __name__ == '__main__':
 
     fakeConsole.noVerbose = True
     joe._maxLevel = 0
+    joe.cid = 1
     joe.connected = True
     
-    #p.onEvent(b3.events.Event(b3.events.EVT_CLIENT_SAY, "fuck", joe))
-    joe.says('hello')
-    joe.says('fuck')
-    joe.says('nothing wrong')
-    joe.says('ass')
-    joe.says('shit')
-    
-    time.sleep(2)
-    
-    
+    joe.says("puta")
+    joe.says("put")
+    joe.says("pelotudo")
+    joe.says("comela")
+    joe.says("idiota")
+    joe.says("fuck")
+    joe.says("www.pepe.com")
+    joe.says("para otro lado")
+    joe.says("trola")
+ 
+    time.sleep(2)    

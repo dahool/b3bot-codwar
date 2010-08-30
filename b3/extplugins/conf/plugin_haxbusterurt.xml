@@ -1,0 +1,8 @@
+<configuration plugin="haxbusterurt">
+	<settings name="settings">
+	  <!-- Do you accept clients with an empty cl_guid ? -->
+		<set name="allow_empty_guid">no</set>
+		<!-- Do you want to kick players with bad guid ? -->
+		<set name="kick_bad_guid">yes</set>
+	</settings>
+</configuration>

@@ -74,10 +74,15 @@ class StatusPlugin(b3.plugin.Plugin):
         if self._cronTab:
             # remove existing crontab
             self.console.cron - self._cronTab
+        self._createCrontab(self._interval)
 
-        self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % self._interval)
+    def _createCrontab(self, interval):
+        if interval > 60:
+            self._cronTab = b3.cron.PluginCronTab(self, self.update, 0, '*/%s' % str(interval/60))    
+        else:
+            self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % interval)
         self.console.cron + self._cronTab
-
+        
     def onEvent(self, event):
         if event.type == b3.events.EVT_STOP:
             self.info('B3 stop/exit.. updating status')
@@ -94,15 +99,13 @@ class StatusPlugin(b3.plugin.Plugin):
             if not self._matchMode:
                 # install new crontab
                 self.console.cron - self._cronTab
-                self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % self._matchinterval)
-                self.console.cron + self._cronTab
+                self._createCrontab(self._matchinterval)
                 self._matchMode = True
         else:
             if self._matchMode:
                 # install new crontab
                 self.console.cron - self._cronTab
-                self._cronTab = b3.cron.PluginCronTab(self, self.update, '*/%s' % self._interval)
-                self.console.cron + self._cronTab            
+                self._createCrontab(self._interval)
                 self._matchMode = False
             
         clients = self.console.clients.getList()

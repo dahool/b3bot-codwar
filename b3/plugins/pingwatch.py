@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    04/23/2010 - 1.2.2 - Bakes
+#    Fix to !ci after bug reported by sgt
 #    03/28/2010 - 1.2.1 - xlr8or
 #    add default _minLevel for !ci if config option is missing
 #    03/21/2010 - 1.2.0 - Bakes
@@ -27,7 +29,7 @@
 #    Converted to use new event handlers
 
 __author__  = 'ThorN'
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 
 
 

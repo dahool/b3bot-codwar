@@ -70,8 +70,8 @@
     </settings>
 
   <settings name="teambalancer">
-    <!-- tinterval sets checking intervals in minutes, 0 disables function -->
-    <set name="tinterval">1</set>
+    <!-- tinterval sets checking intervals in seconds, 0 disables function -->
+    <set name="tinterval">30</set>
     <!-- how much difference should we tolerate -->
     <set name="teamdifference">1</set>
     <!-- maxlevel and above won't be balanced so admins can help weaker teams -->
@@ -124,7 +124,7 @@
   </gametype_tdm>
 
   <pamatch_settings>
-    <cvar name="timelimit" status="on">20</cvar>
+    <!-- cvar name="timelimit" status="on">20</cvar -->
     <cvar name="g_mapcycle" status="on">mapcycle_std.txt</cvar>
     <cvar name="g_mapcycle" status="off">mapcycle.txt</cvar>
     <cvar name="g_waverespawns" status="on">1</cvar>
@@ -134,7 +134,7 @@
   <settings name="speccheck">
     <!-- sinterval sets checking intervals in minutes, 0 disables function -->
     <!-- it will warn 3 times before kick, so kick after: maxspectime + 3 * sinterval -->
-    <set name="sinterval">2</set>
+    <set name="sinterval">1</set>
     <!-- how long a player may idle in spec in minutes -->
     <set name="maxspectime">5</set>
     <!-- with how many players do we consider the server full and start checking spectators -->
@@ -155,7 +155,7 @@
     <set name="g_password">entrando</set>
     <set name="usedic">True</set>
     <set name="randnum">0</set>
-    <set name="dicfile">/home/gabriel/urbanterror/passdic.txt</set>
+    <set name="dicfile">/home/gabriel/.q3a/q3ut4/passdic.txt</set>
     </settings>
 
   <pamatch_plugins_disable>
@@ -167,6 +167,7 @@
     <plugin>censor</plugin>
     <plugin>spamcontrol</plugin>
     <plugin>follow</plugin>
+    <plugin>flagstats</plugin>
   </pamatch_plugins_disable>
 
   <!-- BOTSUPPORT IS VERY UNSTABLE! IT MAY CRASH YOUR SERVER PLENTY! -->
@@ -201,7 +202,7 @@
     <!-- Advise victims to wear kevlar? -->
     <set name="warn_kevlar">True</set>
     <!-- After how many torso hits? -->
-    <set name="warn_kevlar_nr">50</set>
+    <set name="warn_kevlar_nr">40</set>
     </settings>
 
   <settings name="rotationmanager">
