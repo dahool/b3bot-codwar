@@ -1,6 +1,9 @@
 <configuration plugin="twity">
 	<settings name="settings">
-		<set name="username">----</set>
-		<set name="password">----</set>
+		<set name="consumer_key">---</set>
+		<set name="consumer_secret">---</set>
+		<set name="access_token">---</set>
+		<set name="secret_token">---</set>
+		<set name="showpassword">false</set>
 	</settings>
 </configuration>

@@ -18,7 +18,7 @@
 #
 
 __author__  = 'Lake'
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -45,14 +45,16 @@ class IpdbPlugin(b3.plugin.Plugin):
     def onStartup(self):
         if self._cronTab:
             self.console.cron - self._cronTab
-        self._cronTab = b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval)
-        self.console.cron + self._cronTab
         self._rpc_proxy = xmlrpclib.ServerProxy("http://ipdbs.com.ar/api/")
         self.debug('Update server name')
         try:
             self._rpc_proxy.server.updateName(self._key, self._hostname)
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
+        else:
+            # activate only if the remote server is working
+            self._cronTab = b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval)
+            self.console.cron + self._cronTab
             
     def onLoadConfig(self):
         self._interval = self.config.getint('settings', 'interval')

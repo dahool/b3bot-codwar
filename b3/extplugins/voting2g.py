@@ -159,7 +159,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
         client.var(self, self._votedmark).value = True #The caller of the vote votes yes by default
         
         reason = self._currentVote.vote_reason()
-        self.debug("Calling a vote " + reason)
+        self.bot("Calling a vote " + reason)
         self.console.say(self.getMessage('call_vote', reason))
         self.console.say(self.getMessage('vote_notice'))
         self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
@@ -170,6 +170,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
         """      
         self.hold_vote()
         self._cleanup()
+        self.bot("Vote vetoed")
         self.console.say(self.getMessage('vote_veto'))
         
     def cmd_cancel(self, data, client, cmd=None):
@@ -177,6 +178,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
         cancel current vote and cleanup
         """
         self._cleanup()
+        self.bot("Vote cancelled")
         self.console.say(self.getMessage('vote_cancel'))
 
     def update_vote(self):
@@ -201,7 +203,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
     def end_vote(self):
         self.console.say(self.getMessage('vote_end'))
         self.console.say(self.getMessage('vote_status', self._yes, self._no))
-        self.debug("Vote results: Yes: %s^7, No: %s" %(self._yes,  self._no))
+        self.bot("Vote results: Yes: %s^7, No: %s" %(self._yes,  self._no))
         if self._yes > self._no:
             self._currentVote.end_vote_yes(self._yes,  self._no)
         else:
@@ -345,6 +347,7 @@ class KickVote(Vote):
             self.console.say(self._parent.getMessage('novotes'))
             return
         if self._victim.connected:
+            self.bot("^1KICKING ^3%s" % self._victim.exactName)
             self.console.say("^1KICKING ^3%s" % self._victim.exactName)
             self._victim.kick("by popular vote (%s)" % self._reason,  None)
 
@@ -393,6 +396,7 @@ class MapVote(Vote):
             self.console.say(self._parent.getMessage('novotes'))
             return
         self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
+        self.bot("Changing map to %s" % self._map)
         self.console.say(self._parent.getMessage('change_map', self._map))
         time.sleep(1)
         self.console.write("map %s" %self._map)
@@ -427,6 +431,7 @@ class NextMapVote(MapVote):
             return
         self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
         self._voted = True
+        self.bot("Changing next map to %s" % self._map)
         self.console.write( 'g_nextmap "%s"' % self._map)
         self.console.say(self._parent.getMessage('next_map', self._map))
 
@@ -479,6 +484,7 @@ class ShuffleVote(Vote):
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
             self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
+            self.bot("Shuffling")
             self.console.say(self._parent.getMessage('shuffle'))
             self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
 
@@ -500,6 +506,7 @@ class CycleMapVote(Vote):
         if yes < self.min_votes:
             self.console.say(self._parent.getMessage('novotes'))
             return
+        self.bot("Cycling map")
         self.console.say(self._parent.getMessage('cycle'))
         time.sleep(1)
         self.console.write('cyclemap')
