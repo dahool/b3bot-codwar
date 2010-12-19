@@ -1,0 +1,35 @@
+<configuration plugin="knifer">
+    <!-- levels (from weaponcontrol)
+        0 : guest
+        1 : user
+        2 : regular
+        20 : moderator
+        40 : admin
+        60 : fulladmin
+        80 : senioradmin
+        100 : superadmin
+      -->
+    <settings name="settings">
+        <set name="enabled">1</set>
+        <set name="minlevel">60</set>
+        <set name="nbtop">5</set>
+        <!-- From xlrstats conf file -->
+        <set name="knifeid">12</set>
+        <set name="knifefactor">2</set>
+        <set name="challengeduration">240</set>
+        <set name="db_table_hof">plugin_knife_hof</set>
+        <set name="db_map_name">map_name</set>
+        <set name="db_playerid">playerid</set>
+        <set name="db_score">score</set>
+        <set name="db_time">time_add</set>
+    </settings>
+    <settings name="messages">
+        <set name="msg_10">^3$name ^4$score ^7acuchilladas!</set>
+        <set name="msg_15">^3$name ^4$score ^7acuchilladas, cuidense de ^4su ^7cuchi!</set>
+        <set name="msg_20">^4$score ^7muertes: ^3$name ^7pelotudo ponete a jugar y deja el cuchi!!</set>
+        <set name="msg_25">^4$score ^7acuchilladas: ^3$name es un ^1carnicero!</set>
+        <set name="msg_35">^4$score ^7acuchilladas!? ^2WTF...</set>
+        <set name="msg_50">^4$score ^7acuchilladas -> ^3$name ^7maldito enfermo!!!</set>
+        <set name="msg_55">^3$name: ^4Sobrecarga ^7demasiadas acuchilladas</set>
+    </settings>
+</configuration>

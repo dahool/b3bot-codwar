@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -157,6 +157,7 @@ class CensorPlugin(b3.plugin.Plugin):
 
             if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
                 self.checkBadName(event.client)
+
             elif len(event.data) > self._ignoreLength:
                 if event.type == b3.events.EVT_CLIENT_SAY or \
                    event.type == b3.events.EVT_CLIENT_TEAM_SAY:

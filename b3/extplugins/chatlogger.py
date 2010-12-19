@@ -14,9 +14,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-#
+# 
+# 20-10-2010 - 1.0.2
+# Escape texts 
 
-__version__ = '1.0.0'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3
@@ -28,15 +30,18 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     CREATE TABLE chatlog (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY ,
         data VARCHAR( 100 ) NULL ,
+        info VARCHAR( 255 ) NULL ,
         target VARCHAR( 50 ) NULL ,
         client_id INT( 11 ) UNSIGNED NOT NULL ,
         time_add INT( 11 ) UNSIGNED NOT NULL
     ) ENGINE = MYISAM;
     ALTER TABLE chatlog ADD INDEX (client_id);
     ALTER TABLE chatlog ADD INDEX (time_add);
+    ALTER TABLE chatlog ADD INDEX (data);
     '''
+    requiresConfigFile = False
     
-    _INSERT_QUERY = "INSERT INTO chatlog (data, client_id, time_add, target) VALUES ('%s', %d, %d, '%s')"
+    _INSERT_QUERY = "INSERT INTO chatlog (data, client_id, time_add, target, info) VALUES ('%s', %d, %d, '%s', '%s')"
     
     _TEAM_NAME = {-1: 'UNKNOWN',
                  1: 'SPEC',
@@ -60,5 +65,10 @@ class ChatloggerPlugin(b3.plugin.Plugin):
             thread.start_new_thread(self.log, (event.data, event.client, target))
             
     def log(self, text, client, target=None):
-        cursor = self.console.storage.query(self._INSERT_QUERY % (text, client.id, self.console.time(), target))
+        try:
+            info = self.console.game.mapName
+        except:
+            info = ''
+        text = text.replace("""'""", """''""")
+        cursor = self.console.storage.query(self._INSERT_QUERY % (text, client.id, self.console.time(), target, info))
         cursor.close()

@@ -1,0 +1,36 @@
+<configuration plugin="Nader">
+    <!-- levels (from weaponcontrol)
+        0 : guest
+        1 : user
+        2 : regular
+        20 : moderator
+        40 : admin
+        60 : fulladmin
+        80 : senioradmin
+        100 : superadmin
+      -->
+
+	<settings name="settings">
+		<set name="enabled">1</set>
+		<set name="minlevel">40</set>
+		<set name="nbtop">5</set>
+        <!-- From xlrstats conf file -->
+        <set name="hegrenadeid">25</set>
+        <set name="nadefactor">2</set>
+        <set name="challengeduration">240</set>
+        <set name="db_table_hef">plugin_nader_hef</set>
+        <set name="db_map_name">map_name</set>
+        <set name="db_playerid">playerid</set>
+        <set name="db_score">score</set>
+        <set name="db_time">time_add</set>
+	</settings>
+    <settings name="messages">
+        <set name="msg_5">Ya volaron ^4$score gracias a las HE de ^3$name</set>
+        <set name="msg_10">ojo,^3$name lleva ^4$score ^7HE efectivas!</set>
+        <set name="msg_15">^3$name: ^4$score ^7muertos por HE, cuidense!</set>
+        <set name="msg_20">^4$score ^7muertos: ^3$name ^7WTF!</set>
+        <set name="msg_30">^4$score ^7muertos por sus HE!!!, ^3$name ^7quitate el cheat :)</set>
+        <set name="msg_40">^3$name ^7maldito enfermo, ^4$score ^7muertos por HE, para un poco!!!</set>
+        <set name="msg_55">^3$name : ^4Sobrecarga ^7demasiadas HE</set>
+    </settings>
+</configuration>

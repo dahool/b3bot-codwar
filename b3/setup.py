@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2009 Mark "xlr8or" Weirath
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -30,9 +30,11 @@
 #      this means that people who spam or swear in admin commands are
 #      warned, rather than the event just being handled in the admin
 #      plugin and veto'd elsewhere.
+# 2010/10/11 - 0.5 - xlr8or
+#    * added MOH support
 
 __author__  = 'xlr8or'
-__version__ = '0.4'
+__version__ = '0.5.1'
 
 import platform, urllib2, shutil, os, sys, time, zipfile
 from functions import main_is_frozen
@@ -49,7 +51,8 @@ class Setup:
     _config = "b3/conf/b3.xml"
     _buffer = ''
     _equaLength = 15
-    _PBSupportedParsers = ['cod','cod2','cod4','cod5']
+    _PBSupportedParsers = ['cod','cod2','cod4','cod5'] #bfbc2 and moh need to be added later when parsers correctly implemented pb. 
+    _frostBite = ['bfbc2', 'moh']
  
     def __init__(self, config=None):
         if config:
@@ -90,7 +93,7 @@ class Setup:
         # B3 settings
         self.add_buffer('--B3 SETTINGS---------------------------------------------------\n')
         xml.start("settings", name="b3")
-        self.add_set("parser", "cod", "Define your game: cod/cod2/cod4/cod5/iourt41/etpro/wop/smg/bfbc2")
+        self.add_set("parser", "cod", "Define your game: cod/cod2/cod4/cod5/iourt41/etpro/wop/smg/bfbc2/moh")
         self.add_set("database", "mysql://b3:password@localhost/b3", "Your database info: [mysql]://[db-user]:[db-password]@[db-server[:port]]/[db-name]")
         self.add_set("bot_name", "b3", "Name of the bot")
         self.add_set("bot_prefix", "^0(^2b3^0)^7:", "Ingame messages are prefixed with this code, you can use colorcodes")
@@ -102,16 +105,36 @@ class Setup:
         xml.end()
         xml.data("\n\t")
         
+        # BFBC2 specific settings
+        if self._set_parser == 'bfbc2':
+            self.add_buffer('\n--BFBC2 SPECIFIC SETTINGS---------------------------------------\n')
+            xml.start("settings", name="bfbc2")
+            self.add_set("max_say_line_length", "100", "how long do you want the lines to be restricted to in the chat zone. (maximum length is 100)")
+            xml.data("\n\t")
+            xml.end()
+            xml.data("\n\t")
+
+        # MOH specific settings
+        if self._set_parser == 'moh':
+            self.add_buffer('\n--MOH SPECIFIC SETTINGS-----------------------------------------\n')
+            xml.start("settings", name="moh")
+            self.add_set("max_say_line_length", "100", "how long do you want the lines to be restricted to in the chat zone. (maximum length is 100)")
+            xml.data("\n\t")
+            xml.end()
+            xml.data("\n\t")
+
         # server settings
         self.add_buffer('\n--GAME SERVER SETTINGS------------------------------------------\n')
         xml.start("settings", name="server")
-        if self._set_parser == 'bfbc2':
+        # Frostbite specific
+        if self._set_parser in self._frostBite:
             self.add_set("public_ip", "11.22.33.44", "The IP address of your gameserver")
             self.add_set("port", "", "The port people use to connect to your gameserver")
             self.add_set("rcon_ip", "11.22.33.44", "The IP that the bot uses to send RCON commands. Usually the same as the public_ip")
             self.add_set("rcon_port", "", "The port that the bot uses to send RCON commands. NOT the same as the normal port.")
             self.add_set("rcon_password", "", "The RCON password of your gameserver.")
             self.add_set("timeout", "3", "RCON timeout", silent=True)
+        # Q3Aa specific
         else:   
             self.add_set("rcon_password", "", "The RCON pass of your gameserver")
             self.add_set("port", "28960", "The port the server is running on")
@@ -123,6 +146,7 @@ class Setup:
             self.add_set("game_log", "games_mp.log", "The gameserver generates a logfile, put the path and name here")
             self.add_set("public_ip", "127.0.0.1", "The public IP your gameserver is residing on")
             self.add_set("rcon_ip", "127.0.0.1", "The IP the bot can use to send RCON commands to (127.0.0.1 when on the same box)")
+
         # determine if PunkBuster is supported
         if self._set_parser in self._PBSupportedParsers:
             self.add_set("punkbuster", "on", "Is the gameserver running PunkBuster Anticheat: on/off")
@@ -195,7 +219,7 @@ class Setup:
         xml.data("\t\t")
         xml.comment("plugin config=\"@b3/extplugins/conf/newplugin.xml\" name=\"newplugin\"")
         self.add_plugin("xlrstats", self._set_external_dir+"/conf/xlrstats.xml", default="no")
-        #self.add_plugin("registered", self._set_external_dir+"/conf/plugin_registered.xml", "Trying to download Registered", "http://www.bigbrotherbot.com/forums/downloads/?sa=downfile&id=22")
+        #self.add_plugin("registered", self._set_external_dir+"/conf/plugin_registered.xml", "Trying to download Registered", "http://www.bigbrotherbot.net/forums/downloads/?sa=downfile&id=22")
         #self.add_plugin("countryfilter", self._set_external_dir+"/conf/countryfilter.xml", "Trying to download Countryfilter", "http://github.com/xlr8or/b3-plugin-countryfilter/zipball/master")
 
         # final comments
@@ -336,7 +360,7 @@ class Setup:
         print "you can always revert to a previous version of the config file."
         print ""
         print "This procedure is new, bugs may be reported on our forums at"
-        print "www.bigbrotherbot.com"
+        print "www.bigbrotherbot.net"
         self.testExit(_question='[Enter] to continue to generate the configfile...')
 
     def testExit(self, _key='', _question='[Enter] to continue, \'abort\' to abort Setup: ', _exitmessage='Setup aborted, run python b3_run.py -s to restart the procedure.'):

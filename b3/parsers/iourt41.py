@@ -1,5 +1,5 @@
 #
-# ioUrT Parser for BigBrotherBot(B3) (www.bigbrotherbot.com)
+# ioUrT Parser for BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2008 Mark Weirath (xlr8or@xlr8or.com)
 #
 # This program is free software; you can redistribute it and/or modify
@@ -82,7 +82,7 @@
 #    * add new UrT specific event : EVT_CLIENT_GEAR_CHANGE
 # v1.7.1 - 30/12/2009 - Courgette
 #    * Say, Sayteam and Saytell lines do not trigger name change anymore and detect the UrT bug described
-#      in http://www.bigbrotherbot.com/forums/urt/b3-bot-sometimes-mix-up-client-id%27s/ . Hopefully this
+#      in http://www.bigbrotherbot.net/forums/urt/b3-bot-sometimes-mix-up-client-id%27s/ . Hopefully this
 #      definitely fixes the wrong aliases issue.
 # v1.7.2 - 30/12/2009 - Courgette
 #    * improve say lines slot bug detection for cases where no player exists on slot 0. 
@@ -108,10 +108,12 @@
 #    * bigsay() function can be used by plugins.
 # v1.7.11 - 15/04/2010 - Courgette
 #    * add debugging info for getNextMap()
+# v1.7.12 - 28/05/2010 - xlr8or
+#    * connect bots
 
 
 __author__  = 'xlr8or'
-__version__ = '1.7.11'
+__version__ = '1.7.12'
 
 
 import b3.parsers.q3a
@@ -520,8 +522,16 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
     # Parse Userinfo
     def OnClientuserinfo(self, action, data, match=None):
         #2 \ip\145.99.135.227:27960\challenge\-232198920\qport\2781\protocol\68\battleye\1\name\[SNT]^1XLR^78or\rate\8000\cg_predictitems\0\snaps\20\model\sarge\headmodel\sarge\team_model\james\team_headmodel\*james\color1\4\color2\5\handicap\100\sex\male\cl_anonymous\0\teamtask\0\cl_guid\58D4069246865BB5A85F20FB60ED6F65
+        #conecting bot:
+        #0 \gear\GMIORAA\team\blue\skill\5.000000\characterfile\bots/ut_chicken_c.c\color\4\sex\male\race\2\snaps\20\rate\25000\name\InviteYourFriends!
         bclient = self.parseUserInfo(data)
         
+        if not bclient.has_key('cl_guid') and bclient.has_key('skill'):
+            # must be a bot connecting
+            self.bot('Bot Connecting!')
+            bclient['ip'] = '0.0.0.0'
+            bclient['cl_guid'] = 'BOT' + str(bclient['cid'])
+
         if bclient.has_key('name'):
             # remove spaces from name
             bclient['name'] = bclient['name'].replace(' ','')
@@ -1090,8 +1100,10 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
                     # ignore them, let them not bother us with errors
                     pass
                 else:
-                    players[str(m.group('slot'))] = int(m.group('ping'))
-
+	            try:
+                        players[str(m.group('slot'))] = int(m.group('ping'))
+                    except:
+			players[str(m.group('slot'))] = 999
         return players
 
     def sync(self):

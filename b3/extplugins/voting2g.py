@@ -35,7 +35,7 @@
 # Add min positive votes params
 # Configurable messages
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 __author__  = 'SGT'
 
 import sys
@@ -63,6 +63,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _vote_interval = 0
 
     _votes = {}
+    _lastmaps = []
+    _lastmap_max = 5
     
     def startup(self):
         """\
@@ -77,6 +79,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
             return False
         
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
+        self.registerEvent(b3.events.EVT_GAME_EXIT)
         self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
 
         self._vote_times = self.config.getint('settings', 'vote_times')
@@ -115,7 +118,11 @@ class Voting2GPlugin(b3.plugin.Plugin):
     def onEvent(self, event):
         if event.type == b3.events.EVT_GAME_WARMUP:
             self._cleanup(True)
-
+        elif event.type == b3.events.EVT_GAME_EXIT:
+            if len(self._lastmaps) == self._lastmap_max:
+                self._lastmaps.pop(0)
+            self._lastmaps.append(self.console.game.mapName)
+            
     def _cleanup(self, init=False):
         self.debug("Cleanning votes")
         self._in_progress = False
@@ -376,6 +383,10 @@ class MapVote(Vote):
         s = m[0]
         try:
             self._map = maplist.findMap(self.console, data)
+            if self._map in self._parent._lastmaps:
+                self._parent.bot("Map %s already played" % self._map)
+                client.message(self._parent.getMessage('map_played', self._map))
+                return False
             return True
         except Exception, e:
             client.message('^7%s' % str(e))
@@ -391,7 +402,7 @@ class MapVote(Vote):
         return self._parent.getMessage('reason_map', self._map)
 
     def end_vote_yes(self,  yes,  no):
-        if yes < self.min_votes:
+        if (yes-no) < self.min_votes:
             self.console.say(self._parent.getMessage('novotes'))
             return
         self.console.queueEvent(self.console.getEvent('EVT_VOTEMAP_COMMAND', (self._map,), self.client))
@@ -458,6 +469,7 @@ class ShuffleVote(Vote):
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
     
     def _shuffle(self):
+        self._parent.bot("Performing shuffle")
         if self._extraAdminPlugin:
             self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
         else:
@@ -483,7 +495,7 @@ class ShuffleVote(Vote):
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
             self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
-            self._parent.bot("Shuffling")
+            self._parent.bot("Will try shuffle in next round")
             self.console.say(self._parent.getMessage('shuffle'))
             self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
 

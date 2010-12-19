@@ -32,8 +32,9 @@
 #    quickest flag award separated from max flag award.
 #    cmd !flag also give best personnal time
 #    add tests
+# 0.6.0 : SGT - Save map stats to db
 
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 __author__  = 'Beber888'
 
 
@@ -48,6 +49,26 @@ class FlagStats:
     
 #--------------------------------------------------------------------------------------------------
 class FlagstatsPlugin(b3.plugin.Plugin):
+    '''
+    CREATE TABLE `flagstats` (
+    `mapname` VARCHAR( 255 ) NOT NULL ,
+    `most_capture_client` INT( 11 ) UNSIGNED NOT NULL ,
+    `most_capture_score` INT( 11 ) UNSIGNED NOT NULL ,
+    `most_capture_timeadd` INT( 11 ) UNSIGNED NOT NULL ,
+    `quick_capture_client` INT( 11 ) UNSIGNED NOT NULL ,
+    `quick_capture_score` FLOAT( 20, 2 ) UNSIGNED NOT NULL ,
+    `quick_capture_timeadd` INT( 11 ) UNSIGNED NOT NULL ,
+    PRIMARY KEY ( `mapname` ) ,
+    INDEX ( `most_capture_client` , `quick_capture_client` )
+    ) ENGINE = MYISAM     
+    '''
+
+    _INSERT_QUERY = "INSERT INTO `flagstats` VALUES ('%s', %d, %d, %d, %d, %f, %d)"
+    _UPDATE_QUERY = "UPDATE `flagstats` SET %s=%d, %s=%d, %s=%d, %s=%d, %s=%f, %s=%d WHERE mapname='%s'"
+    _UPDATE_QUERY_D = "UPDATE `flagstats` SET %s=%d, %s=%d, %s=%d WHERE mapname='%s'"
+    _UPDATE_QUERY_F = "UPDATE `flagstats` SET %s=%d, %s=%f, %s=%d WHERE mapname='%s'"
+    _SELECT_QUERY = "SELECT * FROM `flagstats` WHERE `mapname` = '%s'"
+    
     _adminPlugin = None
     _reset_flagstats_stats = None
     _min_level_flagstats_cmd = None
@@ -107,7 +128,9 @@ class FlagstatsPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_GAME_FLAG_RETURNED)
         self.registerEvent(b3.events.EVT_GAME_EXIT)
         self.registerEvent(b3.events.EVT_GAME_ROUND_END)
-
+        self.registerEvent(b3.events.EVT_GAME_ROUND_START)
+        
+        self.query = self.console.storage.query
         
     def onEvent(self, event):
         """\
@@ -121,7 +144,8 @@ class FlagstatsPlugin(b3.plugin.Plugin):
             elif event.type == b3.events.EVT_GAME_EXIT or \
                     event.type == b3.events.EVT_GAME_ROUND_END:
                 self.handle_gameexit(event)
-        
+            elif (event.type == b3.events.EVT_GAME_ROUND_START):
+                self.show_halloffame()
 
     def init_flagstats_stats(self, client):
         # initialize the clients flag stats
@@ -278,17 +302,23 @@ class FlagstatsPlugin(b3.plugin.Plugin):
                 plurial = ''
                 if self.maxFlagBlue > 1:
                     plurial = 's'
-                self.console.say('^2Most Red Flag Award : %s^3 (^6%s^3 Flag%s)'%(self.maxFlagClientsBlue.name, self.maxFlagBlue, plurial))
+                self.console.write('^2Most Red Flag Award : %s^3 (^6%s^3 Flag%s)'%(self.maxFlagClientsBlue.name, self.maxFlagBlue, plurial))
             if self.maxFlagClientsRed is not None:
                 plurial = ''
                 if self.maxFlagRed > 1:
                     plurial = 's'
-                self.console.say('^2Most Blue Flag Award : %s^3 (^6%s^3 Flag%s)'%(self.maxFlagClientsRed.name, self.maxFlagRed, plurial))  
+                self.console.write('^2Most Blue Flag Award : %s^3 (^6%s^3 Flag%s)'%(self.maxFlagClientsRed.name, self.maxFlagRed, plurial))  
             if self.minTimeClientBlue is not None:
-                self.console.say('^2Quickest Red Flag Award : %s^3 (^6%0.2f^3 Sec)'%(self.minTimeClientBlue.name, self.MinTimeBlue))
+                self.console.write('^2Quickest Red Flag Award : %s^3 (^6%0.2f^3 Sec)'%(self.minTimeClientBlue.name, self.MinTimeBlue))
             if self.minTimeClientRed is not None:
-                self.console.say('^2Quickest Blue Flag Award : %s^3 (^6%0.2f^3 Sec)'%(self.minTimeClientRed.name, self.MinTimeRed))
-             
+                self.console.write('^2Quickest Blue Flag Award : %s^3 (^6%0.2f^3 Sec)'%(self.minTimeClientRed.name, self.MinTimeRed))
+
+        try:
+            self.saveData()
+        except Exception, e:
+            self.error("Couldn't update hall of fame")
+            self.error(str(e))
+            
         if self._reset_flagstats_stats:
             for c in self.console.clients.getList():
                 self.init_flagstats_stats(c)
@@ -304,6 +334,124 @@ class FlagstatsPlugin(b3.plugin.Plugin):
         self.FlagRedTaken = 0
         self.FlagBlueTaken = 0
         
+    def show_halloffame(self):
+        current = self.getRecord()
+        if current:
+            holder, score = current['most']
+            if holder:
+                if score > 1:
+                    plurial = 's'
+                else:
+                    plurial = ''
+                self.console.write('^2Most Captured Flags on this map: %s^3 (^6%s^3 Flag%s)'%(holder, str(score), plurial))
+                
+            holder, score = current['quick']
+            if holder:
+                self.console.write('^2Quickest Flag on this map: %s^3 (^6%0.2f^3 Sec)'%(holder, score))
+        return
+        
+    def saveData(self):
+        maxClient = None
+        maxScore = 0
+        quickClient = None
+        quickScore = 999
+        q = None
+        
+        if self.maxFlagClientsBlue:
+            maxClient = self.maxFlagClientsBlue
+            maxScore = self.maxFlagBlue
+        if self.maxFlagClientsRed:
+            if self.maxFlagRed > maxScore:
+                maxClient = self.maxFlagClientsRed
+                maxScore = self.maxFlagRed
+            #elif self.maxFlagRed == maxScore:
+        if self.minTimeClientBlue:
+            quickClient = self.minTimeClientBlue
+            quickScore = self.MinTimeBlue
+        if self.minTimeClientRed:
+            if self.MinTimeRed < quickScore:
+                quickScore = self.MinTimeRed
+                quickClient = self.minTimeClientRed
+            #elif self.MinTimeRed == quickScore:
+                
+        current = self.getRecord()
+
+        if current:
+            holder, score = current['most']
+            if maxScore > score:
+                q = self._UPDATE_QUERY_D % ('most_capture_client',maxClient.id,
+                                    'most_capture_score',maxScore,
+                                    'most_capture_timeadd', self.console.time(),
+                                    self.console.game.mapName)
+            holder, score = current['quick']
+            if quickScore < score:
+                if q:
+                    q = self._UPDATE_QUERY % ('most_capture_client',maxClient.id,
+                                        'most_capture_score',maxScore,
+                                        'most_capture_timeadd', self.console.time(),
+                                        'quick_capture_client', quickClient.id,
+                                        'quick_capture_score', quickScore,
+                                        'quick_capture_timeadd', self.console.time(),
+                                        self.console.game.mapName)
+                else:
+                    q = self._UPDATE_QUERY_D % ('quick_capture_client', quickClient.id,
+                                        'quick_capture_score', quickScore,
+                                        'quick_capture_timeadd', self.console.time(),
+                                        self.console.game.mapName)                    
+        else:
+            if maxClient and quickClient:
+                q = self._INSERT_QUERY % (self.console.game.mapName,
+                                            maxClient.id,
+                                            maxScore,
+                                            self.console.time(),
+                                            quickClient.id,
+                                            quickScore,
+                                            self.console.time())
+
+        if q:
+            cursor = self.query(q)
+            cursor.close()
+            self.debug("Updated hall of fame")
+        
+    def getRecord(self):
+        mHolder = None
+        mScore = 0
+        qHolder = None
+        qScore = 0
+        
+        q = self._SELECT_QUERY % (self.console.game.mapName)
+        try:
+            cursor = self.query(q)
+        except Exception, e:
+            cursor = None
+            self.error('Can\'t execute query : %s' % q)
+            self.error(str(e))
+            
+        self.debug('getRecord : %s' % q)
+        
+        if cursor and (cursor.rowcount > 0):
+            r = cursor.getRow()
+            # most
+            id = '@' + str(r['most_capture_client'])
+            clientList = []
+            clientList = self.console.clients.getByDB(id)
+            if len(clientList):
+                mHolder = clientList[0].exactName
+                self.debug('most capture record holder found: %s' % clientList[0].exactName)
+            mScore = r['most_capture_score']
+            # quickest
+            id = '@' + str(r['quick_capture_client'])
+            clientList = []
+            clientList = self.console.clients.getByDB(id)
+            if len(clientList):
+                qHolder = clientList[0].exactName
+                self.debug('quick capture record holder found: %s' % clientList[0].exactName)
+            qScore = r['quick_capture_score']
+            cursor.close()
+        else:
+            return None
+            
+        return {'most': (mHolder,mScore), 'quick': (qHolder, qScore)}
                 
 
 ################################ TESTS #############################

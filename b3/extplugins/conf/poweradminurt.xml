@@ -15,9 +15,9 @@
         <set name="pacyclemap-cyclemap">40</set>
         <set name="pamaprestart-maprestart">40</set>
         <set name="pamapreload-mapreload">40</set>
-        <set name="pamute-mute">40</set>
+        <set name="pamute-mute">20</set>
         <set name="panuke-nuke">60</set>
-        <set name="paslap-slap">40</set>
+        <set name="paslap-slap">20</set>
         <set name="paveto-veto">20</set>
         <set name="pabigtext-bigtext">20</set>
         <!--set name="pashuffleteams-shuffleteams">40</set-->
@@ -34,22 +34,22 @@
         
         <!--  by Courgette -->
         <set name="pamoon-moon">40</set>
-        <set name="papublic-public">60</set>
-        <set name="pamatch-match">60</set>
+        <set name="papublic-public">80</set>
+        <set name="pamatch-match">80</set>
         <set name="pagear-gear">60</set>
         <!--set name="pamap-map">40</set-->
  
-        <set name="paffa-ffa">60</set>
-        <set name="patdm-tdm">60</set>
-        <set name="pats-ts">60</set>
-        <set name="paftl-ftl">60</set>
-        <set name="pacah-cah">60</set>
-        <set name="pactf-ctf">60</set>
-        <set name="pabomb-bomb">60</set>
+        <set name="paffa-ffa">80</set>
+        <set name="patdm-tdm">80</set>
+        <set name="pats-ts">80</set>
+        <set name="paftl-ftl">80</set>
+        <set name="pacah-cah">80</set>
+        <set name="pactf-ctf">80</set>
+        <set name="pabomb-bomb">80</set>
 
         <set name="pasetgravity-setgravity">40</set>
         
-        <set name="paident-id">2</set>
+        <set name="paident-id">0</set>
     <!--  END by Courgette -->
     </settings>
 
@@ -93,43 +93,10 @@
     <set name="votedelay">0</set>
   </settings>
 
-  <gametype_default>
-    <cvar name="timelimit">20</cvar>
-    <cvar name="g_swaproles">0</cvar>
-    <cvar name="g_mapcycle">mapcycle.txt</cvar>
-    <cvar name="g_gear">0</cvar>
-  </gametype_default>
-
-  <gametype_ts>
-    <cvar name="g_mapcycle">mapcycle_ts.txt</cvar>
-  </gametype_ts>
-
-  <gametype_bomb>
-    <cvar name="timelimit">10</cvar>
-    <cvar name="g_swaproles">1</cvar>
-    <cvar name="g_mapcycle">mapcycle_bomb.txt</cvar>
-    <!--cvar name="g_gear">48</cvar-->
-  </gametype_bomb>
-
-  <gametype_ctf>
-    <cvar name="g_mapcycle">mapcycle_ctf.txt</cvar>
-  </gametype_ctf>
-  
-  <gametype_ffa>
-    <cvar name="g_mapcycle">mapcycle_ffa.txt</cvar>
-  </gametype_ffa>
-  
-  <gametype_tdm>
-    <cvar name="g_mapcycle">mapcycle_tdm.txt</cvar>
-  </gametype_tdm>
-
-  <pamatch_settings>
-    <!-- cvar name="timelimit" status="on">20</cvar -->
-    <cvar name="g_mapcycle" status="on">mapcycle_std.txt</cvar>
-    <cvar name="g_mapcycle" status="off">mapcycle.txt</cvar>
-    <cvar name="g_waverespawns" status="on">1</cvar>
-    <cvar name="g_waverespawns" status="off">0</cvar>
-  </pamatch_settings>
+  <gameconfig>
+    <config name="matchon">match_config_on.cfg</config>
+    <config name="matchoff">match_config_off.cfg</config>
+  </gameconfig>
   
   <settings name="speccheck">
     <!-- sinterval sets checking intervals in minutes, 0 disables function -->

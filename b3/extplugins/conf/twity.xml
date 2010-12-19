@@ -5,5 +5,11 @@
 		<set name="access_token">---</set>
 		<set name="secret_token">---</set>
 		<set name="showpassword">false</set>
+		<set name="alert_new_user">true</set>
+        <set name="admin_level">20</set>
+        <set name="show_alive_interval">0</set>
 	</settings>
+    <settings name="commands">
+        <set name="helpme">2</set>
+    </settings>
 </configuration>

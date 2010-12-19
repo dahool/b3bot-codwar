@@ -19,7 +19,7 @@
 # 01/28/2010
 # Initial version
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, threading
@@ -55,13 +55,12 @@ class EventschedullerPlugin(b3.plugin.Plugin):
 
     def onEvent(self,  event):
         if self._events.has_key(event.type):
-            self.debug("Processing event %s" % event.type)
-            process_event(event)
+            self.bot("Processing event %s" % event.type)
+            self.process_event(event)
             
     def process_event(self, event):
         events = self._events[event.type]
         for ev in events:
-            #self.console.write(ev)
             ev()
             time.sleep(1)
         del self._events[event.type]

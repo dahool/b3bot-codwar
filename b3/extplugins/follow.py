@@ -65,9 +65,19 @@ class FollowPlugin(b3.plugin.Plugin):
             # something is wrong, can't start without admin plugin
             self.error('Could not find admin plugin')
             return False
-        
+
+        self._twitter = self.console.getPlugin('twity')
+        if not self._twitter:
+            self.warning("Twitter plugin not avaiable.")
+            
         self._mod_level = self.config.getint('settings', 'mod_level')
         self._admin_level = self.config.getint('settings', 'admin_level')
+        try:
+            self._twit_event = self.config.getboolen('settings','twit_connect')
+        except:
+            self._twit_event = False
+            
+        self.createEvent('EVT_FOLLOW_CONNECTED', 'Suspicious User Connected.')
         
         self._adminPlugin.registerCommand(self, 'follow', self._admin_level, self.cmd_addfollow,'ff')
         self._adminPlugin.registerCommand(self, 'unfollow', self._admin_level, self.cmd_delfollow,'uf')
@@ -112,10 +122,17 @@ class FollowPlugin(b3.plugin.Plugin):
         if client.connected:
             if client.maxLevel < self._mod_level:
                 if self._add_list(client):
+                    self.console.queueEvent(self.console.getEvent('EVT_FOLLOW_CONNECTED', (client.var(self, 'follow_data').value,), self.client))
                     self.notify_admins(client)
+                    self._event_notify(client)
             else:
                 self.warn_user(client)
 
+    def _event_notify(self, client):
+        if self._twit_event and self._twitter:
+            message = "WARNING: Suspicious user is playing."
+            self._twitter.post_update(message)
+        
     def notify_admins(self, client):
         self.debug("Notify connected admins")
         clients = self.console.clients.getList()
@@ -165,6 +182,7 @@ class FollowPlugin(b3.plugin.Plugin):
                 admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
                 client.setvar(self, 'follow_reason', reason)
                 client.setvar(self, 'follow_admin', admin)
+                client.setvar(self, 'follow_data', {'reason': reason, 'admin': admin})
                 self._following[client.id] = client
                 return True
             cursor.close()

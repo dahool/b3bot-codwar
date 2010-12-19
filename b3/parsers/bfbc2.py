@@ -107,7 +107,54 @@
 # 2010/04/11 - 1.2.4 - Bakes
 # * client.messagebig() is now available for use by plugins.
 # * getHardName is added from poweradminbfbc2, reverse of getEasyname
-# 
+# 2010/04/12 - 1.2.5 - Courgette
+# * make sure client.squad and client.team are of type int. 
+# 2010/04/12 - 1.2.6 - Courgette
+# Fix client.team inconsistency
+# * add client.teamId property which is the exact team id as understood by the BFBC2 
+#   (while client.team follow the B3 team numbering scheme : b3.TEAM_BLUE, b3.TEAM_SPEC, etc)
+# 2010/05/19 - 1.2.7 - Bakes
+# * fixed issue between this and clients.py by overwriting the clients.py method. Will need to
+#   be fixed more comprehensively at a later date, this is a quick fix and nothing more!
+# 2010/05/21 - 1.2.8 - xlr8or
+# * delegated getByCID override to clients.py and fix it there
+# 2010/05/22 - 1.2.9 - nicholasperkins (inserted by Bakes)
+# * new method for getWrap that doesn't split strings in the middle of words.
+# 2010/07/20 - 1.3.0 - xlr8or
+# * modified OnPlayerKill to work with R15+
+# * fixed infinite loop in a python socket thread in receivePacket() (in protocol.py) on gameserver restart
+# * fixed (statusplugin crontab) error when polling for playerscores and -pings while server is unreachable
+# 2010/07/26 - 1.3.1 - xlr8or
+# * make sure we don't create a new client without a guid and;
+# * pass guid to getClient() in OnPlayerAuthenticated() for a better chance on a guid
+# 2010/07/28 - 1.3.1 - Durzo
+# * merge onPlayerSpawn event with latest xlr8or code base
+# 2010/07/29 - 1.3.2 - xlr8or
+# * Added EVT_PUNKBUSTER_NEW_CONNECTION when IP address is published by PB
+#  (to aid IP and GeoIP based plugins)
+# * Removed obsolete code in OnPBLostConection() that generated a consistent error.
+# * Fixed unban()
+# * Added needConfirmation var to write() so we can test on the confirmationtype ("OK", "NotFound") sent by the server on rcon.
+# 2010-07-30 - 1.3.3 - xlr8or
+# * Added joinClient() to OnServerLevelstarted() so rounds are counted for playerstats
+# 2010-07-30 - 1.3.4 - xlr8or
+# * Quick mapretrieval on startup
+# 2010-07-30 - 1.3.5 - xlr8or
+# * Fixed self.game.rounds
+# 2010-08-15 - 1.3.6 - xlr8or
+# * Fix PB handling when the PB server was renamed to something else than 'PunkBuster Server'
+# * Added OnPBVersion() for testing purposes 
+# 2010-09-02 - 1.3.7 - xlr8or
+# * Fix memory leak due to never ending threads in messagequeue workers
+# 2010-09-02 - 1.3.8 - xlr8or
+# * Better thread handling in messagequeue workers
+# * Fix bug on exit preventing --restart to function properly
+# 2010-09-02 - 1.3.9 - xlr8or
+# * Debugged messagequeue workers
+# 2010-09-02 - 1.3.10 - xlr8or
+# * More debugging messagequeue workers
+# 2010-09-25 - 1.4 - Bakes
+# * Refactored into Frostbite and Bfbc2 for MoH support.
 #
 # ===== B3 EVENTS AVAILABLE TO PLUGIN DEVELOPERS USING THIS PARSER ======
 # -- standard B3 events  -- 
@@ -118,6 +165,7 @@
 # EVT_CLIENT_TEAM_SAY
 # EVT_CLIENT_PRIVATE_SAY
 # EVT_CLIENT_CONNECT
+# EVT_CLIENT_DISCONNECT
 # EVT_CLIENT_SUICIDE
 # EVT_CLIENT_KILL_TEAM
 # EVT_CLIENT_KILL
@@ -127,9 +175,11 @@
 # EVT_CLIENT_BAN
 #
 # -- BFBC2 specific B3 events --
+# EVT_CLIENT_SPAWN
 # EVT_CLIENT_SQUAD_CHANGE
 # EVT_PUNKBUSTER_LOST_PLAYER
 # EVT_PUNKBUSTER_SCHEDULED_TASK
+# EVT_PUNKBUSTER_NEW_CONNECTION
 # 
 # -- B3 events triggered natively by B3 core --
 # EVT_CLIENT_NAME_CHANGE
@@ -139,20 +189,20 @@
 #
 
 __author__  = 'Courgette, SpacepiG, Bakes'
-__version__ = '1.2.4'
+__version__ = '1.3.10'
 
 
 import sys, time, re, string, traceback
 import b3
 import b3.events
 import b3.parser
-from b3.parsers.bfbc2.punkbuster import PunkBuster as Bfbc2PunkBuster
+from b3.parsers.frostbite.punkbuster import PunkBuster as Bfbc2PunkBuster
 import threading
 import Queue
-import rcon
+import b3.parsers.frostbite.rcon as rcon
 import b3.cvar
 from b3.functions import soundex, levenshteinDistance
-from b3.parsers.bfbc2.bfbc2Connection import *
+from b3.parsers.frostbite.bfbc2Connection import *
 
 SAY_LINE_MAX_LENGTH = 100
 
@@ -173,6 +223,8 @@ SQUAD_HOTEL = 8
 SQUAD_NEUTRAL = 24
 
 BUILD_NUMBER_R9 = 527791
+BUILD_NUMBER_R16 = 556157
+BUILD_NUMBER_R17 = 560541
 
 #----------------------------------------------------------------------------------------------------------------------------------------------
 class Bfbc2Parser(b3.parser.Parser):
@@ -237,11 +289,12 @@ class Bfbc2Parser(b3.parser.Parser):
     )
 
     _punkbusterMessageFormats = (
-        (re.compile(r'^PunkBuster Server: Running PB Scheduled Task \(slot #(?P<slot>\d+)\)\s+(?P<task>.*)$'), 'OnPBScheduledTask'),
-        (re.compile(r'^PunkBuster Server: Lost Connection \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+) (?P<pbuid>[^\s]+)\(-\)\s(?P<name>.+)$'), 'OnPBLostConnection'),
-        (re.compile(r'^PunkBuster Server: Master Query Sent to \((?P<pbmaster>[^\s]+)\) (?P<ip>[^:]+)$'), 'OnPBMasterQuerySent'),
-        (re.compile(r'^PunkBuster Server: Player GUID Computed (?P<pbid>[0-9a-fA-F]+)\(-\) \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+)\s(?P<name>.+)$'), 'OnPBPlayerGuid'),
-        (re.compile(r'^PunkBuster Server: New Connection \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+) \[(?P<something>[^\s]+)\]\s"(?P<name>.+)".*$'), 'OnPBNewConnection')
+        (re.compile(r'^(?P<servername>.*): PunkBuster Server for BC2 \((?P<version>.+)\)\sEnabl.*$'), 'OnPBVersion'),
+        (re.compile(r'^(?P<servername>.*): Running PB Scheduled Task \(slot #(?P<slot>\d+)\)\s+(?P<task>.*)$'), 'OnPBScheduledTask'),
+        (re.compile(r'^(?P<servername>.*): Lost Connection \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+) (?P<pbuid>[^\s]+)\(-\)\s(?P<name>.+)$'), 'OnPBLostConnection'),
+        (re.compile(r'^(?P<servername>.*): Master Query Sent to \((?P<pbmaster>[^\s]+)\) (?P<ip>[^:]+)$'), 'OnPBMasterQuerySent'),
+        (re.compile(r'^(?P<servername>.*): Player GUID Computed (?P<pbid>[0-9a-fA-F]+)\(-\) \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+)\s(?P<name>.+)$'), 'OnPBPlayerGuid'),
+        (re.compile(r'^(?P<servername>.*): New Connection \(slot #(?P<slot>\d+)\) (?P<ip>[^:]+):(?P<port>\d+) \[(?P<something>[^\s]+)\]\s"(?P<name>.+)".*$'), 'OnPBNewConnection')
      )
 
     PunkBuster = None
@@ -252,7 +305,9 @@ class Bfbc2Parser(b3.parser.Parser):
         self.Events.createEvent('EVT_CLIENT_SQUAD_CHANGE', 'Client Squad Change')
         self.Events.createEvent('EVT_PUNKBUSTER_SCHEDULED_TASK', 'PunkBuster scheduled task')
         self.Events.createEvent('EVT_PUNKBUSTER_LOST_PLAYER', 'PunkBuster client connection lost')
-        
+        self.Events.createEvent('EVT_PUNKBUSTER_NEW_CONNECTION', 'PunkBuster client received IP')
+        self.Events.createEvent('EVT_CLIENT_SPAWN', 'Client Spawn')
+                
         # create the 'Server' client
         self.clients.newClient('Server', guid='Server', name='Server', hide=True, pbid='Server', team=b3.TEAM_UNKNOWN, squad=SQUAD_NEUTRAL)
         
@@ -277,8 +332,6 @@ class Bfbc2Parser(b3.parser.Parser):
                 self.error('failed to read max_say_line_length setting "%s" : %s' % (self.config.get('bfbc2', 'max_say_line_length'), err))
         self.debug('line_length: %s' % self._settings['line_length'])
             
-            
-            
         version = self.output.write('version')
         self.info('BFBC2 server version : %s' % version)
         if version[0] != 'BFBC2':
@@ -288,6 +341,7 @@ class Bfbc2Parser(b3.parser.Parser):
         
         self.getServerVars()
         self.getServerInfo()
+        self.verbose('GameType: %s, Map: %s' %(self.game.gameType, self.game.mapName))
         
         self.info('connecting all players...')
         plist = self.getPlayerList()
@@ -329,8 +383,8 @@ class Bfbc2Parser(b3.parser.Parser):
     def run(self):
         """Main worker thread for B3"""
         self.bot('Start listening ...')
-        self.screen.write('Startup Complete : Let\'s get to work!\n\n')
-        self.screen.write('(Please check %s in the B3 root directory for more detailed info)\n' % self.config.getpath('b3', 'logfile'))
+        self.screen.write('Startup Complete : B3 is running! Let\'s get to work!\n\n')
+        self.screen.write('(If you run into problems, check %s in the B3 root directory for detailed log info)\n' % self.config.getpath('b3', 'logfile'))
         #self.screen.flush()
 
         self.updateDocumentation()
@@ -370,7 +424,7 @@ class Bfbc2Parser(b3.parser.Parser):
                                 except Exception, msg:
                                     self.error('%s: %s', msg, traceback.extract_tb(sys.exc_info()[2]))
                             except Bfbc2Exception, e:
-                                self.debug(e)
+                                #self.debug(e)
                                 nbConsecutiveReadFailure += 1
                                 if nbConsecutiveReadFailure > 5:
                                     raise e
@@ -391,7 +445,7 @@ class Bfbc2Parser(b3.parser.Parser):
         self.bot('Stop listening.')
 
         if self.exiting.acquire(1):
-            self.input.close()
+            #self.input.close()
             self.output.close()
 
             if self.exitcode:
@@ -469,6 +523,7 @@ class Bfbc2Parser(b3.parser.Parser):
         #player.onLeave: ['GunnDawg']
         client = self.getClient(data[0])
         if client: 
+            client.endMessageThreads = True
             client.disconnect() # this triggers the EVT_CLIENT_DISCONNECT event
         return None
 
@@ -486,14 +541,41 @@ class Bfbc2Parser(b3.parser.Parser):
         Effect: Player with name <soldier name> has been authenticated, and has the given GUID
         """
         #player.onJoin: ['OrasiK']
-        client = self.getClient(data[0])
-        return b3.events.Event(b3.events.EVT_CLIENT_CONNECT, data, client)
+        client = self.getClient(data[0], data[1])
+        # No need to queue a client join event, that is done by clients.newClient() already
+        # return b3.events.Event(b3.events.EVT_CLIENT_CONNECT, data, client)
+
+
+    def OnPlayerSpawn(self, action, data):
+        """
+        Request: player.onSpawn <spawning soldier name: string> <kit type: string> <gadget: string> <pistol: string> <primary weapon: string> <specialization 1: string> <specialization 2: string> <specialization 3: string>
+        """
+        if len(data) < 2:
+            return None
+
+        spawner = self.getClient(data[0])
+        kit = data[1]
+        gadget = data[2]
+        pistol = data[3]
+        weapon = data[4]
+        spec1 = data[5]
+        spec2 = data[6]
+        spec3 = data[7]
+
+        event = b3.events.EVT_CLIENT_SPAWN
+        return b3.events.Event(event, (kit, gadget, pistol, weapon, spec1, spec2, spec3), spawner)
 
 
     def OnPlayerKill(self, action, data):
-        #player.onKill: ['Juxta', '6blBaJlblu']
-        if not len(data) == 2:
+        """
+        Request: player.onKill <killing soldier name: string> <killed soldier name: string> <weapon: string> <headshot: boolean> <killer location: 3 x integer> <killed location: 3 x integes>
+
+        Effect: Player with name <killing soldier name> has killed <killed soldier name> Suicide is indicated with the same soldier name for killer and victim. If the server kills the player (through admin.killPlayer), it is indicated by showing the killing soldier name as Server. The locations of the killer and the killed have a random error of up to 10 meters in each direction.
+        """
+        #R15: player.onKill: ['Brou88', 'kubulina', 'S20K', 'true', '-77', '68', '-195', '-76', '62', '-209']
+        if len(data) < 2:
             return None
+
         attacker = self.getClient(data[0])
         if not attacker:
             self.debug('No attacker')
@@ -504,22 +586,51 @@ class Bfbc2Parser(b3.parser.Parser):
             self.debug('No victim')
             return None
         
-        if victim == attacker:
-            return b3.events.Event(b3.events.EVT_CLIENT_SUICIDE, (100, 1, 1), attacker, victim)
-        elif attacker.team == victim.team and attacker.team != b3.TEAM_UNKNOWN and attacker.team != b3.TEAM_SPEC:
-            return b3.events.Event(b3.events.EVT_CLIENT_KILL_TEAM, (100, None, None), attacker, victim)
+        if data[2]:
+            weapon = data[2]
         else:
-            return b3.events.Event(b3.events.EVT_CLIENT_KILL, (100, None, None), attacker, victim)
+            # to accomodate pre R15 servers
+            weapon = None
+
+        if data[3]:
+            if data[3] == 'true':
+                hitloc = 'head'
+            else:
+                hitloc = 'torso'
+        else:
+            # to accomodate pre R15 servers
+            hitloc = None
+
+        attackerloc = []
+        victimloc = []
+        if data[4] and data[9]:
+            attackerloc.append(data[4])
+            attackerloc.append(data[5])
+            attackerloc.append(data[6])
+            victimloc.append(data[7])
+            victimloc.append(data[8])
+            victimloc.append(data[9])
+        else:
+            # to accomodate pre R15 servers
+            attackerloc.append('None')
+            victimloc.append('None')
+
+        event = b3.events.EVT_CLIENT_KILL
+        if victim == attacker:
+            event = b3.events.EVT_CLIENT_SUICIDE
+        elif attacker.team == victim.team and attacker.team != b3.TEAM_UNKNOWN and attacker.team != b3.TEAM_SPEC:
+            event = b3.events.EVT_CLIENT_KILL_TEAM
+        return b3.events.Event(event, (100, weapon, hitloc, attackerloc, victimloc), attacker, victim)
 
     def OnPlayerTeamchange(self, action, data):
         """
         player.onTeamChange <soldier name: player name> <team: Team ID> <squad: Squad ID>
-        
         Effect: Player might have changed team
         """
         client = self.getClient(data[0])
         if client:
             client.team = self.getTeam(data[1]) # .team setter will send team change event
+            client.teamId = int(data[1])
             client.squad = int(data[2])
             
     def OnPlayerSquadchange(self, action, data):
@@ -531,8 +642,9 @@ class Bfbc2Parser(b3.parser.Parser):
         client = self.getClient(data[0])
         if client:
             client.team = self.getTeam(data[1]) # .team setter will send team change event
+            client.teamId = int(data[1])
             if client.squad != data[2]:
-                client.squad = data[2]
+                client.squad = int(data[2])
                 return b3.events.Event(b3.events.EVT_CLIENT_SQUAD_CHANGE, data[1:], client)
 
 
@@ -553,13 +665,22 @@ class Bfbc2Parser(b3.parser.Parser):
         return b3.events.Event(b3.events.EVT_GAME_WARMUP, data[0])
 
     def OnServerLevelstarted(self, action, data):
-        """When the level finished loading and started"""
+        """
+        server.onLevelStarted
+        
+        Effect: Level is started"""
+        # next function call will increase roundcount by one, this is not correct, need to deduct one to compensate
+        # we'll still leave the call here since it provides us self.game.roundTime()
         self.game.startRound()
+        self.game.rounds -= 1
+        
+        #Players need to be joined (EVT_CLIENT_JOIN) for stats to count rounds
+        self.joinPlayers()
         return b3.events.Event(b3.events.EVT_GAME_ROUND_START, self.game)
             
 
     def OnPunkbusterMessage(self, action, data):
-        """handes all punkbuster related events and 
+        """handles all punkbuster related events and 
         route them to the appropriate method depending
         on the type of PB message.
         """
@@ -577,9 +698,19 @@ class Bfbc2Parser(b3.parser.Parser):
             else:
                 return b3.events.Event(b3.events.EVT_UNKNOWN, data)
                 
+    def OnPBVersion(self, match,data):
+        """PB notifies us of the version numbers
+        version = match.group('version')"""
+        #self.debug('PunkBuster server named: %s' % match.group('servername') )
+        #self.debug('PunkBuster Server version: %s' %( match.group('version') ) )
+        pass
+
     def OnPBNewConnection(self, match, data):
         """PunkBuster tells us a new player identified. The player is
-        normally already connected"""
+        normally already connected and authenticated by B3 by ea_guid
+        
+        This is our first moment where we receive the clients IP address
+        so we also fire the custom event EVT_PUNKBUSTER_NEW_CONNECTION here"""
         name = match.group('name')
         client = self.getClient(name)
         if client:
@@ -591,6 +722,8 @@ class Bfbc2Parser(b3.parser.Parser):
             client.port = port
             client.save()
             self.debug('OnPBNewConnection: client updated with %s' % data)
+            # This is our first moment where we get a clients IP. Fire this event to accomodate geoIP based plugins like Countryfilter.
+            return b3.events.Event(b3.events.EVT_PUNKBUSTER_NEW_CONNECTION, data, client)
         else:
             self.warning('OnPBNewConnection: we\'ve been unable to get the client')
 
@@ -599,7 +732,9 @@ class Bfbc2Parser(b3.parser.Parser):
         we have to save the ip of clients.
         This event is triggered after the OnPlayerLeave, so normaly the client
         is not connected. Anyway our task here is to save data into db not to 
-        connect/disconnect the client
+        connect/disconnect the client.
+        
+        Part of this code is obsolete since R15, IP is saved to DB on OnPBNewConnection()
         """
         name = match.group('name')
         dict = {
@@ -609,18 +744,21 @@ class Bfbc2Parser(b3.parser.Parser):
             'pbuid': match.group('pbuid'),
             'name': name
         }
+        """ Code Obsolete since R15:
         client = self.clients.getByCID(dict['name'])
         if not client:
             matchingClients = self.storage.getClientsMatching( {'pbid': match.group('pbuid')} )
             if matchingClients and len(matchingClients) == 0:
                 client = matchingClients[0]
         if not client:
-            self.error('unable to find client %s. weird')
+            self.error('unable to find client %s. weird' %name )
         else:
             # update client data with PB id and IP
             client.pbid = dict['pbuid']
             client.ip = dict['ip']
             client.save()
+        """
+        self.verbose('PB lost connection: %s' %dict)
         return b3.events.Event(b3.events.EVT_PUNKBUSTER_LOST_PLAYER, dict)
 
     def OnPBScheduledTask(self, match, data):
@@ -730,18 +868,24 @@ class Bfbc2Parser(b3.parser.Parser):
         self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_BAN_TEMP, reason, client))
 
     def unban(self, client, reason='', admin=None, silent=False, *kwargs):
-        if client.ip is not None:
-            self.write(self.getCommand('unbanByIp', ip=client.ip, reason=reason))
-            if admin:
-                admin.message('Unbanned: %s. His last ip (^1%s^7) has been removed from banlist.' % (client.exactName, client.ip))    
+        self.debug('UNBAN: Name: %s, Ip: %s, Guid: %s' %(client.name, client.ip, client.guid))
+        if client.ip:
+            response = self.write(self.getCommand('unbanByIp', ip=client.ip, reason=reason), needConfirmation=True)
+            #self.verbose(response)
+            if response == "OK":
+                self.verbose('UNBAN: Removed ip (%s) from banlist' %client.ip)
+                if admin:
+                    admin.message('Unbanned: %s. His last ip (%s) has been removed from banlist.' % (client.exactName, client.ip))    
         
-        self.write(self.getCommand('unban', guid=client.guid, reason=reason))
+        response = self.write(self.getCommand('unban', guid=client.guid, reason=reason), needConfirmation=True)
+        #self.verbose(response)
+        if response == "OK":
+            self.verbose('UNBAN: Removed guid (%s) from banlist' %client.guid)
+            if admin:
+                admin.message('Unbanned: Removed %s guid from banlist' % (client.exactName))
         
         if self.PunkBuster:
             self.PunkBuster.unBanGUID(client)
-            
-        if admin:
-            admin.message('Unbanned: %s' % (client.exactName))
         
 
     def ban(self, client, reason='', admin=None, silent=False, *kwargs):
@@ -1016,7 +1160,7 @@ class Bfbc2Parser(b3.parser.Parser):
             return b3.TEAM_UNKNOWN
         
         
-    def getClient(self, cid):
+    def getClient(self, cid, _guid=None):
         """Get a connected client from storage or create it
         B3 CID   <--> BFBC2 character name
         B3 GUID  <--> BFBC2 EA_guid
@@ -1036,13 +1180,23 @@ class Bfbc2Parser(b3.parser.Parser):
             p = pib[0]
             cid = p['name']
             name = p['name']
+
+            # Let's see if we have a guid, either from the PlayerInfoBlock, or passed to us by OnPlayerAuthenticated()
+            if p['guid']:
+                guid = p['guid']
+            elif _guid:
+                guid = _guid
+            else:
+                # If we still don't have a guid, we cannot create a newclient without the guid!
+                self.debug('No guid for %s, waiting for next event.' %name)
+                return None
+
             if 'clanTag' in p and len(p['clanTag']) > 0:
                 name = "[" + p['clanTag'] + "] " + p['name']
-            client = self.clients.newClient(cid, guid=p['guid'], name=name, team=p['teamId'], squad=p['squadId'], data=p)
+            client = self.clients.newClient(cid, guid=guid, name=name, team=self.getTeam(p['teamId']), teamId=int(p['teamId']), squad=p['squadId'], data=p)
             self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, p, client))
         
         return client
-        
 
 
     def getPlayerList(self, maxRetries=None):
@@ -1101,19 +1255,25 @@ class Bfbc2Parser(b3.parser.Parser):
         """Ask the BFBC2 for a given client's team
         """
         scores = {}
-        pib = PlayerInfoBlock(self.write(('admin.listPlayers', 'all')))
-        for p in pib:
-            scores[p['name']] = int(p['score'])
+        try:
+            pib = PlayerInfoBlock(self.write(('admin.listPlayers', 'all')))
+            for p in pib:
+                scores[p['name']] = int(p['score'])
+        except:
+            self.debug('Unable to retrieve scores from playerlist')
         return scores
     
     def getPlayerPings(self):
         """Ask the BFBC2 for a given client's team
         """
-        scores = {}
-        pib = PlayerInfoBlock(self.write(('admin.listPlayers', 'all')))
-        for p in pib:
-            scores[p['name']] = int(p['ping'])
-        return scores
+        pings = {}
+        try:
+            pib = PlayerInfoBlock(self.write(('admin.listPlayers', 'all')))
+            for p in pib:
+                pings[p['name']] = int(p['ping'])
+        except:
+            self.debug('Unable to retrieve pings from playerlist')
+        return pings
     
     def getServerInfo(self):
         """query server info, update self.game and return query results"""
@@ -1121,6 +1281,8 @@ class Bfbc2Parser(b3.parser.Parser):
         self.game.sv_hostname = data[0]
         self.game.sv_maxclients = int(data[2])
         self.game.gameType = data[3]
+        if not self.game.mapName:
+            self.game.mapName = data[4]
         self.game.rounds = int(data[5])
         self.game.g_maxrounds = int(data[6])
         return data
@@ -1137,7 +1299,10 @@ class Bfbc2Parser(b3.parser.Parser):
                 sp.pbid = p.get('pbid', sp.pbid)
                 sp.guid = p.get('guid', sp.guid)
                 sp.data = p
-                sp.team = p.get('teamId', sp.team)
+                newTeam = p.get('teamId', None)
+                if newTeam is not None:
+                    sp.team = self.getTeam(newTeam)
+                sp.teamId = int(newTeam)
                 sp.auth()
 
     def getCvar(self, cvarName):
@@ -1171,6 +1336,15 @@ class Bfbc2Parser(b3.parser.Parser):
         except Bfbc2CommandFailedError, err:
             self.error(err)
 
+    def joinPlayers(self):
+        self.info('Joining players...')
+        plist = self.getPlayerList()
+        for cid, p in plist.iteritems():
+            client = self.clients.getByCID(cid)
+            if client:
+                self.debug(' - Joining %s' % cid)
+                self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, p, client))
+        return None
     
     def sync(self):
         plist = self.getPlayerList()
@@ -1180,7 +1354,10 @@ class Bfbc2Parser(b3.parser.Parser):
             client = self.clients.getByCID(cid)
             if client:
                 mlist[cid] = client
-                client.team = c.get('teamId', client.team)
+                newTeam = c.get('teamId', None)
+                if newTeam is not None:
+                    client.team = self.getTeam(newTeam)
+                client.teamId = int(newTeam)
         return mlist
 
     def getCommand(self, cmd, **kwargs):
@@ -1201,7 +1378,7 @@ class Bfbc2Parser(b3.parser.Parser):
         self.debug('getCommand: %s', result)
         return result
     
-    def write(self, msg, maxRetries=1):
+    def write(self, msg, maxRetries=1, needConfirmation=False):
         """Write a message to Rcon/Console
         Unfortunaltely this has been abused all over B3 
         and B3 plugins to broadcast text :(
@@ -1216,7 +1393,7 @@ class Bfbc2Parser(b3.parser.Parser):
             elif self.output == None:
                 pass
             else:
-                res = self.output.write(msg, maxRetries=maxRetries)
+                res = self.output.write(msg, maxRetries=maxRetries, needConfirmation=needConfirmation)
                 self.output.flush()
                 return res
             
@@ -1231,11 +1408,21 @@ class Bfbc2Parser(b3.parser.Parser):
         if len(text) <= maxLength:
             return [text]
         else:
-            lines = [text[:maxLength]]
-            remaining = text[maxLength:]
+            wrappoint = text[:maxLength].rfind(" ")
+            if wrappoint == 0:
+                wrappoint = maxLength
+            lines = [text[:wrappoint]]
+            remaining = text[wrappoint:]
             while len(remaining) > 0:
-                lines.append(remaining[0:maxLength])
-                remaining = remaining[maxLength:]
+                if len(remaining) <= maxLength:
+                    lines.append(remaining)
+                    remaining = ""
+                else:
+                    wrappoint = remaining[:maxLength].rfind(" ")
+                    if wrappoint == 0:
+                        wrappoint = maxLength
+                    lines.append(remaining[0:wrappoint])
+                    remaining = remaining[wrappoint:]
             return lines
         
 
@@ -1382,7 +1569,7 @@ def bfbc2ClientMessageQueueWorker(self):
     This take a line off the queue and displays it
     then pause for 'message_delay' seconds
     """
-    while self.console.working:
+    while not self.messagequeue.empty():
         msg = self.messagequeue.get()
         if msg:
             self.console.message(self, msg)
@@ -1392,14 +1579,20 @@ b3.clients.Client.messagequeueworker = bfbc2ClientMessageQueueWorker
 ## override the Client.message() method at runtime
 def bfbc2ClientMessageMethod(self, msg):
     if msg and len(msg.strip())>0:
+        # do we have a queue?
         if not hasattr(self, 'messagequeue'):
             self.messagequeue = Queue.Queue()
-            self.messagehandler = threading.Thread(target=self.messagequeueworker)
-            self.messagehandler.setDaemon(True)
-            self.messagehandler.start()
+        # fill the queue
         text = self.console.stripColors(self.console.msgPrefix + ' [pm] ' + msg)
         for line in self.console.getWrap(text, self.console._settings['line_length'], self.console._settings['min_wrap_length']):
             self.messagequeue.put(line)
+        # create a thread that executes the worker and pushes out the queue
+        if not hasattr(self, 'messagehandler') or not self.messagehandler.isAlive():
+            self.messagehandler = threading.Thread(target=self.messagequeueworker)
+            self.messagehandler.setDaemon(True)
+            self.messagehandler.start()
+        else:
+            self.console.verbose('messagehandler for %s isAlive' %self.name)
 b3.clients.Client.message = bfbc2ClientMessageMethod
 
 ## add a new method to the Client class
@@ -1409,7 +1602,7 @@ def bfbc2ClientMessageBigQueueWorker(self):
     in the middle of the screen then pause for
     'message_delay' seconds
     """
-    while self.console.working:
+    while not self.messagebigqueue.empty():
         msg = self.messagebigqueue.get()
         if msg:
             self.console.messagebig(self, msg)
@@ -1419,12 +1612,19 @@ b3.clients.Client.messagebigqueueworker = bfbc2ClientMessageBigQueueWorker
 ## add the Client.messagebig() method at runtime
 def bfbc2ClientMessageBigMethod(self, msg):
     if msg and len(msg.strip())>0:
+        # do we have a queue?
         if not hasattr(self, 'messagebigqueue'):
             self.messagebigqueue = Queue.Queue()
-            self.messagebighandler = threading.Thread(target=self.messagebigqueueworker)
-            self.messagebighandler.setDaemon(True)
-            self.messagebighandler.start()
+        # fill the queue
         text = self.console.stripColors(self.console.msgPrefix + ' [pm] ' + msg)
         for line in self.console.getWrap(text):
             self.messagebigqueue.put(line)
+        # create a thread that executes the worker and pushes out the queue
+        if not hasattr(self, 'messagebighandler') or not self.messagebighandler.isAlive():
+            self.messagebighandler = threading.Thread(target=self.messagebigqueueworker)
+            self.messagebighandler.setDaemon(True)
+            self.messagebighandler.start()
+        else:
+            self.console.verbose('messagebighandler for %s isAlive' %self.name)
 b3.clients.Client.messagebig = bfbc2ClientMessageBigMethod
+

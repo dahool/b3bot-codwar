@@ -32,8 +32,15 @@
 # 04-28-2010 - 1.1.0 - SGT
 # Move whereis command from locator plugin
 # Add country filter from countryfilter plugin
+# 1.1.1 - SGT
+# fix minor error in !wis
+# 08-24-2010 - 1.1.2 - SGT
+# Change in broadcast for cod servers
+# Added some more debugs logs
+# 11-16-2010 - 1.1.3 - SGT
+# If we can't get location allow all clients to connect
 
-__version__ = '1.1.1'
+__version__ = '1.1.3'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -137,18 +144,23 @@ class GeowelcomePlugin(WelcomePlugin):
             t = threading.Timer(self._welcomeDelay, self.welcome, (client,))
             t.start()
         else:
-            data = {
-                'name'  : client.name,
-                'country' : self.get_client_location(client)['country_name'],
-            }             
-            message = self.getMessage('cf_deny_message', data)
-            self.console.say(message)
-            client.kick(silent=True)
-            self.debug("Reject. %(name)s - %(country)s" % data)
+            location = self.get_client_location(client)
+            if location:
+                data = {
+                    'name'  : client.name,
+                    'country' : location['country_name'],
+                }             
+                message = self.getMessage('cf_deny_message', data)
+                self.console.say(message)
+                client.kick(silent=True)
+                self.debug("Reject. %(name)s - %(country)s" % data)
     
     def isAllowToConnect(self, client):
         # I will use it anyway so, lets get it
         country = self.get_client_location(client)
+        if not country:
+            # allow all if we can't get country
+            return True
         countryCode = country['country_code']
         
         # this part is taken from countryfilter plugin
@@ -186,7 +198,8 @@ class GeowelcomePlugin(WelcomePlugin):
             # lets find the country
             try:
                 ret = geoip.geo_ip_lookup(client.ip)
-                client.setvar(self, 'localization', ret)
+                if ret:
+                    client.setvar(self, 'localization', ret)
                 return ret
             except Exception, e:
                 self.error(e)
@@ -199,9 +212,17 @@ class GeowelcomePlugin(WelcomePlugin):
                     'name'  : client.exactName,
                     'country'  : translate(self._country_format % self.get_client_location(client)),
                 }
-                self.debug('Connected %s from %s' % (client.ip,info['country']))        
-                self.console.write(self.getMessage('broadcast', info))
-    
+                self.debug('Connected %s from %s' % (client.ip,info['country']))
+                self.debug('Broadcasting location')
+                if self.console.gameName.startswith('cod'):
+                    self.console.say(self.getMessage('broadcast', info))
+                else:
+                    self.console.write(self.getMessage('broadcast', info))
+            else:
+                self.debug('Broadcasting disable or client doesn\'t have location data')
+        else:
+            self.debug('Broadcasting location')
+            
     def welcome(self, client):
         _timeDiff = 0
         if client.lastVisit:
@@ -235,6 +256,7 @@ class GeowelcomePlugin(WelcomePlugin):
                 info['country'] = translate(self._country_format % self.get_client_location(client))
             
             if client.connections >= 2:
+                self.debug('Newb welcome')
                 if client.maskedGroup:
                     if self._welcomeFlags & 16:
                         client.message(self.getMessage('user', info))
@@ -247,6 +269,7 @@ class GeowelcomePlugin(WelcomePlugin):
                     else:
                         self.console.say(self.getMessage('announce_user', info))
             else:
+                self.debug('User welcome')
                 if self._welcomeFlags & 4:
                     client.message(self.getMessage('first', info))
                 if self._welcomeFlags & 8:
@@ -279,8 +302,11 @@ class GeowelcomePlugin(WelcomePlugin):
             client.message('^7Invalid data, try !help whereis')
             return False
       
-        country = translate(self._country_format % self.get_client_location(sclient))
-        if country:
+        location = self.get_client_location(sclient)
+        if location:
+            country = translate(self._country_format % location)
             client.message('^3%s [@%s] ^7is connected from ^3%s' % (sclient.name,str(sclient.id),country)) 
+            self.debug('[LOCATE] %s [@%s] is connected from %s' % (sclient.name,str(sclient.id),country))
         else:
             client.message('^7Cannot found client location.')
+            self.debug('[LOCATE] Cannot found client location.')

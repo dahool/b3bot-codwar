@@ -10,12 +10,12 @@
         <set name="runas-su">100</set>
 
         <set name="pause">90</set>
-	    <set name="rebuild">90</set>
-	    <set name="clientinfo">80</set>
-	    <set name="putgroup">90</set>
-	    <set name="ungroup">90</set>
+        <set name="rebuild">90</set>
+        <set name="clientinfo">60</set>
+        <set name="putgroup">90</set>
+        <set name="ungroup">90</set>
 
-        <set name="permban-pb">90</set>
+        <set name="permban-pb">80</set>
         <!--set name="map">60</set-->
         <set name="maprotate">90</set>
         <set name="warnclear-wc">60</set>
@@ -64,7 +64,7 @@
         <set name="time">1</set>
 
         <set name="help-h">0</set>
-	    <set name="register">0</set>
+	<set name="register">0-0</set>
         <set name="rules-r">0</set>
     </settings>
     <settings name="settings">
@@ -79,20 +79,20 @@
     </settings>
     <settings name="messages">
         <set name="ban_denied">^7Hey %s^7, you're no Elvis, can't ban %s</set>
-        <set name="help_available">^7Available commands: %s</set>
+        <set name="help_available">^7Comandos: %s</set>
         <set name="temp_ban_self">^7%s ^7Can't ban yourself newb</set>
-        <set name="groups_in">^7%s^7 is in groups %s</set>
+        <set name="groups_in">^7%s^7 esta en los grupos %s</set>
         <set name="say">^7%s^7: %s</set>
         <set name="player_id">^7[^2%s^7] %s^7</set>
-        <set name="seen">^7%s ^7was last seen on %s</set>
-        <set name="help_no_command">^7Command not found %s</set>
+        <set name="seen">^7%s ^7fue visto por ultima vez %s</set>
+        <set name="help_no_command">^7No se encuentra %s</set>
         <set name="lookup_found">^7[^2@%s^7] %s^7 (^3%s^7)</set>
         <set name="kick_self">^7%s ^7Can't kick yourself newb!</set>
-        <set name="groups_welcome">^7You are now a %s</set>
+        <set name="groups_welcome">^7Ahora eres %s</set>
         <set name="warn_denied">%s^7, %s^7 owns you, can't warn</set>
-        <set name="groups_already_in">^7%s^7 is already in group %s</set>
+        <set name="groups_already_in">^7%s^7 ya esta en el grupo %s</set>
         <set name="temp_ban_denied">^7Hey %s^7, you're no ^1Red ^7Elvis, can't temp ban %s</set>
-        <set name="players_matched">^7Players matching %s %s</set>
+        <set name="players_matched">^7Jugadores encontrados %s %s</set>
         <set name="ban_self">^7%s ^7Can't ban yourself newb!</set>
         <set name="regme_annouce">^7%s ^7put in group %s</set>
         <set name="kick_denied">^7%s^7 gets 1 point, %s^7 gets none, %s^7 wins, can't kick</set>
@@ -107,13 +107,13 @@
         <set name="help_none">^7You have no available commands</set>
         <set name="spanked">%s ^7was ^1SPANKED^7 by %s</set>
         <set name="admins">^7Admins online: %s</set>
-        <set name="time">At the sound of the beep it will be ^3%s^7...(beeeep)</set>
-        <set name="unknown_command">^7Unrecognized command %s</set>
+        <set name="time">La hora actual es ^3%s</set>
+        <set name="unknown_command">^7Comando ^3%s desconocido</set>
         <set name="leveltest">^7%s ^7(^3@%s^7) is a ^3%s ^7[^2%s^7] since %s</set>
         <set name="leveltest_nogroups">^7%s ^7(^3@%s^7) is not in any groups</set>
         <set name="aliases">^7%s^7 aliases: %s</set>
-        <set name="warn_kick_alert">^1ALERT^7: $name^7 auto-kick from warnings if not cleared (^3$warnings^7)</set>
-        <set name="warn_ban_alert">^1ALERT^7: $name^7 auto-ban from warnings if not cleared (^3$warnings^7)</set>
+        <set name="warn_kick_alert">^1ATENCION^7: $name^7 auto-kick por exceso de advertencias (^3$warnings^7)</set>
+        <set name="warn_ban_alert">^1ATENCION^7: $name^7 auto-ban por exceso de advertencias (^3$warnings^7)</set>
     </settings>
     <settings name="warn">
 <!-- This setting determines whether the warning is sent to the the whole server, or just the player and admin, to reduce chatbox spam.
@@ -134,17 +134,19 @@
         <set name="tempban_num">2</set>
         <set name="tempban_duration">1m</set>
         <set name="max_duration">10m</set>
-        <set name="message">^1WARNING^7 (^3$warnings^7): $reason</set>
+        <set name="message">^1ADVERTENCIA^7 (^3$warnings^7): $reason</set>
         <set name="warn_delay">20</set>
-        <set name="reason">^7too many warnings: $reason</set>
+        <set name="reason">^7demasiadas advertencias: $reason</set>
         <set name="duration_divider">30</set>
-        <set name="alert">^1ALERT^7: $name^7 auto-kick from warnings if not cleared (^3$warnings^7) $reason</set>
+        <set name="alert">^1ATENCION^7: $name^7 auto-kick por exceso de advertencias (^3$warnings^7) $reason</set>
     </settings>
     <settings name="spamages">
         <set name="ts">^3Teamspeak: ^2ts.wishdeath.com.ar</set>
         <set name="cs">^3Teamspeak: ^2cs.wishdeath.com.ar</set>
         <set name="cs2">^3Teamspeak: ^2cs2.wishdeath.com.ar</set>
-        <set name="site">^3----- ^2www.clanwd.com.ar</set>
+        <set name="site">^3Soporte: ^2www.clanwd.com.ar</set>
+        <set name="irc">^3Soporte: irc.freenode.net - canal: ##clanwd</set>
+        <set name="acceso">^7Se reserva el derecho de admision y permanencia</set>
         <set name="stack">^7No clan stacking, members must split evenly between the teams, go spectator and wait if you have to</set>
         <set name="rule1">^3Regla #1: El racismo o cualquier muestra de discriminacion es motivo de ban</set>
         <set name="rule2">^3Regla #2: Los miembros de un clan deben dividirse entre ambos equipos</set>
@@ -153,15 +155,18 @@
         <set name="rule5">^3Regla #5: No uses nombres ofensivos o molestos</set>
         <set name="rule6">^3Regla #6: No reclutes para tu clan, server o lo que sea</set>
         <set name="rule7">^3Regla #7: No hagas publicidad de tu server o sitio web</set>
-        <set name="rule8">^3Regla #8: No utilices lenguage ofensivo (sea el idioma que sea)</set>
+        <set name="rule8">^3Regla #8: No utilices lenguage ofensivo</set>
         <set name="rule9">^3Regla #9: ^1NO ^3dispares a tu equipo o dentro de los 10 segundos en su spawn</set>
         <set name="rule10">^3Regla #10: No campees en la base del otro equipo</set>
         <set name="rule11">^3Regla #11: No rompas las pelotas</set>
-        <set name="rule12">^3Regla #12: No molestes al admin pidiendo mapas</set>
+        <set name="rule12">^3Regla #12: No molestes pidiendo mapas</set>
+        <set name="rule13">^3Regla #13: No acuses de cheat. Graba demo y publicala.</set>
+        <set name="rule14">^3Regla #14: El server no es sala de chat</set>
+        <set name="rule15">^3Regla #15: Nombres o temas que aludan a cuestiones politicas y o religiosas no estan permitidos</set>
     </settings>
     <settings name="warn_reasons">
         <set name="generic">1h, ^7</set>
-        <set name="default">1h, ^7behave yourself</set>
+        <set name="default">1h, ^7comportate</set>
 
         <set name="rule1">10d, /spam#rule1</set>
         <set name="rule2">1d, /spam#rule2</set>
@@ -173,7 +178,7 @@
         <set name="rule8">3d, /spam#rule8</set>
         <set name="rule9">3h, /spam#rule9</set>
         <set name="rule10">1h, /spam#rule10</set>
-
+        <set name="rule13">10m, /spam#rule13</set>
         <set name="stack">1d, /spam#stack</set>
 
         <set name="lang">/rule8</set>
@@ -196,15 +201,15 @@
         <set name="spawnfire">/rule9</set>
         <set name="jerk">/rule4</set>
 
-        <set name="afk">5m, ^7you appear to be away from your keyboard</set>
-        <set name="tk">1d, ^7stop team killing!</set>
+        <set name="afk">5m, ^7ausente demasiado tiempo</set>
+        <set name="tk">1d, ^7basta de hacer team kill!</set>
         <set name="obj">1h, ^7go for the objective!</set>
         <set name="camp">1h, ^7stop camping or you will be kicked!</set>
-        <set name="fakecmd">1h, ^7do not use fake commands</set>
-        <set name="nocmd">1h, ^7do not use commands that you do not have access to, try using !help</set>
-        <set name="ci">5m, ^7connection interupted, reconnect</set>
-        <set name="spectator">1h, ^7spectator too long on full server</set>
-        <set name="spam">1h, ^7do not spam, shut-up!</set>
-        <set name="autojoin">10m, ^7use auto-join</set>
+        <set name="fakecmd">1h, ^7no uses comandos falsos</set>
+        <set name="nocmd">1h, ^7no uses comandos a los que no tienes permisos, proba con !help</set>
+        <set name="ci">5m, ^7conexion interrumpida, reconectar</set>
+        <set name="spectator">1h, ^7spec demasiado tiempo en server lleno</set>
+        <set name="spam">1h, ^7basta de spam, callate!</set>
+        <set name="autojoin">10m, ^7usa auto-join</set>
     </settings>
 </configuration>

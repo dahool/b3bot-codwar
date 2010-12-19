@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   29/06/2010 - 1.7.2 - xlr8or
+#   fixed typo myqsldb -> msqldb in error message (thanks ryry46d9)
 #   20/05/2010 - 1.7.2 - SGT
 #   add IP to aliasses
 #   27/03/2010 - 1.7.1 - xlr8or
@@ -160,7 +162,7 @@ class DatabaseStorage(Storage):
                 import MySQLdb
                 return MySQLdb.connect(host=self.dsnDict['host'], port=self.dsnDict['port'], user=self.dsnDict['user'], passwd=self.dsnDict['password'], db=self.dsnDict['path'][1:]) 
             except ImportError, err:
-                self.console.critical("%s. You need to install python-myqsldb. Look for 'dependencies' in B3 documentation.",err)
+                self.console.critical("%s. You need to install python-mysqldb. Look for 'dependencies' in B3 documentation.",err)
         elif protocol == 'sqlite':
             # Break it off here
             self.console.critical('SQLite is currently not supported!')

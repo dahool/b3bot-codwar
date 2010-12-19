@@ -138,7 +138,8 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
         if event.type == b3.events.EVT_GAME_WARMUP:
             # fix to use scores on status plugin
-            self.console.setCvar('g_teamScores','0:0')
+	    if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
+                self.console.setCvar('g_teamScores','0:0')
             if not self.is_matchmode():
                 self.handle_rotation(event)
         elif event.type == b3.events.EVT_GAME_ROUND_START:

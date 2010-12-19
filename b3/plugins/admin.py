@@ -1,12 +1,12 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -17,6 +17,15 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   2010/08/25 - 1.8.1 - Courgette
+#   * do not fail if warn_command_abusers is missing in config
+#   2010/08/24 - 1.8 - kikker916 & Courgette
+#   * add warn_command_abusers setting what defines if player should get warned 
+#     for trying to use non existing or privileged commands
+#   * add documentation into the xml config file
+#   * fix a few things with the config file
+#   2010/08/14 - 1.7.1 - Courgette
+#   * fix _parseUserCmdRE regexp for cases where the player's name start with a digit
 #   2010/04/10 - 1.7 - Bakes
 #   * new '&' command prefix can be used to say messages in the middle of the screen.
 #     has the same settings as '@', this may change in the future.
@@ -62,7 +71,7 @@
 #    Added data field to warnClient(), warnKick(), and checkWarnKick()
 
 
-__version__ = '1.7'
+__version__ = '1.8.1'
 __author__  = 'ThorN, xlr8or, Courgette'
 
 import b3, string, re, time, threading, sys, traceback, thread, random
@@ -78,8 +87,9 @@ import copy
 #--------------------------------------------------------------------------------------------------
 class AdminPlugin(b3.plugin.Plugin):
     _commands = {}
-    _parseUserCmdRE = re.compile(r'^(?P<cid>\'[^\']{2,}\'|[0-9]+|[^\s]{2,}|@[0-9]+)\s?(?P<parms>.*)$')
+    _parseUserCmdRE = re.compile(r"^(?P<cid>'[^']{2,}'|[0-9]+|[^\s]{2,}|@[0-9]+)(\s+(?P<parms>.*))?$")
     _long_tempban_max_duration = 1440 # 60m/h x 24h = 1440m = 1d
+    _warn_command_abusers = None
 
     cmdPrefix = '!'
     cmdPrefixLoud = '@'
@@ -95,13 +105,37 @@ class AdminPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_PRIVATE_SAY)
         self.createEvent('EVT_ADMIN_COMMAND', 'Admin Command')
 
-        cmdPrefix = self.config.get('settings', 'command_prefix')
-        if cmdPrefix:
-            self.cmdPrefix = cmdPrefix
+        try:
+            cmdPrefix = self.config.get('settings', 'command_prefix')
+            if cmdPrefix:
+                self.cmdPrefix = cmdPrefix
+        except:
+            self.warning('could not get command_prefix, using default')
 
-        #cmdPrefixLoud = self.config.get('settings', 'command_prefix_loud')
-        #if cmdPrefixLoud:
-        #    self.cmdPrefixLoud = cmdPrefixLoud
+        try:
+            cmdPrefixLoud = self.config.get('settings', 'command_prefix_loud')
+            if cmdPrefixLoud:
+                self.cmdPrefixLoud = cmdPrefixLoud
+        except:
+            self.warning('could not get command_prefix_loud, using default')
+    
+        try:
+            cmdPrefixBig = self.config.get('settings', 'command_prefix_big')
+            if cmdPrefixBig:
+                self.cmdPrefixBig = cmdPrefixBig
+        except:
+            self.warning('could not get command_prefix_big, using default')
+
+
+        try:
+            self._warn_command_abusers = self.config.getboolean('warn', 'warn_command_abusers')
+        except ConfigParser.NoOptionError:
+            self.warning('conf warn\warn_command_abusers not found, using default : yes')
+            self._warn_command_abusers = True
+        except ValueError:
+            self.warning('invalid value for conf warn\warn_command_abusers, using default : yes')
+            self._warn_command_abusers = True
+
 
         if 'commands' in self.config.sections():
             for cmd in self.config.options('commands'):
@@ -184,66 +218,70 @@ class AdminPlugin(b3.plugin.Plugin):
     def OnSay(self, event, private=False):
         self.debug('OnSay handle %s:"%s"', event.type, event.data)
 
-        if self.console.debug and len(event.data) >= 3 and event.data[:1] == '#':
-            if event.data[1:] == 'clients':
-                self.debug('Clients:')
-                for k, c in self.console.clients.items():
-                    self.debug('client %s (#%i id: %s cid: %s level: %s group: %s) obj: %s', c.name, id(c), c.id, c.cid, c.maxLevel, c.groupBits, c)
-            elif event.data[1:] == 'groups':
-                self.debug('Groups for %s:', event.client.name)
-                for g in event.client.groups:
-                    self.debug('group (id: %s, name: %s, level: %s)', g.id, g.name, g.level)
-
-            elif event.data[1:5] == 'vars':
-                try:
-                    data = event.data[7:].strip()
-                    if data:
-                        sclient = self.findClientPrompt(data, event.client)
-                        if not sclient: return
-                    else:
+        if len(event.data) >= 3 and event.data[:1] == '#':
+            if event.data[1:] == 'confirm':
+                self.debug('checking confirmation...')
+                self.console.say(functions.confirm(event.client))
+            elif self.console.debug:
+                if event.data[1:] == 'clients':
+                    self.debug('Clients:')
+                    for k, c in self.console.clients.items():
+                        self.debug('client %s (#%i id: %s cid: %s level: %s group: %s) obj: %s', c.name, id(c), c.id, c.cid, c.maxLevel, c.groupBits, c)
+                elif event.data[1:] == 'groups':
+                    self.debug('Groups for %s:', event.client.name)
+                    for g in event.client.groups:
+                        self.debug('group (id: %s, name: %s, level: %s)', g.id, g.name, g.level)
+    
+                elif event.data[1:5] == 'vars':
+                    try:
+                        data = event.data[7:].strip()
+                        if data:
+                            sclient = self.findClientPrompt(data, event.client)
+                            if not sclient: return
+                        else:
+                            sclient = event.client
+                    except:
                         sclient = event.client
-                except:
-                    sclient = event.client
-
-                self.debug('Vars for %s:', sclient.name)
-
-                try:
-                    for k,v in sclient._pluginData.items():
-                        self.debug('\tplugin %s:', k)
-                        for kk,vv in v.items():
-                            self.debug('\t\t%s = %s', kk, str(vv.value))
-                except Exception, e:
-                    self.debug('Error getting vars: %s', e)
-                self.debug('End of vars')
-            elif event.data[1:7] == 'tkinfo':
-                try:
-                    data = event.data[9:].strip()
-                    if data:
-                        sclient = self.findClientPrompt(data, event.client)
-                        if not sclient: return
-                    else:
+    
+                    self.debug('Vars for %s:', sclient.name)
+    
+                    try:
+                        for k,v in sclient._pluginData.items():
+                            self.debug('\tplugin %s:', k)
+                            for kk,vv in v.items():
+                                self.debug('\t\t%s = %s', kk, str(vv.value))
+                    except Exception, e:
+                        self.debug('Error getting vars: %s', e)
+                    self.debug('End of vars')
+                elif event.data[1:7] == 'tkinfo':
+                    try:
+                        data = event.data[9:].strip()
+                        if data:
+                            sclient = self.findClientPrompt(data, event.client)
+                            if not sclient: return
+                        else:
+                            sclient = event.client
+                    except:
                         sclient = event.client
-                except:
-                    sclient = event.client
-
-                self.debug('Tkinfo for %s:', sclient.name)
-
-                try:
-                    for k,v in sclient._pluginData.items():
-
-                        for kk,vv in v.items():
-                            if kk == 'tkinfo':
-                                self.debug('\tplugin %s:', k)
-                                tkinfo = vv.value
-                                self.debug('\t\tcid = %s', tkinfo.cid)
-                                self.debug('\t\tattackers = %s', str(tkinfo.attackers))
-                                self.debug('\t\tattacked = %s', str(tkinfo.attacked))
-                                self.debug('\t\tpoints = %s', tkinfo.points)
-                                self.debug('\t\t_grudged = %s', str(tkinfo._grudged))
-                                self.debug('\t\tlastAttacker = %s', tkinfo.lastAttacker)
-                except Exception, e:
-                    self.debug('Error getting Tkinfo: %s', e)
-                self.debug('End of Tkinfo')
+    
+                    self.debug('Tkinfo for %s:', sclient.name)
+    
+                    try:
+                        for k,v in sclient._pluginData.items():
+    
+                            for kk,vv in v.items():
+                                if kk == 'tkinfo':
+                                    self.debug('\tplugin %s:', k)
+                                    tkinfo = vv.value
+                                    self.debug('\t\tcid = %s', tkinfo.cid)
+                                    self.debug('\t\tattackers = %s', str(tkinfo.attackers))
+                                    self.debug('\t\tattacked = %s', str(tkinfo.attacked))
+                                    self.debug('\t\tpoints = %s', tkinfo.points)
+                                    self.debug('\t\t_grudged = %s', str(tkinfo._grudged))
+                                    self.debug('\t\tlastAttacker = %s', tkinfo.lastAttacker)
+                    except Exception, e:
+                        self.debug('Error getting Tkinfo: %s', e)
+                    self.debug('End of Tkinfo')
 
         elif len(event.data) >= 2 and (event.data[:1] == self.cmdPrefix or event.data[:1] == self.cmdPrefixLoud or event.data[:1] == self.cmdPrefixBig):
             self.debug('Handle command %s' % event.data)
@@ -265,8 +303,8 @@ class AdminPlugin(b3.plugin.Plugin):
 
             try:
                 command = self._commands[cmd.lower()]
-            except Exception, msg:
-                if event.client.authed and event.client.maxLevel < self.config.getint('settings', 'admins_level'):
+            except Exception:
+                if self._warn_command_abusers and event.client.authed and event.client.maxLevel < self.config.getint('settings', 'admins_level'):
                     if event.client.var(self, 'fakeCommand').value:
                         event.client.var(self, 'fakeCommand').value += 1
                     else:
@@ -276,8 +314,10 @@ class AdminPlugin(b3.plugin.Plugin):
                         event.client.setvar(self, 'fakeCommand', 0)
                         self.warnClient(event.client, 'fakecmd', None, False)
                         return
-
-                event.client.message(self.getMessage('unknown_command', cmd))
+                if not self._warn_command_abusers and event.client.maxLevel < self.config.getint('settings', 'admins_level'):
+                    event.client.message(self.getMessage('unknown_command', cmd))
+                elif event.client.maxLevel > self.config.getint('settings', 'admins_level'):
+                    event.client.message(self.getMessage('unknown_command', cmd))
                 return
 
             cmd = cmd.lower()
@@ -314,7 +354,7 @@ class AdminPlugin(b3.plugin.Plugin):
                 else:
                     self.console.queueEvent(self.console.getEvent('EVT_ADMIN_COMMAND', (command, data, results), event.client))
             else:
-                if event.client.maxLevel < self.config.getint('settings', 'admins_level'):
+                if self._warn_command_abusers and event.client.maxLevel < self.config.getint('settings', 'admins_level'):
                     if event.client.var(self, 'noCommand').value:
                         event.client.var(self, 'noCommand').value += 1
                     else:
@@ -327,7 +367,7 @@ class AdminPlugin(b3.plugin.Plugin):
                 
                 if command.level == None:
                     event.client.message('^7%s%s command is disabled' % (self.cmdPrefix, cmd))
-                else:
+                elif self._warn_command_abusers:
                     event.client.message('^7You do not have sufficient access to use %s%s' % (self.cmdPrefix, cmd))
 
     def getCmd(self, cmd):
@@ -626,7 +666,6 @@ class AdminPlugin(b3.plugin.Plugin):
                 self.console.say('^7b3 is at %s.' % self.console._publicIp)
         else:
             cmd.sayLoudOrPM(client, '%s ^7- uptime: [^2%s^7]' % (b3.version, functions.minutesStr(self.console.upTime() / 60.0)))
-
 
     def cmd_enable(self, data, client, cmd=None):
         """\

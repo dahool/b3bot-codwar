@@ -4,14 +4,12 @@
 		<set name="rate">2</set>
 	</settings>
 	<ads>
-		<ad>^7Server CTF --> ^9WD Argentina</ad>
-		<ad>@nextmap</ad>
-                <ad>/spam#rule1</ad>
-		<ad>^7Visitanos en ^2www.clanwd.com.ar</ad>
-                <ad>/spam#rule3</ad>
-		<ad>^7Server CTF --> ^9WD Argentina</ad>
-                <ad>/spam#rule4</ad>
-		<ad>@time</ad>
-                <ad>/spam#rule12</ad>
+	<ad>@nextmap</ad>
+    <ad>/spam#rule1</ad>
+    <ad>^7Visitanos en ^2www.clanwd.com.ar</ad>
+    <ad>/spam#rule3</ad>
+    <ad>/spam#rule4</ad>
+	<ad>@time</ad>
+    <ad>/spam#rule12</ad>
 	</ads>
 </configuration>

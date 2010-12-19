@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -73,7 +73,7 @@ from b3.functions import getModule
 #--------------------------------------------------------------------------------------------------
 class PublistPlugin(b3.plugin.Plugin):
     _cronTab = None
-    _url='http://www.bigbrotherbot.com/master/serverping.php'
+    _url='http://www.bigbrotherbot.net/master/serverping.php'
     _secondUrl = None
     requiresConfigFile = False
     

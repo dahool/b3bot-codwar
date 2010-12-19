@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -18,9 +18,10 @@
 #
 # 27/03/2010 - 1.2.1 - xlr8or - set default port for mysql
 # 11/04/2010 - 1.2.2 - Courgette - make splitDSN support usernames containing '@'
+# 01/09/2010 - 1.3 - Courgette - make splitDSN add default ftp and sftp port
 
 __author__    = 'ThorN, xlr8or'
-__version__ = '1.2.2'
+__version__   = '1.3'
 
 import re, sys, imp, string, urllib2
 from lib.elementtree import ElementTree
@@ -44,14 +45,14 @@ def checkUpdate(currentVersion, singleLine=True, showErrormsg=False):
     message = None
     errorMessage = None
     try:
-        f = urllib2.urlopen('http://www.bigbrotherbot.com/version.xml')
+        f = urllib2.urlopen('http://www.bigbrotherbot.net/version.xml')
         _xml = ElementTree.parse(f)
         latestVersion = _xml.getroot().text
         _lver = version.LooseVersion(latestVersion)
         _cver = version.LooseVersion(currentVersion)
         if _cver < _lver:
             if singleLine:
-                message = "*** NOTICE: A newer version of B3 is available. See www.bigbrotherbot.com! ***"
+                message = "*** NOTICE: A newer version of B3 is available. See www.bigbrotherbot.net! ***"
             else:
                 message = """
          _\|/_
@@ -60,7 +61,7 @@ def checkUpdate(currentVersion, singleLine=True, showErrormsg=False):
  |                                    |
  |                                    |
  | A newer version of B3 is available |
- |     See www.bigbrotherbot.com      |
+ |     See www.bigbrotherbot.net      |
  |                                    |
  |                                    |
  +------------------------------------+
@@ -116,11 +117,26 @@ def splitDSN(url):
 
     if g['port']:
         g['port'] = int(g['port'])
+    elif g['protocol'] == 'ftp':
+        g['port'] = 21
+    elif g['protocol'] == 'sftp':
+        g['port'] = 22
     elif g['protocol'] == 'mysql':
         g['port'] = 3306
 
     return g
+
 #--------------------------------------------------------------------------------------------------
+def confirm(client):
+    msg = 'No confirmation...'
+    try:
+        f = urllib2.urlopen('http://www.bigbrotherbot.net/confirm.php?ip=%s' %client.ip)
+        response = f.read()
+        if not response == 'Error' and not response == 'False':
+            msg = '%s is confirmed to be %s!' %(client.name, response)
+    except:
+        pass
+    return msg
 
 #--------------------------------------------------------------------------------------------------
 def minutes2int(mins):

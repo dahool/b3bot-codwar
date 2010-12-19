@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,11 @@
 # 2010/03/20 - 1.3 -  xlr8or
 #    * finished options -s --setup and -n, --nosetup
 #      where setup launches setup procedure and nosetup prevents bot from entering setup procedure.
+# 2010/08/05 - 1.3.1 -  xlr8or
+#    * Fixing broken --restart mode
 
 __author__  = 'ThorN'
-__version__ = '1.3'
+__version__ = '1.3.2'
 
 import b3, sys, os, time
 import traceback
@@ -34,12 +36,17 @@ from b3.functions import main_is_frozen
 from b3.setup import Setup
 from optparse import OptionParser
 import pkg_handler
+
+
 modulePath = pkg_handler.resource_directory(__name__)
 
 def run_autorestart(args=None):
-    script = os.path.join(modulePath, 'run.py')
-    if os.path.isfile(script + 'c'):
-        script += 'c'
+    if main_is_frozen():
+        script = ''
+    else:
+        script = os.path.join(modulePath[:-3], 'b3_run.py')
+        if os.path.isfile(script + 'c'):
+            script += 'c'
 
     if args:
         script = '%s %s %s' % (sys.executable, script, ' '.join(args))
@@ -49,8 +56,16 @@ def run_autorestart(args=None):
     while True:
         try:
             print 'Running in auto-restart mode...'
+            time.sleep(1)
 
-            status = os.system(script)
+            try:
+                import subprocess
+                status = subprocess.call(script, shell=True)
+            except ImportError:
+                #for Python versions < 2.5
+                #status = os.system(script)
+                print 'Restart mode not fully supported!\nUse B3 without the -r (--restart) option or update your python installation!'
+                break
 
             print 'Exited with status %s' % status
 
@@ -88,7 +103,7 @@ def run_autorestart(args=None):
             else:
                 print 'Unknown shutdown status (%s), restarting...' % status
         
-            time.sleep(5)
+            time.sleep(4)
         except KeyboardInterrupt:
             print 'Quit'
             break
@@ -151,23 +166,29 @@ def main():
         try:
             run(config=options.config, nosetup=options.nosetup)
         except SystemExit, msg:
-            print msg
-            if sys.stdout != sys.__stdout__:
-                # make sure we are not writting to the log:
-                sys.stdout = sys.__stdout__
-                sys.stderr = sys.__stderr__
+            # This needs some work, is ugly a.t.m. but works... kinda
+            if main_is_frozen():
+                if sys.stdout != sys.__stdout__:
+                    # make sure we are not writing to the log:
+                    sys.stdout = sys.__stdout__
+                    sys.stderr = sys.__stderr__
                 print msg
+                raw_input("Press the [ENTER] key")
+            raise
         except:
-            traceback.print_exc()
             if sys.stdout != sys.__stdout__:
-                # make sure we are not writting to the log:
+                # make sure we are not writing to the log:
                 sys.stdout = sys.__stdout__
                 sys.stderr = sys.__stderr__
-                traceback.print_exc()
+            traceback.print_exc()
         if main_is_frozen():
             # which happens when running from the py2exe build
             # we wait for keyboad keypress to give a chance to the 
             # user to see the error message
+            if sys.stdout != sys.__stdout__:
+                # make sure we are not writing to the log:
+                sys.stdout = sys.__stdout__
+                sys.stderr = sys.__stderr__
             raw_input("Press the [ENTER] key")
      
     

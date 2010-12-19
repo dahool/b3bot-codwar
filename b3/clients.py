@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    15/08/2010 - 1.2.13 - xlr8or
+#    * Minor addition for bfbc2 in alias checking
 #    21/05/2010 - 1.2.12 - xlr8or
 #    * Catch ValueError in clients.getByCID to allow names as CID's, but still
 #      fix the previous exploit in q3a based games 
@@ -51,7 +53,7 @@
 #     Added data parameter to Client.tempban()
 
 __author__  = 'ThorN'
-__version__ = '1.2.12'
+__version__ = '1.2.13'
 
 import b3, string, re, time, functions, threading, traceback, sys
 
@@ -343,8 +345,11 @@ class Client(object):
     ip = property(_get_ip, _set_ip)
 
     #------------------------
-    def _set_timeAdd(self, time):
-        self._timeAdd = int(time)
+    def _set_timeAdd(self, tim):
+        try:
+            self._timeAdd = int(tim)
+        except:
+            self._timeAdd = int(time.time())
 
     def _get_timeAdd(self):
         return self._timeAdd
@@ -406,7 +411,7 @@ class Client(object):
         if self._name == newName:
             self.console.verbose2('Aborted Making Alias for cid: %s, name is the same' % self.cid)
             return
-        if self.cid == '-1':
+        if self.cid == '-1' or self.cid == 'Server': # bfbc2 addition
             self.console.verbose2('Aborted Making Alias for cid: %s, must be World' % self.cid)
             return
         
@@ -986,6 +991,7 @@ class Clients(dict):
         try:
             cleanedCid = int(cid)
         except ValueError:
+            self.console.error('Unexpected CID getByCID(%s) - %s', cid, e)
             # Must ba a game using names or other strings as cid's, allow it.
             # this will obviously fail for a nickname like '007'
             cleanedCid = cid
@@ -997,10 +1003,11 @@ class Clients(dict):
         except Exception, e:
             self.console.error('Unexpected error getByCID(%s) - %s', cid, e)
         else:
-            #self.console.debug('Found client by CID %s = %s', cid, c.name)
+            self.console.debug('Found client by CID %s = %s', cid, c.name)
             if c.cid == str(cleanedCid):
                 return c
-            else: 
+            else:
+                self.console.debug('CID %s = Cleaned CID %s', c.cid, str(cleanedCid))
                 return None
 
         return None

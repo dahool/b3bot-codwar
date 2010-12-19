@@ -1,26 +1,6 @@
 <configuration plugin="adv">
-	<!--
-		Note: within ads, you can use the following variables : @nextmap @time
-		or rules as defined in the admin plugin config file. ie: /spam#rule1
-	-->
-	<settings name="settings">
-		<!-- rate in minutes -->
-		<set name="rate">2</set>
-		<!--
-			you can either set here a text file that will contain one ad per line
-			or fill the <ads> section below
-		-->
-		<!-- <set name="ads">c:/somewhere/my_ads.txt</set> -->
-	</settings>
-	<ads>
-	<ad>^7Server Survivor --> ^9WD Argentina II</ad>
-	<ad>@nextmap</ad>
-        <ad>/spam#rule1</ad>
-      	<ad>^7Visitanos en ^2www.clanwd.com.ar</ad>
-        <ad>/spam#rule3</ad>
-	<ad>^7Server Survivor --> ^9WD Argentina II</ad>
-        <ad>/spam#rule4</ad>
-	<ad>@time</ad>
-        <ad>/spam#rule12</ad>
-	</ads>
+    <settings name="settings">
+        <set name="rate">2</set>
+        <set name="ads">/local/codwar/q3a/q3ut4/ads1.txt</set>
+    </settings>
 </configuration>

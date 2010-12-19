@@ -1,0 +1,5 @@
+<configuration plugin="mirror">
+	<settings name="settings">
+        <set name="commands">paslap,panuke,pamute,spank,ban,tempban,kick,warn,poke</set>
+	</settings>
+</configuration>

@@ -71,6 +71,11 @@ class StatusPlugin(b3.plugin.Plugin):
         self._interval = self.config.getint('settings', 'interval')
         self._matchinterval = self.config.getint('settings', 'match_interval')
 
+        try:
+            self._showpass = self.config.getboolean('settings','show_password')
+        except:
+            self._showpass = False
+            
         if self._cronTab:
             # remove existing crontab
             self.console.cron - self._cronTab
@@ -120,6 +125,29 @@ class StatusPlugin(b3.plugin.Plugin):
         b3clients.setAttribute("Total", str(len(clients)))
         b3status.appendChild(b3clients)
 
+        c = self.console.game
+        gamename = ''
+        gametype = ''
+        mapname = ''
+        timelimit = ''
+        fraglimit = ''
+        capturelimit = ''
+        rounds = ''
+        if c.gameName:
+            gamename = c.gameName
+        if c.gameType:
+            gametype = c.gameType
+        if c.mapName:
+            mapname = c.mapName
+        if c.timeLimit:
+            timelimit = c.timeLimit
+        if c.fragLimit:
+            fraglimit = c.fragLimit
+        if c.captureLimit:
+            capturelimit = c.captureLimit
+        if c.rounds:
+            rounds = c.rounds
+            
         for c in clients:
             if not c.name:
                 c.name = "@"+str(c.id)
@@ -139,7 +167,10 @@ class StatusPlugin(b3.plugin.Plugin):
                 client.setAttribute("Connections", str(c.connections))
                 client.setAttribute("CID", str(c.cid))
                 client.setAttribute("Level", str(_level))
-                client.setAttribute("State", str(c.state))
+                if gametype in ('ts','bomb'):
+                    client.setAttribute("State", str(c.state))
+                else:
+                    client.setAttribute("State", '2')
                 if c.guid:
                     client.setAttribute("GUID", c.guid)
                 else:
@@ -182,28 +213,6 @@ class StatusPlugin(b3.plugin.Plugin):
                 self.debug('XML Failed: %r' % err)
                 pass
 
-        c = self.console.game
-        gamename = ''
-        gametype = ''
-        mapname = ''
-        timelimit = ''
-        fraglimit = ''
-        capturelimit = ''
-        rounds = ''
-        if c.gameName:
-            gamename = c.gameName
-        if c.gameType:
-            gametype = c.gameType
-        if c.mapName:
-            mapname = c.mapName
-        if c.timeLimit:
-            timelimit = c.timeLimit
-        if c.fragLimit:
-            fraglimit = c.fragLimit
-        if c.captureLimit:
-            capturelimit = c.captureLimit
-        if c.rounds:
-            rounds = c.rounds
         game = xml.createElement("Game")
         game.setAttribute("Name", str(gamename))
         game.setAttribute("Type", str(gametype))
@@ -221,15 +230,30 @@ class StatusPlugin(b3.plugin.Plugin):
             game.appendChild(data)
         
         # SGT - Scores
-        scores = self.console.getCvar( 'g_teamScores' )
-        if scores:
-            scores = scores.getString()
+        if len(clients)>0:
+            scores = self.console.getCvar( 'g_teamScores' )
+            if scores:
+                scores = scores.getString()
+            else:
+                scores = '--:--'
         else:
             scores = '--:--'
         data = xml.createElement("Data")
         data.setAttribute("Name", "g_teamScores")
         data.setAttribute("Value", scores)
         game.appendChild(data)
+        
+        # SGT - Password
+        if self._showpass:
+            p = self.console.getCvar( 'g_password' )
+            if p:
+                p = p.getString()
+            else:
+                p = ''            
+            data = xml.createElement("Data")
+            data.setAttribute("Name", "g_password")
+            data.setAttribute("Value", p)
+            game.appendChild(data)
             
         self.writeXML(xml.toprettyxml(indent="        "))
 

@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -30,14 +30,19 @@
 # * fix import Bfbc2Exception
 # 2010/04/11 - 1.0 Courgette
 # * just make it v1.0 as it is now part of a public release and works rather good
+# 2010/04/15 - 1.0.1 Bakes
+# * If the response of the rcon command does not start with 'OK', trigger Bfbc2CommandFailedError
+# 2010/07/29 - 1.0.2 xlr8or
+# * The response may also be "NotFound" ie. when a guid or ip address is not found in the banslist.
+# * Added needConfirmation var to write() so we can use the confirmationtype ("OK", "NotFound") to test on.
 
 import thread
-from b3.parsers.bfbc2 import bfbc2Connection
+from b3.parsers.frostbite import bfbc2Connection
  
 __author__ = 'Courgette'
 __version__ = '1.0'
  
-from b3.parsers.bfbc2.bfbc2Connection import Bfbc2Connection, Bfbc2Exception
+from b3.parsers.frostbite.bfbc2Connection import Bfbc2Connection, Bfbc2Exception, Bfbc2CommandFailedError
 
 #--------------------------------------------------------------------------------------------------
 class Rcon:
@@ -58,14 +63,14 @@ class Rcon:
     def _connect(self):
         if self._bfbc2Connection:
             return
-        self.console.verbose('RCON: Connecting to BFBC2 server ...')
+        self.console.verbose('RCON: Connecting to Frostbite server ...')
         self._bfbc2Connection = Bfbc2Connection(self.console, self._rconIp, self._rconPort, self._rconPassword)
 
     def writelines(self, lines):
         for line in lines:
             self.write(line)
 
-    def write(self, cmd, maxRetries=1):
+    def write(self, cmd, maxRetries=1, needConfirmation=False):
         self._lock.acquire()
         try:
             if self._bfbc2Connection is None:
@@ -76,7 +81,12 @@ class Rcon:
                     tries += 1
                     self.console.verbose('RCON (%s/%s) %s' % (tries, maxRetries, cmd))
                     response = self._bfbc2Connection.sendRequest(cmd)
-                    return response[1:]
+                    if response[0] != "OK" and response[0] != "NotFound":
+                        raise Bfbc2CommandFailedError(response)
+                    if needConfirmation:
+                        return response[0]
+                    else:
+                        return response[1:]
                 except Bfbc2Exception, err:
                     self.console.warning('RCON: sending \'%s\', %s' % (cmd, err))
             self.console.error('RCON: failed to send \'%s\'', cmd)

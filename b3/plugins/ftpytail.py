@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2009 James "Bakes" Baker
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,17 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 #
 # CHANGELOG:
+# 04/10/2010 - 1.5.3 - Courgette
+#   * stop thread on FTP permanent error
+#   * can activate FTP debug messages with _ftplib_debug_level
+#   * display exact error message whenever the ftp connection fails
+# 04/09/2010 - 1.5.2 - GrosBedo
+#   * b3/delay option now specify the delay between each ftp log fetching
+#   * b3/local_game_log option to specify the temporary local log name (permits to manage remotely several servers at once)
+# 02/09/2010 - 1.5.1 - Courgette
+#    * fix bug in 1.5. Dectect FTP permanent error and give up in such cases
+# 02/09/2010 - 1.5 - Courgette
+#    * allow to connect on non standard FTP port
 # 06/02/2010 - 1.4 - Courgette
 #    * force FTP binary mode
 # 13/12/2009 - 1.3 - Courgette
@@ -36,8 +47,8 @@
 # 17/06/2009 - 1.0 - Bakes
 #     Initial Plugin, basic functionality.
  
-__version__ = '1.4'
-__author__ = 'Bakes'
+__version__ = '1.5.3'
+__author__ = 'Bakes, Courgette'
  
 import b3, threading
 from b3 import functions
@@ -62,7 +73,26 @@ class FtpytailPlugin(b3.plugin.Plugin):
     _remoteFileOffset = None
     _nbConsecutiveConnFailure = 0
     
+    _working = True
+    _ftplib_debug_level = 0 # 0: no debug, 1: normal debug, 2: extended debug
+    
+    _ftpdelay = 0.150
+    
     def onStartup(self):
+        versionsearch = re.search("^((?P<mainversion>[0-9]).(?P<lowerversion>[0-9]+)?)", sys.version)
+        version = int(versionsearch.group(3))
+        if version < 6:
+            self.error('Python Version %s, this is not supported and may lead to hangs. Please update Python to 2.6' % versionsearch.group(1))
+            self.console.die()
+
+        if self.console.config.has_option('server', 'delay'):
+            self._ftpdelay = self.console.config.getfloat('server', 'delay')
+        
+        if self.console.config.has_option('server', 'local_game_log'):
+            self.lgame_log = self.console.config.getfloat('server', 'local_game_log')
+        else:
+            self.lgame_log = os.path.normpath(os.path.expanduser('games_mp.log'))
+
         if self.console.config.get('server','game_log')[0:6] == 'ftp://' :
             self.initThread(self.console.config.get('server','game_log'))
     
@@ -83,6 +113,7 @@ class FtpytailPlugin(b3.plugin.Plugin):
         self.ftpconfig = functions.splitDSN(ftpfileDSN)
         thread1 = threading.Thread(target=self.update)
         self.info("Starting ftpytail thread")
+        self._working = True
         thread1.start()
     
     def update(self):
@@ -94,8 +125,8 @@ class FtpytailPlugin(b3.plugin.Plugin):
             else:
                 self.buffer = self.buffer + block
         ftp = None
-        self.file = open('games_mp.log', 'ab')
-        while self.console.working:
+        self.file = open(self.lgame_log, 'ab')
+        while self.console.working and self._working:
             try:
                 if not ftp:
                     ftp = self.ftpconnect()
@@ -122,16 +153,21 @@ class FtpytailPlugin(b3.plugin.Plugin):
                     if self.console._paused:
                         self.console.unpause()
                         self.debug('Unpausing')
-            except ftplib.all_errors, e:
+
+            except ftplib.error_perm, e:
+                self.critical('FTP permanent error : ' + str(e))
+                self.exception(e)
+                self._working = False
+                continue
+            except ftplib.error_temp, e:
                 self.debug(str(e))
                 self._nbConsecutiveConnFailure += 1
-                self.verbose('Lost connection to server, pausing until updated properly')
                 if self.console._paused is False:
                     self.console.pause()
                 self.file.close()
-                self.file = open('games_mp.log', 'w')
+                self.file = open(self.lgame_log, 'w')
                 self.file.close()
-                self.file = open('games_mp.log', 'ab')
+                self.file = open(self.lgame_log, 'ab')
                 try:
                     ftp.close()
                     self.debug('FTP Connection Closed')
@@ -144,8 +180,29 @@ class FtpytailPlugin(b3.plugin.Plugin):
                 else:
                     self.debug('too many failures, sleeping %s sec' % self._waitBeforeReconnect)
                     time.sleep(self._waitBeforeReconnect)
-            time.sleep(0.150)
-        self.verbose("B3 is down, stopping Ftpytail thread")
+            except ftplib.all_errors, e:
+                self.debug(str(e))
+                self._nbConsecutiveConnFailure += 1
+                if self.console._paused is False:
+                    self.console.pause()
+                self.file.close()
+                self.file = open(self.lgame_log, 'w')
+                self.file.close()
+                self.file = open(self.lgame_log, 'ab')
+                try:
+                    ftp.close()
+                    self.debug('FTP Connection Closed')
+                except:
+                    pass
+                ftp = None
+                
+                if self._nbConsecutiveConnFailure <= 30:
+                    time.sleep(1)
+                else:
+                    self.debug('too many failures, sleeping %s sec' % self._waitBeforeReconnect)
+                    time.sleep(self._waitBeforeReconnect)
+            time.sleep(self._ftpdelay)
+        self.verbose("stopping Ftpytail update thread")
         try:
             ftp.close()
         except:
@@ -156,21 +213,27 @@ class FtpytailPlugin(b3.plugin.Plugin):
             pass
     
     def ftpconnect(self):
-        versionsearch = re.search("^((?P<mainversion>[0-9]).(?P<lowerversion>[0-9]+)?)", sys.version)
-        version = int(versionsearch.group(3))
-        if version < 6:
-            self.debug('Python Version %s.%s, this is not supported and may lead to hangs. Please update Python to 2.6 if you want B3 to autorestart properly.' % (versionsearch.group(2), versionsearch.group(3)))
-            self.console.die('Python version is not new enough for FTPyTail, this will almost certainly lead to bot hangs. Please update your Python.')
-        else:
-            #self.debug('Python Version %s.%s, so setting timeout of 10 seconds' % (versionsearch.group(2), versionsearch.group(3)))
-            self.verbose('Connecting to %s ...', self.ftpconfig["host"])
-            ftp=FTP(self.ftpconfig['host'],self.ftpconfig['user'],passwd=self.ftpconfig['password'],timeout=self._connectionTimeout)
-            ftp.voidcmd('TYPE I')
+        #self.debug('Python Version %s.%s, so setting timeout of 10 seconds' % (versionsearch.group(2), versionsearch.group(3)))
+        self.verbose('Connecting to %s:%s ...' % (self.ftpconfig["host"], self.ftpconfig["port"]))
         try:
-            ftp.cwd(os.path.dirname(self.ftpconfig['path']))
-        except:
-            self.error('Cannot CWD to the correct directory, ftp connection has failed')
-        self.console.clients.sync()
+            ftp = FTP()
+            ftp.set_debuglevel(self._ftplib_debug_level)
+            ftp.connect(self.ftpconfig['host'], self.ftpconfig['port'], self._connectionTimeout)
+            ftp.login(self.ftpconfig['user'], self.ftpconfig['password'])
+            ftp.voidcmd('TYPE I')
+            dir = os.path.dirname(self.ftpconfig['path'])
+            self.debug('trying to cwd to [%s]' % dir)
+            ftp.cwd(dir)
+            self.console.clients.sync()
+        except ftplib.error_perm, err:
+            self.exception(err)
+            self.error('Permanent error while trying to connect to FTP server. %s' %err)
+        except ftplib.error_temp, err:
+            self.exception(err)
+            self.error('Temporary error while trying to connect to FTP server. %s' %err)
+        except Exception, err:
+            self.error('ftp connection has failed. %s' % err)
+            self.exception(err)
         return ftp
     
     
@@ -192,8 +255,10 @@ if __name__ == '__main__':
     
     print "------------------------------------"
     p = FtpytailPlugin(fakeConsole)
+    p.onStartup()
 
-    p.initThread('ftp://www.somewhere.tld/somepath/somefile.log')
-    time.sleep(30)
+    #p.initThread('ftp://www.somewhere.tld/somepath/somefile.log')
+    p.initThread('ftp://thomas@127.0.0.1/DRIVERS/test.txt')
+    time.sleep(90)
     fakeConsole.shutdown()
     time.sleep(8)
