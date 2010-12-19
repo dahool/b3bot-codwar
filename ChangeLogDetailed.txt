@@ -1,3 +1,983 @@
+2010-11-12  Courgette <courgette@ubu-team.org>
+
+	* b3/clients.py: clients: harden _set_name for cases where console
+	is not set
+
+2010-11-11  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit d099d0c9f82b580699c112bdf4f04cc166414182 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Mon Nov 8 19:45:01 2010 +0100
+
+2010-11-08  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/publist.py: PLUGIN PUBLIST : B3 master server can
+	prevent a bot from sending further heartbeats
+
+2010-11-07  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/frostbite/abstractParser.py: PARSER FROSTBITE:
+	OnServerLoadinglevel() now fills game.rounds and game.sv_maxrounds
+	and fix getSupportedMaps()
+
+2010-11-07  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/moh.py: PARSER MOH : add new maps info
+
+2010-11-05  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 00602b222e2f5bb21ea04419e933dcd27fe6a49c Author:
+	Courgette <courgette@ubu-team.org> Date:   Fri Nov 5 19:15:28 2010
+	+0100
+
+2010-11-03  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/frostbite/util.py: FROSTBITE UTIL : minor changes
+
+2010-11-01  xlr8or <xlr8or@xlr8or.com>
+
+	* versions.txt: versions.txt
+
+2010-11-01  Courgette <courgette@ubu-team.org>
+
+	* : commit 5fa63dc0f21852d73e07d5fefd2fdc27013860bf Author:
+	Courgette <courgette@ubu-team.org> Date:   Mon Nov 1 20:34:10 2010
+	+0100
+
+2010-11-01  xlr8or <xlr8or@xlr8or.com>
+
+	* CHANGELOG, ChangeLogDetailed.txt, MANIFEST.in,
+	b3.egg-info/SOURCES.txt, versions.txt: versioning 1.4.1b: feature
+	freeze release candidate
+
+2010-11-01  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/ftpytail.py: Make ftpytail retry forever in case it
+	looses FTP connection
+
+2010-10-31  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/frostbite/abstractParser.py: doc
+
+2010-10-29  Courgette <courgette@ubu-team.org>
+
+	* : commit a4609735e14bce6a8da088283fb99fa7e8696a37 Author:
+	Courgette <courgette@ubu-team.org> Date:   Fri Oct 29 22:41:42 2010
+	+0200
+
+2010-10-29  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/publist.py: PLUGIN PUBLIST : send additional info to B3
+	master for frostbite games
+
+2010-10-29  Courgette <courgette@ubu-team.org>
+
+	* : commit da4ce861a4ac2557d5b20d0b1be2d6bc054894f6 Merge: ea82f43
+	c7f2e28 Author: Courgette <courgette@ubu-team.org> Date:   Fri Oct
+	29 19:49:13 2010 +0200
+
+2010-10-29  xlr8or <xlr8or@xlr8or.com>
+
+	* .gitignore: minor
+
+2010-10-29  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/setup.py: added cod6 to setup.py
+
+2010-10-28  Courgette <courgette@ubu-team.org>
+
+	* : commit 26acf5eef531747cfe135e86ea39e530b8fab87a Author:
+	Courgette <courgette@ubu-team.org> Date:   Thu Oct 28 20:40:03 2010
+	+0200
+
+2010-10-28  Courgette <courgette@ubu-team.org>
+
+	* b3/parser.py: support an new optional syntax for loading plugins
+	in b3.xml which enable to specify a directory where to find the
+	plugin with the 'path' attribute.
+
+2010-10-27  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/moh.py: PARSER MOH : make tempban and permban effective
+
+2010-10-25  Courgette <courgette@ubu-team.org>
+
+	* : commit d5f3ddb971ef6ae570b9bbe46e3ab09aba7caffd Merge: d2d17bf
+	20bc035 Author: xlr8or <xlr8or@xlr8or.com> Date:   Mon Oct 25
+	20:54:57 2010 +0200
+
+2010-10-25  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 44ab24818c0133b81112866ec770fc24db7d8b4d Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Mon Oct 25 02:50:57 2010 -0700
+
+2010-10-25  grosbedo <grosbedo@gmail.com>
+
+	* b3/parsers/oa081.py: oa081 parser: enhanced CTF events detection
+	(can now run flagstats.py plugin) Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-10-25  Courgette <courgette@ubu-team.org>
+
+	* : commit dafd550cedb68f0111788a962584846bbc368bd5 Author:
+	Courgette <courgette@ubu-team.org> Date:   Mon Oct 25 00:07:54 2010
+	+0200
+
+2010-10-25  Courgette <courgette@ubu-team.org>
+
+	* : commit cffe18eede2c681fb2a3112b2617c3bd1ed665a2 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Sun Oct 24 23:46:21 2010 +0200
+
+2010-10-24  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/adv.py: PLUGIN ADV : prevent plugin crash when no feed
+	url is set in config
+
+2010-10-24  Courgette <courgette@ubu-team.org>
+
+	* : commit 16335578e0b7f7a8e22b28631d0d653707c4be32 Merge: f070e43
+	e7719b8 Author: Courgette <courgette@ubu-team.org> Date:   Sun Oct
+	24 20:57:34 2010 +0200
+
+2010-10-24  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/moh.py: add missing getTeam()
+
+2010-10-24  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod.py, b3/parsers/cod5.py: CoD5 Parser: #
+	ActionMapping added #  Add JoinTeam event processing CoD Parser: #
+	Some documentation on line formats
+
+2010-10-24  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/moh.py: PARSER MoH : minor fixes
+
+2010-10-24  Courgette <courgette@ubu-team.org>
+
+	* : commit 5c2a19a9d81b01efd9ae137b7a8c0adeb9615b78 Author:
+	Courgette <courgette@ubu-team.org> Date:   Sun Oct 24 16:16:22 2010
+	+0200
+
+2010-10-23  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/moh.py: better handling of MoH events :
+	server.onRoundOver, server.onRoundOverPlayers,
+	server.onRoundOverTeamScores and player.onTeamChange
+
+2010-10-23  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/frostbite/abstractParser.py: more renaming
+
+2010-10-23  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/bfbc2.py, b3/parsers/frostbite/abstractParser.py,
+	b3/parsers/frostbite/bfbc2Connection.py,
+	b3/parsers/frostbite/connection.py, b3/parsers/frostbite/rcon.py,
+	b3/parsers/frostbite/util.py, b3/parsers/moh.py: huge refactoring
+	regarding Frostbite related parsers. Carefull not fully tested and
+	this is regression prone activity
+
+2010-10-22  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/output.py, b3/parser.py: devmode > log2both: adds option to
+	write to logfile AND stdout simultaneously
+
+2010-10-22  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 001e706b9e58ea2cfb9d6dc351da8314c6f7fa11 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Fri Oct 22 20:16:53 2010 +0200
+
+2010-10-22  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: Added restart counter to console
+
+2010-10-22  grosbedo <grosbedo@gmail.com>
+
+	* b3/__init__.py, b3/parsers/oa081.py: oa081 parser: fix tk issue
+	with DM and other team free gametypes global: added TEAM_FREE
+	constant Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-10-22  grosbedo <grosbedo@gmail.com>
+
+	* b3/plugins/stats.py: stats plugin: clientKill and clientDamage
+	separated from clientKillTeam and clientDamageTeam Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-10-22  grosbedo <grosbedo@gmail.com>
+
+	* b3/parsers/oa081.py: oa081.py : fix a BIG issue when detecting
+	teams (were always unknown) Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-10-22  grosbedo <grosbedo@gmail.com>
+
+	* b3/plugins/stats.py: stats.py : No more teamKills if team is
+	unknown (eg: parser can't detect the team) Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-10-22  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/sftpytail.py: change to the SFTP URI syntax
+
+2010-10-21  Courgette <courgette@ubu-team.org>
+
+	* b3/pkg_handler.py: fix an issue that broke the b3_run.exe when
+	frozen on a machine that have pkg_resources available
+
+2010-10-21  Courgette <courgette@ubu-team.org>
+
+	* setupPy2exe.py: setupPy2exe.py : change b3.parsers.bfbc2.* into
+	b3.parsers.frostibte.*
+
+2010-10-20  Courgette <courgette@ubu-team.org>
+
+	* py2exe_builder/b3-installer-project.iss: InnoSetup script: make
+	the b3 version number a constant. Need InnoSetup preprocessor to
+	compile
+
+2010-10-20  Courgette <courgette@ubu-team.org>
+
+	* b3/functions.py: harden the check for B3 updates which crashed the
+	bot in case it received non valid xml
+
+2010-10-20  Courgette <courgette@ubu-team.org>
+
+	* b3/fake.py: minor change to fakeconsole
+
+2010-10-20  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/PKG-INFO: versioning
+
+2010-10-20  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/plugins/censor.py: CensorPlugin: Plugin can now be disabled
+	with !disable censor
+
+2010-10-17  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 5c38df867df4886b84ef659fb6de6973efcf06d8 Merge: 3bbb4eb
+	27991d9 Author: xlr8or <xlr8or@xlr8or.com> Date:   Sun Oct 17
+	11:16:22 2010 +0200
+
+2010-10-17  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod2.py: [cod2]: Don't let version exceptions be
+	inherited by later parsers
+
+2010-10-17  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/plugin_adv.xml, b3/plugins/adv.py: PLUGIN ADV : can set
+	rate in seconds
+
+2010-10-17  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/plugin_welcome.xml, b3/plugins/welcome.py: PLUGIN WELCOME
+	: can now customize for how long the bot waits before welcoming a
+	second time a player
+
+2010-10-13  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/xlrstats.py: [xlrstats] BugFix: Empty field webfront
+	Url is now allowed in config
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* py2exe_builder/build_py2exe.bat, setup.cfg: release package format
+	changes
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/setup.py, versions.txt: config wizard updates
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt, b3.egg-info/PKG-INFO,
+	b3.egg-info/SOURCES.txt, b3/PKG-INFO, setup.py, versions.txt: 
+	Versioning 1.4.0
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/frostbite/bfbc2Connection.py,
+	b3/parsers/frostbite/rcon.py: [Frostbite] Output to log changed:
+	BFBC2 -> Frostbite (cosmetic only!)
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: Win-standalone: minor fix prior to release.
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit a2b8bbddd380c1b9b8f7f875b6d0f8b1161d0c5f Merge: 952138f
+	a1e6eb9 Author: xlr8or <xlr8or@xlr8or.com> Date:   Mon Oct 11
+	20:09:55 2010 +0200
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* py2exe_builder/b3-installer-project.iss: Versioning 1.4.0
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/setup.py: MOH support for config wizard
+
+2010-10-11  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod.py: cod parser: don't save client.name on say and
+	sayteam when name is the same (sanitization problem)
+
+2010-10-10  Bakes <bakes@ymail.com>
+
+	* b3/parsers/moh.py: Added getEasyName (working) getHardName (not
+	working)
+
+2010-10-10  Courgette <courgette@ubu-team.org>
+
+	* b3/clients.py: revert client.py back to v1.2.13
+
+2010-10-10  Courgette <courgette@ubu-team.org>
+
+	* b3/clients.py: attempt to prevent the loss of color information in
+	_exactName
+
+2010-10-09  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/cod6.py: cod6: set sv_hostname at startup
+
+2010-10-07  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/b3.moh_example.xml, b3/parsers/moh.py: few fixes to MoH
+	that need validation from Bakes
+
+2010-10-06  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt, versions.txt: detailed changelog and
+	versions.txt
+
+2010-10-06  xlr8or <xlr8or@xlr8or.com>
+
+	* b3.egg-info/PKG-INFO, b3.egg-info/SOURCES.txt, b3/PKG-INFO,
+	b3/run.py, py2exe_builder/b3-installer-project.iss, setup.py,
+	setupPy2exe.py: versioning 1.4.0b
+
+2010-10-06  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parser.py, b3/parsers/q3a.py: reintroduced rcontesting on
+	startup, but for q3a based only (rconTest var in parser)
+
+2010-10-04  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/ftpytail.py: Ftpytail : stop on FTP permanent error +
+	more useful debug message
+
+2010-10-03  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/xlrstats.py: XLRstats: Default action bonus set to
+	+3 skillpoints (was 0)
+
+2010-10-02  Courgette <courgette@ubu-team.org>
+
+	* b3_debug.py, b3_run.py: make b3_run.py not dependent on
+	b3_debug.py to avoid any bug related to the debug tool when running
+	B3 in standard mode
+
+2010-10-02  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/cod6.py: add cod6 parser (supposed to be working on
+	alterIWnet dedicated servers) (2)
+
+2010-10-02  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/cod6.py: add cod6 parser (supposed to be working on
+	alterIWnet dedicated servers)
+
+2010-09-28  Courgette <courgette@ubu-team.org>
+
+	* b3_run.py: try to go around the b3 profiler issues on some python
+	distribution
+
+2010-09-27  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/plugin_censor.xml: Fix plugin_censor.xml 'spica' (pt).
+	Credit 82ndAB.Bravo17
+
+2010-09-27  Courgette <courgette@ubu-team.org>
+
+	* : commit 1eb6e6470b66e2eacf6d4f8d7d284ba65f685319 Merge: 717eea2
+	7f0794e Author: xlr8or <xlr8or@xlr8or.com> Date:   Sat Sep 25
+	16:22:05 2010 +0200
+
+2010-09-25  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit d0a19fc1af6baa536177d57cb1c5456ccd3a9560 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Sat Sep 25 16:20:37 2010 +0200
+
+2010-09-25  Bakes <bakes@ymail.com>
+
+	* b3/parsers/bfbc2.py, b3/parsers/bfbc2/__init__.py,
+	b3/parsers/bfbc2/bfbc2Connection.py, b3/parsers/bfbc2/protocol.py,
+	b3/parsers/bfbc2/punkbuster.py, b3/parsers/bfbc2/rcon.py,
+	b3/parsers/frostbite/__init__.py,
+	b3/parsers/frostbite/bfbc2Connection.py,
+	b3/parsers/frostbite/protocol.py,
+	b3/parsers/frostbite/punkbuster.py, b3/parsers/frostbite/rcon.py,
+	b3/parsers/moh.py: Refactored the Bfbc2 parser to be bfbc2.py and
+	frostbite/ where frostbite includes all connection modules. Added
+	the first version of the MoH parser.
+
+2010-09-22  grosbedo <grosbedo@gmail.com>
+
+	* b3/tools/functionprofiler.py: added error handling if profile and
+	pstats libraries can't be found Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-20  Courgette <courgette@ubu-team.org>
+
+	* : merge xlr8or/master
+
+2010-09-17  grosbedo <grosbedo@gmail.com>
+
+	* b3/parsers/oa081.py: fix crash issue when a player has
+	disconnected at the very time the bot check for the list of players Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-17  grosbedo <grosbedo@gmail.com>
+
+	* b3/tools/functionprofiler.py: added an automatic calibration prior
+	to profiling Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-17  grosbedo <grosbedo@gmail.com>
+
+	* b3/conf/b3.distribution.xml, b3/tools/functionprofiler.py,
+	b3/tools/logdiagnostic.py, b3/tools/memoryprofiler.py, b3_debug.py: 
+	fixed import bug for debug mode Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-16  grosbedo <grosbedo@gmail.com>
+
+	* b3/tools/diag.py, b3/tools/mstats.py, b3/tools/pstat.py: delete
+	deprecated debug tools and libs Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-16  grosbedo <grosbedo@gmail.com>
+
+	* b3/__init__.py, b3/lib/argparse.py, b3/lib/corestats.py,
+	b3/lib/kthread.py, b3/lib/profilebrowser.py,
+	b3/lib/runsnakerun/__init__.py, b3/lib/runsnakerun/dumbprofile.py,
+	b3/lib/runsnakerun/hotshotreader.py,
+	b3/lib/runsnakerun/memdumploader.py,
+	b3/lib/runsnakerun/pstatsloader.py, b3/lib/runsnakerun/runsnake.py,
+	b3/lib/runsnakerun/squaremap.py, b3/lib/statlib/__init__.py,
+	b3/lib/statlib/anova.py, b3/lib/statlib/io.py,
+	b3/lib/statlib/matfunc.py, b3/lib/statlib/pstat.py,
+	b3/lib/statlib/stats.py, b3/lib/yaml/__init__.py,
+	b3/lib/yaml/composer.py, b3/lib/yaml/constructor.py,
+	b3/lib/yaml/cyaml.py, b3/lib/yaml/dumper.py,
+	b3/lib/yaml/emitter.py, b3/lib/yaml/error.py,
+	b3/lib/yaml/events.py, b3/lib/yaml/loader.py, b3/lib/yaml/nodes.py,
+	b3/lib/yaml/parser.py, b3/lib/yaml/reader.py,
+	b3/lib/yaml/representer.py, b3/lib/yaml/resolver.py,
+	b3/lib/yaml/scanner.py, b3/lib/yaml/serializer.py,
+	b3/lib/yaml/tokens.py, b3/tools/functionprofiler.py,
+	b3/tools/logdiagnostic.py, b3/tools/memoryprofiler.py, b3_debug.py,
+	b3_run.py: * added debug tools : log diagnostic and functions profiler Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-15  grosbedo <grosbedo@gmail.com>
+
+	* b3/parsers/smg.py, b3/parsers/smg11.py: * added !nextmap and !maps support for smg and smg11 parsers Signed-off-by: grosbedo <grosbedo@gmail.com>
+
+2010-09-12  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parser/oa081.py, b3/parsers/oa081.py: Fix misplaced oa081
+	parser
+
+2010-09-09  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/conf/b3.distribution.xml, b3/tools/mstats.py,
+	b3/tools/pstat.py: Signed-off-by: xlr8or <xlr8or@xlr8or.com>
+
+2010-09-09  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 7cacb4a92532b2b8712a02f23ee04c58fbcfe779 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Thu Sep 9 19:09:27 2010 +0200
+
+2010-09-07  grosbedo <grosbedo@gmail.com>
+
+	* b3/conf/b3.distribution.xml, b3/parser.py, b3/parser/oa081.py,
+	b3/plugins/ftpytail.py, b3/plugins/httpytail.py,
+	b3/plugins/sftpytail.py, b3/tools/diag.py, b3/tools/mstats.py,
+	b3/tools/pstat.py: * remote http log reading (httpytail.py) * added lines per second setting * fixed some issues with oa081 parser * can now manage remotely several servers at once (fixed
+	ftpytail.py, sftpytail.py and httpytail.py) * can now set the interval delay for log fetching in ftp or sftp or
+	http remote access mode via server/delay * updated the sample b3 xml config * added the diagnostic tool
+
+2010-09-03  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: [BFBC2] More debugging messagequeue
+	workers
+
+2010-09-02  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: Debugged messagequeue workers
+
+2010-09-02  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/plugins/ftpytail.py: FTPYTAIL : bugfix and properly detect
+	permanent FTP errors
+
+2010-09-02  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/plugins/ftpytail.py: FTPYTAIL : rollback 1.5.1
+
+2010-09-02  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/plugins/ftpytail.py: FTPYTAIL : fix stupid bug introduced in
+	1.5
+
+2010-09-02  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/plugins/ftpytail.py: ftpytail : allow to connect on non
+	standard FTP port (untested)
+
+2010-09-02  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parser.py: reduce disk access costs by reading multiple lines
+	at once from the game log file
+
+2010-09-02  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: [BFBC2] Better thread handling in
+	messagequeue workers [BFBC2] Fix bug on exit preventing --restart to
+	function properly
+
+2010-09-01  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit baeeffbb31893f7e8c492149b55be3589c59f29d Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Wed Sep 1 20:47:34 2010 +0200
+
+2010-09-01  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: [BFBC2] Fix memory leak due to never
+	ending threads in messagequeue workers
+
+2010-09-01  Courgette <courgette@ubu-team.org>
+
+	* b3/parser.py: parser: detect game log file rotation
+
+2010-09-01  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/b3.distribution.xml, b3/functions.py, b3/parser.py,
+	b3/plugins/sftpytail.py: Add beta support for reading remote game
+	log file over SFTP
+
+2010-08-28  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/oa081.py: OA081: fix issue with Award recognition
+
+2010-08-28  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/oa081.py: OA081: fix findnextmap underscore bug
+
+2010-08-28  Courgette <courgette@ubu-team.org>
+
+	* : commit 0385ca20a617af5c96c9756b3dbc7c3f1a330609 Author:
+	Courgette <courgette@ubu-team.org> Date:   Sat Aug 28 14:55:39 2010
+	+0200
+
+2010-08-28  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parsers/oa081.py: OA081: fixed findnextmap underscore bug
+
+2010-08-28  Courgette <courgette@bigbrotherbot.net>
+
+	* : commit fe4fb26dd14a349e01dbd3b7d54065d8b3533ece Author:
+	Courgette <courgette@ubu-team.org> Date:   Wed Aug 25 21:01:37 2010
+	+0200
+
+2010-08-25  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/admin.py: plugin admin: harden conf reading for
+	warn_command_abusers
+
+2010-08-25  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 36318f2bac3ea01457947370bedd18dcc641c541 Merge: 0cfaaf5
+	f4c431a Author: xlr8or <xlr8or@xlr8or.com> Date:   Wed Aug 25
+	19:31:48 2010 +0200
+
+2010-08-25  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/plugins/admin.py: plugin admin : version numbering
+
+2010-08-25  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/plugin_admin.xml, b3/plugins/admin.py: admin plugin : add
+	kikker916 stuff and few fixes. Add doc to conf
+
+2010-08-24  Courgette <courgette@ubu-team.org>
+
+	* setupPy2exe.py: add calendar module to the win32 build
+
+2010-08-23  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/xlrstats.py: BugFix: Requires ConfigFile for the
+	commands
+
+2010-08-22  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: * [BFBC2] Fix PB handling when the
+	PB server was renamed to something else than 'PunkBuster Server' *
+	[BFBC2] Added OnPBVersion() for testing purposes
+
+2010-08-22  Courgette <courgette@ubu-team.org>
+
+	* : commit 501c775558a7903dd55235bcebd56e90db9a8640 Merge: b804b21
+	379ddb9 Author: xlr8or <xlr8or@xlr8or.com> Date:   Sat Aug 21
+	20:17:29 2010 +0200
+
+2010-08-21  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/conf/xlrstats.xml, b3/extplugins/xlrstats.py: Allow
+	external function call for cmd_xlrtopstats Retrieve variables from
+	webfront installation for topstats results
+
+2010-08-21  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/plugins/adv.py: Add @topstats for xlrstats
+
+2010-08-21  Courgette <courgette@ubu-team.org>
+
+	* : commit 98aa7488da447b4e6c039e8669b6258064f46fb3 Merge: 304dd69
+	1e06965 Author: Courgette <courgette@ubu-team.org> Date:   Sat Aug
+	21 12:41:07 2010 +0200
+
+2010-08-20  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parsers/oa081.py: fix regexp (Item, CTF, Award, fallback), fix
+	OnItem, remove OnDamage, add OnCtf, add OnAward
+
+2010-08-20  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parsers/oa081.py: OA081: detect ctf events, cvars and awards,
+	implement permban by ip, unbanbyip, say_team and team recognition
+
+2010-08-16  Courgette <courgette@bigbrotherbot.net>
+
+	* : commit 5326268c38d7d74d8f6b765b30264b4d2b026b19 Author:
+	Courgette <courgette@bigbrotherbot.net> Date:   Mon Aug 16 12:32:49
+	2010 +0200
+
+2010-08-15  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/stats.py: fix disabling reset xp option
+
+2010-08-15  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/clients.py, b3/parsers/bfbc2/__init__.py: minor updates
+
+2010-08-15  Courgette <courgette@ubu-team.org>
+
+	* : commit d20b1cf6d9457fbf6ece9a8983396be910981432 Author:
+	Courgette <courgette@ubu-team.org> Date:   Sun Aug 15 00:00:16 2010
+	+0200
+
+2010-08-14  Courgette <courgette@ubu-team.org>
+
+	* b3/conf/plugin_stats.xml, b3/plugins/stats.py: Added XP score and
+	topxp command. More settings in config
+
+2010-08-14  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 33ed8b02cacda2158ae20fc96339c27e1c01cfea Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Sat Aug 14 21:05:43 2010 +0200
+
+2010-08-14  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/stats.py: PLUGIN STATS: Stats are now cleared at the
+	beginning of next round
+
+2010-08-14  Courgette <courgette@ubu-team.org>
+
+	* b3/parser.py: Do not crash when timezone code is missing or
+	invalid. Instead fallback on UTC and log an error message
+
+2010-08-14  Courgette <courgette@ubu-team.org>
+
+	* b3/plugins/admin.py: admin plugin : fix _parseUserCmdRE
+
+2010-08-14  Courgette <courgette@ubu-team.org>
+
+	* b3/__init__.py, b3/clients.py, b3/config.py, b3/cron.py,
+	b3/cvar.py, b3/events.py, b3/extplugins/xlrstats.py,
+	b3/functions.py, b3/game.py, b3/output.py, b3/parser.py,
+	b3/parsers/bfbc2/__init__.py, b3/parsers/bfbc2/bfbc2Connection.py,
+	b3/parsers/bfbc2/punkbuster.py, b3/parsers/bfbc2/rcon.py,
+	b3/parsers/cod.py, b3/parsers/cod2.py, b3/parsers/cod4.py,
+	b3/parsers/cod5.py, b3/parsers/et.py, b3/parsers/etpro.py,
+	b3/parsers/iourt41.py, b3/parsers/oa081.py,
+	b3/parsers/punkbuster.py, b3/parsers/q3a.py,
+	b3/parsers/q3a_rcon.py, b3/parsers/smg.py, b3/parsers/smg11.py,
+	b3/parsers/wop.py, b3/pkg_handler.py, b3/plugin.py,
+	b3/plugins/admin.py, b3/plugins/adv.py, b3/plugins/censor.py,
+	b3/plugins/codam.py, b3/plugins/ftpytail.py, b3/plugins/login.py,
+	b3/plugins/pingwatch.py, b3/plugins/publist.py,
+	b3/plugins/punkbuster.py, b3/plugins/spamcontrol.py,
+	b3/plugins/stats.py, b3/plugins/status.py, b3/plugins/tk.py,
+	b3/plugins/welcome.py, b3/querybuilder.py, b3/run.py, b3/setup.py,
+	b3/storage.py, b3/timezones.py, b3/tools/documentationBuilder.py,
+	b3_run.py, setup.py: bigbrotherbot.com ---> bigbrotherbot.net
+
+2010-08-13  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 90ddb82a8a854b09676068e40d9bb3ca172a3fa2 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Fri Aug 13 11:06:04 2010 +0200
+
+2010-08-13  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/plugins/status.py: * Added running roundtime and maptime (Seconds)
+
+2010-08-12  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py, b3/run.py: * Quick mapretrieval on startup * fixed typo in run.py
+
+2010-08-12  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parsers/oa081.py: OA081: added weapons and means of death.
+	Define what means of death are suicides
+
+2010-08-11  Courgette <courgette@bigbrotherbot.net>
+
+	* b3/parsers/oa081.py: OA081: v0.6: fix permban
+
+2010-08-11  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/oa081.py: OA081: v0.5 from grosbedo. Adds nextmap
+	support and fix detection of player with no guid on connect
+
+2010-08-10  Courgette <courgette@ubu-team.org>
+
+	* : commit a55fbcebdd28d0a2a45b64806d83bab3a652ec46 Author:
+	Courgette <courgette@ubu-team.org> Date:   Tue Aug 10 23:59:07 2010
+	+0200
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/xlrstats.py: fixed typo
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/extplugins/xlrstats.py: BFBC2 adaptions (Bot Guid is Server,
+	not WORLD)
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod.py: Cod series parsers: Fixed a bug where clients
+	would be disconnected after mapchange on PB enabled servers.
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit d70cf6c81ac446e82ddfedae1e1fc7d1972c1e96 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Tue Aug 10 10:45:13 2010 +0200
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: minor update
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/plugins/status.py: Moved 'Game section' before 'Clients
+	section', XLRstats needs gameinfo before it adds clients to the
+	playerlist
+
+2010-08-10  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/conf/plugin_admin.xml: fixed typo in admin plugin config where
+	rules was only available to level 0
+
+2010-08-09  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/oa081.py: OA081: react upon tell log lines
+
+2010-08-09  Courgette <courgette@ubu-team.org>
+
+	* : commit 9da83f333d0a709f26cd70fe296319a06e6a60a8 Author:
+	Courgette <courgette@ubu-team.org> Date:   Mon Aug 9 08:00:59 2010
+	+0200
+
+2010-08-08  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: fixing --restart for WIN standalone editions
+
+2010-08-08  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit 913b4fec3acae24da2b6f22338168e6b5d6d0448 Author: xlr8or
+	<xlr8or@xlr8or.com> Date:   Sun Aug 8 20:34:52 2010 +0200
+
+2010-08-08  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/conf/plugin_adv.xml, b3/lib/feedparser.py, b3/plugins/adv.py: 
+	Adding feedparser to advertising plugin
+
+2010-08-08  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/oa081.py: OA081: create beta parser for OpenArena 0.8.1
+
+2010-08-08  Courgette <courgette@ubu-team.org>
+
+	* b3/parsers/q3a.py: Q3A: fix minor bug with saybig()
+
+2010-08-07  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: better py version handling
+
+2010-08-06  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/conf/plugin_adv.xml, b3/plugins/adv.py: Remove save() errors
+	and !advsave when XML adds are used
+
+2010-08-06  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/run.py: Fixing broken --restart mode (ready for testing!)
+
+2010-08-04  xlr8or <xlr8or@xlr8or.com>
+
+	* b3.egg-info/PKG-INFO, b3/PKG-INFO, b3/functions.py,
+	b3/plugins/admin.py, setup.py, versions.txt: Update version
+	numbering
+
+2010-08-03  xlr8or <xlr8or@xlr8or.com>
+
+	* versions.txt: versions list updated
+
+2010-08-03  xlr8or <xlr8or@xlr8or.com>
+
+	* CHANGELOG, b3.egg-info/PKG-INFO, b3/PKG-INFO,
+	b3/conf/plugin_admin.xml, b3/functions.py, b3/plugins/admin.py,
+	py2exe_builder/b3-installer-project.iss, setup.py, versions.txt: 
+	Version 1.3.3 release preparations
+
+2010-07-31  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt: updated detailed changelog
+
+2010-07-31  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: Added joinClient() to
+	OnServerLevelstarted() so rounds are counted for playerstats
+
+2010-07-30  xlr8or <xlr8or@xlr8or.com>
+
+	* : commit edd4771cb9594b9075b3966e5d67353d5ebc5f16 Author: durzo
+	<durzo@badcompany2.com.au> Date:   Fri Jul 30 01:42:44 2010 -0700
+
+2010-07-30  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt: Updated detailed Changelog
+
+2010-07-30  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py, b3/parsers/bfbc2/rcon.py: * Fixed unban() * Added needConfirmation var to write() so we can test on the
+	confirmationtype ("OK", "NotFound") sent by the server on rcon.
+
+2010-07-29  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: * Added EVT_PUNKBUSTER_NEW_CONNECTION when PB announces new
+	  connection.  Here's where we see the clients IP for the first time
+	(to aid IP and GeoIP based plugins).  * Removed obsolete code in OnPBLostConection() that generated a
+	consistent error.
+
+2010-07-29  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt: Updated detailed Changelog
+
+2010-07-29  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py, b3/parsers/bfbc2/rcon.py: * Fixed unban() * Added needConfirmation var to write() so we can test on the
+	confirmationtype ("OK", "NotFound") sent by the server on rcon.
+
+2010-07-29  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: * Added EVT_PUNKBUSTER_NEW_CONNECTION when PB announces new
+	  connection.  Here's where we see the clients IP for the first time
+	(to aid IP and GeoIP based plugins).  * Removed obsolete code in OnPBLostConection() that generated a
+	consistent error.
+
+2010-07-28  durzo <durzo@badcompany2.com.au>
+
+	* b3/parsers/bfbc2/__init__.py: Add event EVT_CLIENT_SPAWN to handle
+	onPlayerSpawn
+
+2010-07-28  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py: Make sure we don't create a new
+	client without a guid and Pass guid to getClient() in
+	OnPlayerAuthenticated() for a better chance on a guid
+
+2010-07-23  xlr8or <xlr8or@xlr8or.com>
+
+	* ChangeLogDetailed.txt: updated detailed changelog
+
+2010-07-23  xlr8or <xlr8or@xlr8or.com>
+
+	* b3.egg-info/PKG-INFO, b3/conf/b3.bfbc2_example.xml,
+	b3/plugins/publist.py, py2exe_builder/b3-installer-project.iss,
+	setup.py, versions.txt: updated version info
+
+2010-07-23  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/bfbc2/__init__.py,
+	b3/parsers/bfbc2/bfbc2Connection.py, b3/parsers/bfbc2/protocol.py: * modified OnPlayerKill to work with R15+ * fixed infinite loop in a python socket thread in receivePacket()
+	(in protocol.py) on gameserver restart * fixed (statusplugin crontab) error when polling for playerscores
+	and -pings while server is unreachable
+
+2010-05-22  Bakes <bakes@ymail.com>
+
+	* b3/parsers/bfbc2/__init__.py: [BC2] nicholasperkins' method for
+	line wrapping. Much better.
+
+2010-06-29  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/storage.py: fixed typo myqsldb -> msqldb in error message
+	(thanks ryry46d9)
+
+2010-06-04  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod2.py: CoD2 v1.2 exception: PBid length set to range
+	30-32
+
+2010-05-30  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod.py, b3/parsers/cod2.py: * adding dummy setVersionExceptions() to enable overriding of
+	variables based on the shortversion * Setting exception for 31 char PBid in shortversion v1.2
+
+2010-05-28  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/iourt41.py: typo
+
+2010-05-28  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/iourt41.py: Connecting bots, needs testing! (minor)
+
+2010-05-28  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/iourt41.py: Connecting Bots. Needs to be tested!
+
+2010-05-24  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/PKG-INFO, setup.py: updated version numbering
+
+2010-05-24  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod.py: check if guids match on existing client objects
+	when joining after a mapchange
+
+2010-05-24  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parsers/cod4.py: added maxretries to sync()
+
+2010-05-24  xlr8or <xlr8or@xlr8or.com>
+
+	* b3/parser.py, b3/parsers/bfbc2/__init__.py: Cleared up message on
+	startup screen, some ppl questioned the 'Let's get to work' notice.
+
+2010-05-22  xlr8or <xlr8or@xlr8or.com>
+
+	* py2exe_builder/b3-installer-project.iss: update version numbering
+
+2010-05-22  xlr8or <xlr8or@xlr8or.com>
+
+	* CHANGELOG, ChangeLogDetailed.txt: Updated changelog for version
+	1.3.2
+
 2010-05-22  xlr8or <xlr8or@xlr8or.com>
 
 	* b3.egg-info/PKG-INFO, b3/PKG-INFO, setupPy2exe.py, versions.txt: 

@@ -58,6 +58,8 @@ can skip the 'Installing Source Distribution' section, and proceed to
 
 2. Run the B3 database SQL script (b3/docs/b3.sql) on your B3 database.
 
+3. Run the B3 database SQL script (b3/docs/b3-sgt-patch.sql) on your B3 database.
+
 ### Setting up B3
 
 ### FTP B3

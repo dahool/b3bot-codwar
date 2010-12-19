@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -24,9 +24,15 @@
 #    * user friendly message on missing config file option
 # 2010/03/20 - 1.1.0 - xl8or (added version)
 #    * ability to disable automatic setup procedure when option -n, --nosetup is passed
+# 2010/09/16 - 1.1.1 - GrosBedo
+#    * can now run in a thread (functions profiler mode)
+# 2010/10/20 - 1.1.2 - GrosBedo
+#    * added TEAM_FREE for non team based gametypes (eg: deathmatch)
+#
+
 
 __author__ = 'ThorN'
-__version__ = '1.1.0'
+__version__ = '1.1.2'
 
 import pkg_handler
 from b3.functions import main_is_frozen
@@ -44,7 +50,7 @@ import ConfigParser
 
 versionOs = os.name
 versionId = 'v%s [%s]' % (__version__, versionOs)
-version = '^8www.BigBrotherBot.com ^0(^8b3^0) ^9%s ^9(^3Daniel^9)^3' % versionId
+version = '^8www.bigbrotherbot.net ^0(^8b3^0) ^9%s ^9(^3Daniel^9)^3' % versionId
 
 
 console = None
@@ -52,6 +58,7 @@ _confDir = None
 
 # some constants
 TEAM_UNKNOWN = -1
+TEAM_FREE = 0 # Team free = no team based game (eg: deathmatch)
 TEAM_SPEC = 1
 TEAM_RED = 2
 TEAM_BLUE = 3
@@ -161,7 +168,10 @@ def start(configFile, nosetup=False):
         console.bot("TERM signal received. Shutting down")
         console.shutdown()
         raise SystemExit(222)
-    signal.signal(signal.SIGTERM, termSignalHandler)
+    try: # necessary if using the functions profiler, because signal.signal cannot be used in threads
+        signal.signal(signal.SIGTERM, termSignalHandler)
+    except:
+        pass
 
     try:
         console.start()

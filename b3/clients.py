@@ -17,6 +17,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    12/11/2010 - 1.3.1 - Courgette
+#    * harden _set_name for cases where console is not set
+#    01/11/2010 - 1.3.0 - Courgette
+#    * Clients::getClientsByName() now ignores blank characters from names
+#    * add automated tests for Clients::getClientsByName()
 #    15/08/2010 - 1.2.13 - xlr8or
 #    * Minor addition for bfbc2 in alias checking
 #    21/05/2010 - 1.2.12 - xlr8or
@@ -53,7 +58,7 @@
 #     Added data parameter to Client.tempban()
 
 __author__  = 'ThorN'
-__version__ = '1.2.13'
+__version__ = '1.3.1'
 
 import b3, string, re, time, functions, threading, traceback, sys
 
@@ -409,10 +414,12 @@ class Client(object):
             newName = name.strip()
 
         if self._name == newName:
-            self.console.verbose2('Aborted Making Alias for cid: %s, name is the same' % self.cid)
+            if self.console:
+                self.console.verbose2('Aborted Making Alias for cid: %s, name is the same' % self.cid)
             return
         if self.cid == '-1' or self.cid == 'Server': # bfbc2 addition
-            self.console.verbose2('Aborted Making Alias for cid: %s, must be World' % self.cid)
+            if self.console:
+                self.console.verbose2('Aborted Making Alias for cid: %s, must be B3' % self.cid)
             return
         
         self.makeAlias(self._name)
@@ -906,9 +913,10 @@ class Clients(dict):
 
     def getClientsByName(self, name):
         clist = []
-        name = name.lower()
+        needle = re.sub(r'\s', '', name.lower())
         for cid,c in self.items():
-            if not c.hide and string.find(c.name.lower(), name) != -1:
+            cleanname = re.sub(r'\s', '', c.name.lower())
+            if not c.hide and needle in cleanname:
                 clist.append(c)
 
         return clist
@@ -1123,3 +1131,34 @@ class Clients(dict):
     def _authorizeClients(self):
         self.console.authorizeClients()
         self._authorizing = False
+        
+        
+if __name__ == '__main__':
+    import unittest
+    from b3.fake import fakeConsole
+    
+    class TestClients(unittest.TestCase):
+        clients = None
+        joe = None
+        def setUp(self):
+            self.clients = Clients(fakeConsole)
+            self.clients.newClient(1, name='joe')
+            self.clients.newClient(2, name=' H a    x\t0r')
+        def test_getClientsByName(self):
+            clients = self.clients.getClientsByName('joe')
+            self.assertEqual(1, len(clients))
+            self.assertEqual('1', clients[0].cid)
+            
+            clients = self.clients.getClientsByName('oe')
+            self.assertEqual(1, len(clients))
+            self.assertEqual('1', clients[0].cid)
+            
+            clients = self.clients.getClientsByName('hax')
+            self.assertEqual(1, len(clients))
+            self.assertEqual('2', clients[0].cid)
+            
+            clients = self.clients.getClientsByName('qsdfqsdf fqsd fsqd fsd f')
+            self.assertEqual([], clients)
+
+
+    unittest.main()

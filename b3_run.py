@@ -23,7 +23,7 @@ __version__ = '1.1.1'
 import b3.run
 
 def main():
-	b3.run.main()
+    b3.run.main()
 
 if __name__ == '__main__':
-	main()
+    main()

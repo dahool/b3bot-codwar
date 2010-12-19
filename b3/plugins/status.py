@@ -133,6 +133,8 @@ class StatusPlugin(b3.plugin.Plugin):
         fraglimit = ''
         capturelimit = ''
         rounds = ''
+        roundTime = ''
+        mapTime = ''
         if c.gameName:
             gamename = c.gameName
         if c.gameType:

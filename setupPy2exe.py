@@ -40,9 +40,15 @@ myDataFiles = [
 setup(
     name = "BigBrotherBot",
     version = getVersion(),
-    url = "http://www.bigbrotherbot.com/",
-    console = ["b3_run.py"],
-    zipfile = None, 
+    url = "http://www.bigbrotherbot.net/",
+    console = [
+        {
+            "script" : "b3_run.py",
+            "icon_resources": [(0, "py2exe_builder/b3.ico")]
+        }
+    ],
+    zipfile = "b3.lib",
+    #zipfile = None, 
     data_files = myDataFiles,
     options = {
         "py2exe": {
@@ -53,8 +59,10 @@ setup(
                 "b3.lib.*",
                 "b3.plugins.*",
                 "b3.parsers.*",
-                "b3.parsers.bfbc2.*",
+                "b3.parsers.frostbite.*",
                 "b3.extplugins.__init__",
+                ### additional modules for popular/useful 3rd party plugins ###
+                "smtplib", "email", "calendar", # contact plugin
             ],
         }
     },
