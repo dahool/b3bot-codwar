@@ -20,7 +20,7 @@
         <set name="maprotate">90</set>
         <set name="warnclear-wc">60</set>
         <set name="clear-kiss">80</set>
-        <set name="lookup-l">40</set>
+        <set name="lookup-l">20</set>
         <!--set name="makereg-mr">40</set-->
         <set name="spankall-sall">80</set>
         <set name="banall-ball">90</set>
@@ -141,11 +141,8 @@
         <set name="alert">^1ATENCION^7: $name^7 auto-kick por exceso de advertencias (^3$warnings^7) $reason</set>
     </settings>
     <settings name="spamages">
-        <set name="ts">^3Teamspeak: ^2ts.wishdeath.com.ar</set>
-        <set name="cs">^3Teamspeak: ^2cs.wishdeath.com.ar</set>
-        <set name="cs2">^3Teamspeak: ^2cs2.wishdeath.com.ar</set>
-        <set name="site">^3Soporte: ^2www.clanwd.com.ar</set>
-        <set name="irc">^3Soporte: irc.freenode.net - canal: ##clanwd</set>
+        <set name="site">^3Soporte: ^2www.codwar.com.ar</set>
+        <set name="irc">^3Soporte: irc.freenode.net - canal: #codwar</set>
         <set name="acceso">^7Se reserva el derecho de admision y permanencia</set>
         <set name="stack">^7No clan stacking, members must split evenly between the teams, go spectator and wait if you have to</set>
         <set name="rule1">^3Regla #1: El racismo o cualquier muestra de discriminacion es motivo de ban</set>

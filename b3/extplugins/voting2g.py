@@ -34,8 +34,10 @@
 # Admins should be allowed to vote again
 # Add min positive votes params
 # Configurable messages
+# 2010-12-21 - 1.0.7
+# Updated rate to work with new cron from 1.4.1
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 __author__  = 'SGT'
 
 import sys
@@ -65,6 +67,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _votes = {}
     _lastmaps = []
     _lastmap_max = 5
+    _rate = "*/10" # 5 seconds
     
     def startup(self):
         """\
@@ -169,7 +172,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
         self.bot("Calling a vote " + reason)
         self.console.say(self.getMessage('call_vote', reason))
         self.console.say(self.getMessage('vote_notice'))
-        self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
+        self.console.cron + b3.cron.OneTimeCronTab(self.update_vote, self._rate)
 
     def cmd_veto(self, data, client, cmd=None):
         """\
@@ -196,9 +199,9 @@ class Voting2GPlugin(b3.plugin.Plugin):
             self.console.say(self.getMessage('vote_status', self._yes, self._no))
             self._times -= 1
             if self._times > 0:
-                self.console.cron + b3.cron.OneTimeCronTab(self.update_vote,  "*/1")
+                self.console.cron + b3.cron.OneTimeCronTab(self.update_vote, self._rate)
             else:
-                self.console.cron + b3.cron.OneTimeCronTab(self.end_vote,  "*/1")
+                self.console.cron + b3.cron.OneTimeCronTab(self.end_vote,  self._rate)
         else:
             if self._in_progress:
                 self.cmd_cancel(None, None)

@@ -279,7 +279,7 @@ class FollowPlugin(b3.plugin.Plugin):
 
     def cmd_followinfo(self, data, client, cmd=None):
         """\
-        <name> - remove user from the follow list
+        <name> - show more details
         """
         m = self._adminPlugin.parseUserCmd(data)
         if not m:

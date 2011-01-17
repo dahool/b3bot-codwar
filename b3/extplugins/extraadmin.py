@@ -134,8 +134,6 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """\
         Handle intercepted events
         """
-        super(ExtraadminPlugin, self).onEvent(event)
-
         if event.type == b3.events.EVT_GAME_WARMUP:
             # fix to use scores on status plugin
 	    if self.console.game.gameType in ('ts','tdm','ctf','bomb'):

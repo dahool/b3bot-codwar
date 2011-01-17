@@ -1,5 +1,5 @@
 #
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,10 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA    02110-1301    USA
 #
 # CHANGELOG
+# 13/08/2010 - 1.4.3 - xlr8or
+# * Added running roundtime and maptime
+# 08/08/2010 - 1.4.2 - xlr8or
+# * Moved 'Game section' before 'Clients section', XLRstats needs gameinfo before it adds clients to the playerlist
 # 21/03/2010 - 1.4.1 - Courgette
 # * does not fail if there is no player score available
 # * make errors more verbose
@@ -41,7 +45,7 @@
 # Converted to use new event handlers
 
 __author__    = 'ThorN'
-__version__ = '1.4.1'
+__version__ = '1.4.3'
 
 import b3, time, os, StringIO
 import b3.plugin
@@ -118,13 +122,12 @@ class StatusPlugin(b3.plugin.Plugin):
                  
         self.verbose('Building XML status')
         xml = Document()
+        # --- Main section
         b3status = xml.createElement("B3Status")
         b3status.setAttribute("Time", time.asctime())
         xml.appendChild(b3status)
-        b3clients = xml.createElement("Clients")
-        b3clients.setAttribute("Total", str(len(clients)))
-        b3status.appendChild(b3clients)
 
+        # --- Game section
         c = self.console.game
         gamename = ''
         gametype = ''
@@ -149,72 +152,11 @@ class StatusPlugin(b3.plugin.Plugin):
             capturelimit = c.captureLimit
         if c.rounds:
             rounds = c.rounds
+        if c.roundTime:
+            roundTime = c.roundTime()
+        if c.mapTime:
+            mapTime = c.mapTime()
             
-        for c in clients:
-            if not c.name:
-                c.name = "@"+str(c.id)
-            if c.exactName == "^7":
-                c.exactName = "@"+str(c.id)+"^7"
-
-            if not c.maskedLevel:
-                _level = c.maxLevel
-            else:
-                _level = c.maskedLevel
-
-            try:
-                client = xml.createElement("Client")
-                client.setAttribute("Name", str(sanitizeMe(c.name)))
-                client.setAttribute("ColorName", str(sanitizeMe(c.exactName)))
-                client.setAttribute("DBID", str(c.id))
-                client.setAttribute("Connections", str(c.connections))
-                client.setAttribute("CID", str(c.cid))
-                client.setAttribute("Level", str(_level))
-                if gametype in ('ts','bomb'):
-                    client.setAttribute("State", str(c.state))
-                else:
-                    client.setAttribute("State", '2')
-                if c.guid:
-                    client.setAttribute("GUID", c.guid)
-                else:
-                    client.setAttribute("GUID", '')
-                if c.pbid:
-                    client.setAttribute("PBID", c.pbid)
-                else:
-                    client.setAttribute("PBID", '')
-                client.setAttribute("IP", c.ip)
-                client.setAttribute("Team", str(c.team))
-                client.setAttribute("Joined", str(time.ctime(c.timeAdd)))
-                client.setAttribute("Updated", str(time.ctime(c.timeEdit)))
-                if scoreList and c.cid in scoreList:
-                    client.setAttribute("Score", str(scoreList[c.cid]))
-                b3clients.appendChild(client)
-
-                for k,v in c.data.iteritems():
-                    data = xml.createElement("Data")
-                    data.setAttribute("Name", str(k))
-                    data.setAttribute("Value", str(sanitizeMe(v)))
-                    client.appendChild(data)
-
-                if self._tkPlugin:
-                    if hasattr(c, 'tkplugin_points'):
-                        tkplugin = xml.createElement("TkPlugin")
-                        tkplugin.setAttribute("Points", str(c.var(self, 'points')))
-                        client.appendChild(tkplugin)            
-                        if hasattr(c, 'tkplugin_attackers'):
-                            for acid,points in c.var(self, 'attackers').value.items():
-                                try:
-                                    attacker = xml.createElement("Attacker")
-                                    attacker.setAttribute("Name", sanitizeMe(self.console.clients[acid].name))
-                                    attacker.setAttribute("CID", str(acid))
-                                    attacker.setAttribute("Points", str(points))
-                                    tkplugin.appendChild(attacker)
-                                except:
-                                    pass
-                                
-            except Exception, err:
-                self.debug('XML Failed: %r' % err)
-                pass
-
         game = xml.createElement("Game")
         game.setAttribute("Name", str(gamename))
         game.setAttribute("Type", str(gametype))
@@ -223,6 +165,8 @@ class StatusPlugin(b3.plugin.Plugin):
         game.setAttribute("FragLimit", str(fraglimit))
         game.setAttribute("CaptureLimit", str(capturelimit))
         game.setAttribute("Rounds", str(rounds))
+        game.setAttribute("RoundTime", str(roundTime))
+        game.setAttribute("MapTime", str(mapTime))
         b3status.appendChild(game)
 
         for k,v in self.console.game.__dict__.items():
@@ -230,7 +174,7 @@ class StatusPlugin(b3.plugin.Plugin):
             data.setAttribute("Name", str(k))
             data.setAttribute("Value", str(v))
             game.appendChild(data)
-        
+
         # SGT - Scores
         if len(clients)>0:
             scores = self.console.getCvar( 'g_teamScores' )
@@ -257,6 +201,80 @@ class StatusPlugin(b3.plugin.Plugin):
             data.setAttribute("Value", p)
             game.appendChild(data)
             
+        # --- End Game section        
+
+        # --- Clients section
+        b3clients = xml.createElement("Clients")
+        b3clients.setAttribute("Total", str(len(clients)))
+        b3status.appendChild(b3clients)
+
+        for c in clients:
+            if not c.name:
+                c.name = "@"+str(c.id)
+            if c.exactName == "^7":
+                c.exactName = "@"+str(c.id)+"^7"
+
+            if not c.maskedLevel:
+                _level = c.maxLevel
+            else:
+                _level = c.maskedLevel
+
+            try:
+                client = xml.createElement("Client")
+                client.setAttribute("Name", str(sanitizeMe(c.name)))
+                client.setAttribute("ColorName", str(sanitizeMe(c.exactName)))
+                client.setAttribute("DBID", str(c.id))
+                client.setAttribute("Connections", str(c.connections))
+                client.setAttribute("CID", str(c.cid))
+                client.setAttribute("Level", str(_level))
+                if c.guid:
+                    client.setAttribute("GUID", c.guid)
+                else:
+                    client.setAttribute("GUID", '')
+                if c.pbid:
+                    client.setAttribute("PBID", c.pbid)
+                else:
+                    client.setAttribute("PBID", '')
+                client.setAttribute("IP", c.ip)
+                client.setAttribute("Team", str(c.team))
+                client.setAttribute("Joined", str(time.ctime(c.timeAdd)))
+                client.setAttribute("Updated", str(time.ctime(c.timeEdit)))
+                if scoreList and c.cid in scoreList:
+                    client.setAttribute("Score", str(scoreList[c.cid]))
+                # SGT - others gametypes do not refresh state
+                if gametype in ('ts','bomb'):
+                    client.setAttribute("State", str(c.state))
+                else:
+                    client.setAttribute("State", '2')
+                b3clients.appendChild(client)
+
+                for k,v in c.data.iteritems():
+                    data = xml.createElement("Data")
+                    data.setAttribute("Name", str(k))
+                    data.setAttribute("Value", str(sanitizeMe(v)))
+                    client.appendChild(data)
+                        
+                if self._tkPlugin:
+                    if hasattr(c, 'tkplugin_points'):
+                        tkplugin = xml.createElement("TkPlugin")
+                        tkplugin.setAttribute("Points", str(c.var(self, 'points')))
+                        client.appendChild(tkplugin)            
+                        if hasattr(c, 'tkplugin_attackers'):
+                            for acid,points in c.var(self, 'attackers').value.items():
+                                try:
+                                    attacker = xml.createElement("Attacker")
+                                    attacker.setAttribute("Name", sanitizeMe(self.console.clients[acid].name))
+                                    attacker.setAttribute("CID", str(acid))
+                                    attacker.setAttribute("Points", str(points))
+                                    tkplugin.appendChild(attacker)
+                                except:
+                                    pass
+                                
+            except Exception, err:
+                self.debug('XML Failed: %r' % err)
+                pass
+        # --- End Clients section
+
         self.writeXML(xml.toprettyxml(indent="        "))
 
     def writeXML(self, xml):

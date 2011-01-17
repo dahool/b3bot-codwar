@@ -32,7 +32,7 @@ import os
 import b3.config
 import b3.events
 
-class Plugin(object):
+class Plugin:
     _enabled = True
     console = None
     events = []

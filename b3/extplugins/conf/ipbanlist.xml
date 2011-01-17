@@ -1,0 +1,7 @@
+<configuration plugin="autojoin">
+	<settings name="settings">
+        <set name="penalties_since">24</set>
+        <set name="refresh_rate">0</set>
+        <set name="apply_ban">false</set>
+	</settings>
+</configuration>

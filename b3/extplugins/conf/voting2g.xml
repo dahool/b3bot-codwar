@@ -30,7 +30,7 @@
 	</settings>
 
 	<settings name="voteshuffle">
-		<set name="shuffle_percent">40</set>	
+		<set name="shuffle_percent">20</set>	
 		<set name="shuffle_diff_percent">70</set>
 	</settings>
 	
