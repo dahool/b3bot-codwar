@@ -226,7 +226,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
 
         # don't run cron-checks on startup
-        self._ignoreTill = self.console.time() + self._ignorePlus
+        self.ignoreSet(self._ignorePlus)
         self._balancing = False
         
         # save original vote settings
@@ -554,9 +554,11 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
             self._hsenable = False
             self.debug('Using default value (%s) for hs_enable', self._hsenable)
         try:
-            self._hsresetvars = self.config.getboolean('headshotcounter', 'reset_vars')
+            self._hsresetvars = self.config.get('headshotcounter', 'reset_vars')
+            if not self._hsresetvars in ['no', 'map', 'round']:
+                raise Exception('Config setting not valid.')
         except:
-            self._hsresetvars = True
+            self._hsresetvars = 'map'
             self.debug('Using default value (%s) for reset_vars', self._hsresetvars)
         try:
             self._hsbroadcast = self.config.getboolean('headshotcounter', 'broadcast')
@@ -711,9 +713,10 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
             self._mapchanged = True
             if self._botenable:
                 self.botsdisable()
-            self._ignoreTill = self.console.time() + self._ignorePlus
+            self.ignoreSet(self._ignorePlus)
             # reset headshotcounter if applicable (we'll do it on game exit and roundstart to be thorough)
-            self.resetVars()
+            if self._hsresetvars == 'map':
+                self.resetVars()
             # reset number of Namechanges per client
             self.resetNameChanges()
             if not self._teamLocksPermanent:
@@ -731,10 +734,10 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
             if self._botenable:
                 self.botsdisable()
                 self.botsupport()
-            # reset headshotcounter if applicable (we'll do it on game exit and roundstart to be thorough)
-            self.resetVars()
+            if self._hsresetvars == 'round':
+                self.resetVars()
             # ignore teambalance checking for 1 minute
-            self._ignoreTill = self.console.time() + self._ignorePlus
+            self.ignoreSet(self._ignorePlus)
             self._teamred = 0
             self._teamblue = 0
             # vote delay init
@@ -937,6 +940,10 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
             client.message('^7Invalid data, try !help pamute')
             return False
 
+        if sclient.maxLevel > client.maxLevel:
+            client.message('^7You don\'t have enought privileges to mute this player')
+            return False
+
         if input[1] is not None and re.match('^([0-9]+)\s*$', input[1]):
             duration = int(input[1])
         else:
@@ -1083,15 +1090,18 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         except:
             lock = False
         
-        if team == 'spec' or team == 's':
-            team = 'spectator'
+        if team == 'spec' or team == 'spectator':
+            team = 's'
         if team == 'b':
             team = 'blue'
         if team == 'r':
             team = 'red'
-        
-        teamname = team
-        
+
+        if team == 's':
+            teamname = 'spectator'
+        else:
+            teamname = team
+
         if team == 'free':
             if sclient.isvar(self, 'paforced'):
                 sclient.message('^3Your are released by the admin')
@@ -1115,7 +1125,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
 
         # are we still here? Let's write it to console
         self.console.write('forceteam %s %s' % (sclient.cid, team))
-
+        client.message('^3%s ^7forced to ^3%s' % (sclient.name, teamname))
         return True
 
     def cmd_paswapteams(self, data, client, cmd=None):
@@ -1123,6 +1133,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         Swap teams.
         (You can safely use the command without the 'pa' at the beginning)
         """
+        self.ignoreSet(30)
         self.console.write('swapteams')
 
         return True
@@ -1132,6 +1143,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         Shuffle teams.
         (You can safely use the command without the 'pa' at the beginning)
         """
+        self.ignoreSet(30)
         self.console.write('shuffleteams')
 
         return True
@@ -1410,7 +1422,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         if self._team_change_force_balance_enable and not self._matchmode:
             
             # if the round just started, don't do anything 
-            if self.console.time() < self._ignoreTill:
+            if self.ignoreCheck():
                 return None
 
             if self.isEnabled() and not self._balancing:
@@ -1896,9 +1908,32 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         else:
             pass    
 
+#--Support Functions------------------------------------------------------------------------------
     def clean(self, data):
         return re.sub(self._reClean, '', data)[:20]
 
+    def ignoreSet(self, data=60):
+        """
+        Sets the ignoreflag for an amount of seconds
+        self._ignoreTill is a plugin flag that holds a time which ignoreCheck checks against  
+        """
+        self._ignoreTill = self.console.time() + data
+        return None
+
+    def ignoreDel(self):
+        self._ignoreTill = 0
+        return None
+  
+    def ignoreCheck(self):
+        """
+        Tests if the ignore flag is set, to disable certain automatic functions when unwanted
+        Returns True if the functionality should be ignored 
+        """
+        if self._ignoreTill - self.console.time() > 0:
+            return True
+        else:
+            return False
+            
 #--Rcon commands------by:FSK405|Fear--------------------------------------------------------------
 # setnextmap <mapname>
 # respawngod <seconds>

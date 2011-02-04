@@ -27,9 +27,13 @@
             <regexp>b[i!1*].tch</regexp>
         </badword>
         <badword name="nigger" lang="en">
-            <penalty type="tempban" reasonkeyword="cuss" duration="15m"/>
+            <penalty type="tempban" reasonkeyword="cuss" duration="5d"/>
             <regexp>n[i!1]gger</regexp>
         </badword>
+        <badword name="hitler" lang="en">
+            <penalty type="tempban" reasonkeyword="cuss" duration="5d"/>
+            <regexp>h[i!1]tler</regexp>
+        </badword>        
         <badword name="pussy" lang="en">
             <regexp>pu[s$]{2}y</regexp>
         </badword>
@@ -67,7 +71,7 @@
                 <regexp>putit[a@o0]</regexp>
         </badword>
         <badword name="wwwsite" lang="en">
-            <penalty type="warning" reasonkeyword="rule7" duration="20"/>
+            <penalty type="warning" reasonkeyword="rule7" duration="1h"/>
             <regexp>www\.</regexp>
         </badword>
     </badwords>
@@ -91,6 +95,10 @@
         <badname name="nigger">
             <regexp>n[1i!.]gger</regexp>
         </badname>
+        <badname name="hitler" lang="en">
+            <penalty type="tempban" reasonkeyword="cuss" duration="5d"/>
+            <regexp>h[i!1]tler</regexp>
+        </badname>        
         <badname name="cunt">
             <word>cunt</word>
         </badname>

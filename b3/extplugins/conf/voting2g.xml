@@ -6,7 +6,7 @@
 		<set name="vote_interval">600</set>
 		<set name="veto_level">20</set>
 		<set name="cancel_level">40</set>
-                <set name="min_votes">2</set>
+        <set name="min_votes">2</set>
 	</settings>
 	
 	<settings name="votes">
@@ -15,12 +15,14 @@
 	  <set name="votenextmap-vx">NextMapVote</set>
 	  <set name="voteshuffle-vs">ShuffleVote</set>
 	  <set name="votecycle-vc">CycleMapVote</set>
+      <set name="votemute-vmu">MuteVote</set>
 	</settings>
 	
 	<settings name="votekick">   
 		<set name="tempban_percent_diff">60</set>
 		<set name="tempban_interval">5</set>
 		<set name="tempban_percent">90</set>
+        <set name="allow_spec">0</set>
 	</settings>	
 	
 	<settings name="votemap">
@@ -37,6 +39,10 @@
 	<settings name="votecycle">
 	</settings>
     
+	<settings name="votemute">
+        <set name="allow_victim_to_vote">false</set>	
+	</settings>
+        
     <settings name="messages">
         <set name="vote_in_progress">^7Ya hay un voto en progeso, espera a que finalice</set>
         <set name="wait_vote">^7Debes esperar entre votos fallidos!</set>
@@ -54,10 +60,15 @@
         <set name="param_invalid">^7Datos no validos</set>
         <set name="param_invalid_reason">^7Datos no validos, indica un motivo!</set>
         <set name="param_invalid_reason2">^7Escribe un mejor motivo</set>
-        <set name="cant_kick">^7No te podes kickear a vos mismo noob!</set>
-        <set name="reason_kick">^7contra ^3%s por ^3%s</set>
+        <set name="cant_kick">^7No podes echar a este usuario!</set>
+        <set name="cant_kick_spec">^7No podes echar a un spec en este momento</set>
+        <set name="cant_mute">^7No podes silenciar a este usuario!</set>
+        <set name="reason_kick">^7para echar a ^3%s por ^3%s</set>
+        <set name="reason_mute">^7para silenciar a ^3%s</set>
         <set name="novotes">^7Los votos positivos no son suficientes</set>
         <set name="no_kick">^7El jugador esta ^2seguro!</set>
+        <set name="failed_vote">^7Voto finalizado negativo</set>
+        <set name="cant_vote">^7No puedes participar en esta votacion</set>
         <set name="param_invalid_map">^7Datos no validos, indica el nombre del mapa!</set>
         <set name="reason_map">^7para cambiar el mapa a ^3%s</set>
         <set name="change_map">^1Cambiando mapa a ^3%s</set>

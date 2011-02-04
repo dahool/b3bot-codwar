@@ -27,8 +27,13 @@
 # message can be changed through conf file
 # 07-26-2010 - 1.1.2
 # Do sync on a thread
+# 07-31-2010 - 1.1.3
+# Add option to disable remove record when banned
+# 01-25-2011 - 1.1.4
+# Add option to use twitter
+# Fix minor error in followinfo
 
-__version__ = '1.1.2'
+__version__ = '1.1.4'
 __author__  = 'SGT'
 
 import b3, threading
@@ -90,6 +95,10 @@ class FollowPlugin(b3.plugin.Plugin):
             self._NOTIFY_MSG = self.config.get('settings','message')
         except:
             self.debug("Using default message")
+        try:
+            self._remove_ban = self.config.getboolean('settings', 'remove_banned')
+        except:
+            self._remove_ban = True
             
     def onEvent(self,  event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
@@ -97,7 +106,8 @@ class FollowPlugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
             self.process_disconnect_event(event)
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
-            self.process_ban(event)
+            if self._remove_ban:
+                self.process_ban(event)
         elif event.type == b3.events.EVT_GAME_ROUND_START:
             b = threading.Timer(10, self.sync_list, (event,))
             b.start()
@@ -175,7 +185,7 @@ class FollowPlugin(b3.plugin.Plugin):
             if cursor.rowcount > 0:
                 r = cursor.getRow()
                 self.debug("Client %s found in list." % client.name)
-                if r['reason']:
+                if r['reason'] and r['reason'] <> '':
                     reason = r['reason']
                 else:
                     reason = self._DEFAULT_REASON
@@ -291,8 +301,12 @@ class FollowPlugin(b3.plugin.Plugin):
         
         if cursor.rowcount > 0:
             r = cursor.getRow()
-            admin = self._adminPlugin.findClientPrompt("@" % r['admin_id'], client)
-            client.message('%s was added by %s for %s' % (sclient.name, admin.name, r['reason']))
+            admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
+            if r['reason'] and r['reason'] <> '':
+                reason = r['reason']
+            else:
+                reason = self._DEFAULT_REASON            
+            client.message('%s was added by %s for %s' % (sclient.name, admin.name, reason))
         else:
             client.message('No follow info for %s' % sclient.name)
         cursor.close()

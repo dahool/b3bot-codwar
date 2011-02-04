@@ -237,13 +237,14 @@ def do_initial_setup():
     print("oauth_token_secret: " + access_token.secret)
     
 if __name__ == '__main__':
-    from b3.fake import fakeConsole
-    from b3.fake import joe
     import sys
     
     if len(sys.argv)>1 and sys.argv[1]=="setup":
         do_initial_setup()
     else:
+        from b3.fake import fakeConsole
+        from b3.fake import joe
+
         setattr(fakeConsole.game,'fs_basepath','/home/gabriel/io1')
         setattr(fakeConsole.game,'fs_game','q3ut4')
         fakeConsole.setCvar('sv_hostname','C3')

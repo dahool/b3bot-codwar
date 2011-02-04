@@ -1,6 +1,7 @@
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
-# Plugin for allowing registered users to vote
-# Copyright (C) 2010 Sergio Gabriel Teves
+#  BigBrotherBot(B3) (www.bigbrotherbot.com)
+#  Plugin for allowing registered users to vote
+#  Copyright (C) 2010 Sergio Gabriel Teves
+#  Originaly developed by Ismal Garrido
 # 
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,8 +37,14 @@
 # Configurable messages
 # 2010-12-21 - 1.0.7
 # Updated rate to work with new cron from 1.4.1
+# 2011-01-25 - 1.0.8
+# Destroy cron on cleanup
+# 2011-01-27 - 1.0.9
+# Add vote mute
+# 2011-02-02 - 1.0.10
+# Add option to allow a spec not be kicked
 
-__version__ = '1.0.7'
+__version__ = '1.0.9'
 __author__  = 'SGT'
 
 import sys
@@ -67,7 +74,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _votes = {}
     _lastmaps = []
     _lastmap_max = 5
-    _rate = "*/10" # 5 seconds
+    _rate = "*/15" # 15 seconds
+    _current_cron = None
     
     def startup(self):
         """\
@@ -127,9 +135,12 @@ class Voting2GPlugin(b3.plugin.Plugin):
             self._lastmaps.append(self.console.game.mapName)
             
     def _cleanup(self, init=False):
+        if self._current_cron:
+            self.console.cron - self._current_cron
         self.debug("Cleanning votes")
         self._in_progress = False
         self._currentVote = None
+        self._current_cron = None
         if init:
             for vote in self._votes.values():
                 vote.cleanup()
@@ -172,7 +183,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
         self.bot("Calling a vote " + reason)
         self.console.say(self.getMessage('call_vote', reason))
         self.console.say(self.getMessage('vote_notice'))
-        self.console.cron + b3.cron.OneTimeCronTab(self.update_vote, self._rate)
+        self._current_cron = b3.cron.OneTimeCronTab(self.update_vote, self._rate)
+        self.console.cron + self._current_cron
 
     def cmd_veto(self, data, client, cmd=None):
         """\
@@ -199,9 +211,10 @@ class Voting2GPlugin(b3.plugin.Plugin):
             self.console.say(self.getMessage('vote_status', self._yes, self._no))
             self._times -= 1
             if self._times > 0:
-                self.console.cron + b3.cron.OneTimeCronTab(self.update_vote, self._rate)
+                self._current_cron = b3.cron.OneTimeCronTab(self.update_vote, self._rate)
             else:
-                self.console.cron + b3.cron.OneTimeCronTab(self.end_vote,  self._rate)
+                self._current_cron = b3.cron.OneTimeCronTab(self.end_vote,  self._rate)
+            self.console.cron + self._current_cron
         else:
             if self._in_progress:
                 self.cmd_cancel(None, None)
@@ -226,16 +239,18 @@ class Voting2GPlugin(b3.plugin.Plugin):
         vote yes
         """
         if self.vote(client,  cmd):
-            self._yes += 1
-            cmd.sayLoudOrPM(client, self.getMessage('vote_yes'))
+            if self._currentVote.vote_yes(client):
+                self._yes += 1
+                cmd.sayLoudOrPM(client, self.getMessage('vote_yes'))
 
     def cmd_voteno(self, data, client, cmd=None):
         """\
         vote no
         """
         if self.vote(client,  cmd):
-            self._no += 1
-            cmd.sayLoudOrPM(client, self.getMessage('vote_no'))
+            if self._currentVote.vote_no(client):
+                self._no += 1
+                cmd.sayLoudOrPM(client, self.getMessage('vote_no'))
     
     def vote(self,  client,  cmd):
         if self._in_progress:
@@ -267,6 +282,12 @@ class Vote(object):
         except:
             self.min_votes = self._parent._min_votes
     
+    def vote_yes(client):
+        return True
+
+    def vote_no(client):
+        return True
+                
     def run_vote(self, data, client, cmd=None):
         """
         call a vote
@@ -315,6 +336,7 @@ class KickVote(Vote):
         self._tempban_percent_diff = self.config.getint('votekick', 'tempban_percent_diff')
         self._tempban_interval = self.config.getint('votekick', 'tempban_interval')
         self._tempban_percent = self.config.getint('votekick', 'tempban_percent')
+        self._allow_spec = self.config.getint('votekick', 'allow_spec')
         
     def run_vote(self, data, client, cmd=None):
         """\
@@ -342,7 +364,14 @@ class KickVote(Vote):
         if sclient.maxLevel >= self._parent._admin_level:
             client.message(self._parent.getMessage('cant_kick'))
             return False
-        
+
+        if self._allow_spec > 0:
+            if sclient.team == b3.TEAM_SPEC:
+                c = self.console.clients.getList()
+                if len(c) < self._allow_spec:
+                    client.message(self._parent.getMessage('cant_kick_spec'))
+                    return False
+
         self._caller = client
         self._victim = sclient
         self._reason = m[1]
@@ -471,12 +500,16 @@ class ShuffleVote(Vote):
         self._shuffle_percent = self.config.getint('voteshuffle', 'shuffle_percent')
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
     
-    def _shuffle(self):
+    def _doShuffle(self):
         self._parent.bot("Performing shuffle")
         if self._extraAdminPlugin:
             self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
         else:
             self.console.write('shuffleteams')
+        
+    def _shuffle(self):
+        self.console.cron + b3.cron.OneTimeCronTab(self._doShuffle,  "*/10")
+        self.console.say("Shuffle is about to perfom. Waiting for players.")
                      
     def run_vote(self, data, client, cmd=None):
         """\
@@ -527,3 +560,60 @@ class CycleMapVote(Vote):
 
     def end_vote_no(self,  yes,  no):
         self.console.say(self._parent.getMessage('no_map'))
+
+class MuteVote(Vote):
+    _victim = None
+    _caller = None
+    _victimCanVote = False
+    
+    def startup(self, parent, adminPlugin,  console,  config, cmd):
+        super(MuteVote, self).startup(parent, adminPlugin,  console,  config, cmd)
+        self._victimCanVote = self.config.getboolean('votemute', 'allow_victim_to_vote')
+        
+    def start_vote(self,  data,  client):
+        m = self._adminPlugin.parseUserCmd(data)
+        if not m:
+            client.message(self._parent.getMessage('param_invalid'))
+            return False
+            
+        cid = m[0]
+        sclient = self._adminPlugin.findClientPrompt(cid, client)
+        if not sclient:
+            return False
+            
+        if sclient.maxLevel >= self._parent._admin_level:
+            client.message(self._parent.getMessage('cant_mute'))
+            return False
+        
+        self._caller = client
+        self._victim = sclient
+        return True
+
+    def _check_can_vote(self, client):
+        if not self._victimCanVote and client.id == self._victim.id:
+            client.message(self._parent.getMessage('cant_vote'))
+            return False
+        return True
+        
+    def vote_yes(self, client):
+        self._check_can_vote(client)
+
+    def vote_no(self, client):
+        self._check_can_vote(client)
+        
+    def vote_reason(self):
+        return self._parent.getMessage('reason_mute', self._victim.exactName)
+    
+    def end_vote_yes(self,  yes,  no):
+        if yes < self.min_votes:
+            self.console.say(self._parent.getMessage('novotes'))
+            return
+        if self._victim.connected:
+            self._parent.bot("^1MUTE ^3%s" % self._victim.exactName)
+            self.console.say("^1MUTE ^3%s" % self._victim.exactName)
+            self.console.write('mute %s %s' % (self._victim.cid, ''))
+            self._victim = None
+
+    def end_vote_no(self,  yes,  no):
+        self.console.say(self._parent.getMessage('failed_vote'))
+        self._victim = None

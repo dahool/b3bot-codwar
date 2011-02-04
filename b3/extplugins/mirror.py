@@ -16,8 +16,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+# 2011-01-28 - SGT
+# Fix minor issue with params
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -66,7 +68,7 @@ class MirrorPlugin(b3.plugin.Plugin):
                     if cli and cli.maxLevel > event.client.maxLevel:
                         world = self._adminPlugin.findClientPrompt("@1")
                         event.client.message("^7You've been mirrored n00b")
-                        if len(params)>0:
+                        if params and len(params)>0:
                             data = "%s %s" % (event.client.cid, params)
                         else:
                             data = event.client.cid

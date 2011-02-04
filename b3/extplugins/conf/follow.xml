@@ -2,6 +2,7 @@
 	<settings name="settings">
 		<set name="mod_level">20</set>
 		<set name="admin_level">40</set>
+		<set name="remove_banned">true</set>
 		<set name="twit_connect">true</set>
 		<set name="message">^1WARNING: ^1%(client_name)s ^7[^2@%(client_id)s^7] ^7has been placed under watch by ^4%(admin_name)s ^7[^2@%(admin_id)s^7] ^7for: ^5%(reason)s</set>
 	</settings>

@@ -202,8 +202,9 @@ class DuelPlugin(b3.plugin.Plugin):
         input = self._adminPlugin.parseUserCmd(data)
         if not input:
             if len(duels) == 1:
-                duels.values()[0].announceScoreTo(client)
-                duels.values()[0].announceScoreTo(opponent)
+                duel = duels.values()[0]
+                duel.announceScoreTo(duel._clientA)
+                duel.announceScoreTo(duel._clientB)
             else:
                 client.message('^7you have %s duels running, type !duelstat <name>' % len(duels))
         else:
