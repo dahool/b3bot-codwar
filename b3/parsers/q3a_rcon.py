@@ -38,7 +38,7 @@ class Rcon:
     socket = None
     queue = None
     console = None
-    socket_timeout = 0.30
+    socket_timeout = 0.80 # // SET TO 0.30 IF USING LOW LATENCY IOQ3
 
     def __init__(self, console, host, password):
         self.console = console

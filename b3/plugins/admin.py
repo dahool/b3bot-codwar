@@ -1941,6 +1941,7 @@ class Command:
 
     def setConsole(self, console):
         self.console = console
+        
     def canUse(self, client):
         if self.level == None:
             return False
@@ -1948,6 +1949,7 @@ class Command:
             return True
         else:
             return False
+            
     def isEnabled(self, client):
         if client.maxLevel >= 90:
             return True

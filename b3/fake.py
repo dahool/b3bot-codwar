@@ -303,6 +303,27 @@ class FakeStorage(object):
     _penalty_id_autoincrement = 0
     _groups = []
     db = None
+    
+    class Cursor:
+        _cursor = None
+        _conn = None
+        fields = None
+        EOF = True
+        rowcount = 0
+        lastrowid = 0    
+        
+        def moveNext(self):
+            return self.EOF
+
+        def getOneRow(self, default=None):
+            return default
+
+        def getValue(self, key, default=None):
+            return default
+
+        def getRow(self):
+            return {}
+                
     def __init__(self):
         G = b3.clients.Group()
         G.id = 1
@@ -366,6 +387,8 @@ class FakeStorage(object):
     def numPenalties(self, client, type='Ban'):
         match = [k for k, v in self._penalties.iteritems() if v.clientId == client.id and v.type == type]
         return len(match)
+    def query(self, sql):
+        return self.Cursor()
     
 class FakeClient(b3.clients.Client):
     console = None
