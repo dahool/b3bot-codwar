@@ -44,7 +44,7 @@ class MessengerPlugin(b3.plugin.Plugin):
         self._adminPlugin.registerCommand(self, 'tell', 1, self.cmd_tell)
 
     def _can_use(self, client):
-        if self._limit_to_spec and client.team == b3.TEAM_SPEC:
+        if self._limit_to_spec and client.team <> b3.TEAM_SPEC:
             client.message('^7You have to be spectator to use this command')
             return False
         return True
@@ -62,7 +62,7 @@ class MessengerPlugin(b3.plugin.Plugin):
             return False
         
         sclient = self._adminPlugin.findClientPrompt(input[0], client)
-        sclient.message('^5[PM] ^2%s^7: %s' % (client.name, input[1]))
+        sclient.message('^5%s^7: %s' % (client.name, input[1]))
         
         return True 
         
@@ -81,7 +81,7 @@ class MessengerPlugin(b3.plugin.Plugin):
         clients = self.console.clients.getList()
         for c in clients:
             if c.maxLevel >= self._admin_level:
-                c.message('^5[PM] ^2%s^7: %s' % (client.name, input[0]))
+                c.message('^5%s^7: %s' % (client.name, input[0]))
 
         return True 
            
