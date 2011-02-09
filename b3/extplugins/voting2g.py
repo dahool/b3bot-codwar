@@ -44,7 +44,7 @@
 # 2011-02-02 - 1.0.10
 # Add option to allow a spec not be kicked
 
-__version__ = '1.0.9'
+__version__ = '1.0.10'
 __author__  = 'SGT'
 
 import sys
@@ -68,13 +68,13 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _no = 0
     _vetoed = 0
     _times = 0
-    _vote_times = 3
+    _vote_times = 5
     _vote_interval = 0
 
     _votes = {}
     _lastmaps = []
     _lastmap_max = 5
-    _rate = "*/15" # 15 seconds
+    _rate = "*/10" # 15 seconds
     _current_cron = None
     
     def startup(self):
@@ -282,10 +282,10 @@ class Vote(object):
         except:
             self.min_votes = self._parent._min_votes
     
-    def vote_yes(client):
+    def vote_yes(self, client):
         return True
 
-    def vote_no(client):
+    def vote_no(self, client):
         return True
                 
     def run_vote(self, data, client, cmd=None):
