@@ -1392,9 +1392,9 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
                 return False
 
         if client.maxLevel < self._full_ident_level:
-            cmd.sayLoudOrPM(client, '%s ^2%s ^2@%s' % (self.console.formatTime(time.time()), sclient.exactName, sclient.id))
+            cmd.sayLoudOrPM(client, '%s ^4@%s ^2%s' % (self.console.formatTime(time.time()), sclient.id, sclient.exactName))
         else:
-            cmd.sayLoudOrPM(client, '%s ^2%s ^2%s^7 ^4%s ^2@%s' % (self.console.formatTime(time.time()), sclient.exactName, sclient.ip, sclient.guid, sclient.id))
+            cmd.sayLoudOrPM(client, '%s ^4@%s ^2%s ^2%s ^2%s' % (self.console.formatTime(time.time()), sclient.id, sclient.exactName, sclient.ip, self.console.formatTime(sclient.timeAdd)))
         return True
             
 #---Teambalance Mechanism--------------------------------------------------------------------------

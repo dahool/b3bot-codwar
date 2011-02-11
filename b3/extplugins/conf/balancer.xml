@@ -1,0 +1,8 @@
+<configuration plugin="balancer">
+	<settings name="settings">
+		<set name="file_prefix">b3_config</set>
+		<set name="action_delay">30</set>
+		<set name="auto_run_rate">5</set>
+		<set name="update_cfg_rate">30</set>
+	</settings>
+</configuration>
