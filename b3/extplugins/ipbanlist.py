@@ -1,4 +1,4 @@
-# BigBrotherBot(B3) (www.bigbrotherbot.com)
+# BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2011 Sergio Gabriel Teves
 # 
 #  This program is free software; you can redistribute it and/or modify
@@ -15,9 +15,12 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 # 
-# 14-01-2011 - 1.0.0 - Initial
+# 2011-01-14 - 1.0.0
+# Initial
+# 2011-02-11 - 1.0.1 
+# Add event. Some code rework.
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3
@@ -33,29 +36,34 @@ class IpbanlistPlugin(b3.plugin.Plugin):
     _refresh_rate = 12
     _cache = set()
     _do_ban = False
-    _SELECT_QUERY = "SELECT distinct(c.ip) FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
-                    "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
-                    "AND p.time_add >= %(since)d AND p.inactive=0"
-                    
-    _SELECT_QUERY_V = "SELECT c.ip FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
+    _do_lookupall = False
+    
+    _SELECT_QUERY = "SELECT c.ip FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
                     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
                     "AND p.time_add >= %(since)d AND p.inactive=0 AND c.ip = %(ip)s"
+
+    _SELECT_QUERY_FULL = "SELECT p.* FROM penalties p WHERE "\
+                    "(p.time_expire=-1 OR p.time_expire > %(time)d) AND p.inactive = 0 AND "\
+                    "(p.type = 'TempBan' or p.type = 'Ban') AND p.client_id IN ("\
+                    "SELECT distinct(c.id) FROM clients c LEFT JOIN aliases a ON c.id = a.client_id "\
+                    "WHERE c.ip = '%(ip)s' or a.ip = '%(ip)s'"
                         
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
+        self.createEvent('EVT_BAN_BREAK', 'Ban Break Event')
         
-        self.load_penalties()
+        #self.load_penalties()
         
-        if self._cronTab:
+        #if self._cronTab:
             # remove existing crontab
-            self.console.cron - self._cronTab
+        #    self.console.cron - self._cronTab
 
-        if self._refresh_rate > 0:
-            self._cronTab = b3.cron.PluginCronTab(self, self.load_penalties, hour="*/%s" % self._refresh_rate)
-            self.console.cron + self._cronTab
-        
+        #if self._refresh_rate > 0:
+        #    self._cronTab = b3.cron.PluginCronTab(self, self.load_penalties, hour="*/%s" % self._refresh_rate)
+        #    self.console.cron + self._cronTab
+
     def onLoadConfig(self):
         try:
             self._since = self.config.getint('settings', 'penalties_since')
@@ -69,14 +77,36 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             self._do_ban = self.config.getboolean('settings','apply_ban')
         except:
             self.debug('Using default value (%s) for apply_ban', self._do_ban)
-                    
+        try:
+            self._do_lookupall = self.config.getboolean('settings','lookup_all')
+        except:
+            self.debug('Using default value (%s) for apply_ban', self._do_lookupall)
+                                
         self._delta = datetime.timedelta(hours=self._since)
-        
+
     def onEvent(self,  event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
-            self.onClientConnect(event.client)
-        elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
-            thread.start_new_thread(self.load_penalties, ())
+            self.debug("Queued event [%s]" % event.client.name)
+            thread.start_new_thread(self.onClientConnect, (event.client,))
+            #self.onClientConnect(event.client)
+#        elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
+#            thread.start_new_thread(self.load_penalties, ())
+        
+    def _lookup_all(self, client):
+        self.debug("Full lookup for %s" % client.name)
+        cursor = self.console.storage.query(self._SELECT_QUERY_FULL % {'ip': client.ip, 'time': int(time.time())})
+        r = (cursor.rowcount > 0)
+        return r
+
+    def _lookup_min(self, client):
+        self.debug("Min lookup for %s" % client.name)
+        now = int(time.mktime(datetime.datetime.now().timetuple()))
+        since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+        cursor = self.console.storage.query(self._SELECT_QUERY % {'now': now,
+                                                                    'since': since,
+                                                                    'ip': client.ip})
+        r = (cursor.rowcount > 0)
+        return r
 
     def onClientConnect(self, client):
         if not client or \
@@ -85,34 +115,20 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             client.pbid == 'WORLD':
             return
         
-        thread.start_new_thread(self.load_penalties, ())
-        
-        if client.ip in self._cache:
-            # ip is in cache. we need to be sure if the ban is still valid.
-            if self.is_still_banned(client.ip):
-                self.debug("Kicked %s (%s)" % (client.name, client.ip))
-                client.notice("Suspicion of ban break.", None)
-                if self._do_ban:
-                    client.tempban("Suspicion of ban break.", "99y", silent=True)
-                client.kick(silent=True)
-            else:
-                # cache is outdated, reload
-                thread.start_new_thread(self.load_penalties, ())
-    
-    def is_still_banned(self, ip):
-        self._cache = set()
-        now = int(time.mktime(datetime.datetime.now().timetuple()))
-        since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
-        cursor = self.console.storage.query(self._SELECT_QUERY_V % {'now': now,
-                                                                    'since': since,
-                                                                    'ip': ip})
-        if cursor.EOF:
-            r = False
-        else:
-            r = True
-        cursor.close()
-        return r
-                            
+        #thread.start_new_thread(self.load_penalties, ())
+        if self._lookup_min(client):
+            self.debug("Kicked %s (%s)" % (client.name, client.ip))
+            client.notice("Suspicion of ban break.", None)
+            if self._do_ban:
+                client.tempban("Suspicion of ban break.", "99y", silent=True)
+            #client.kick(silent=True)
+            client.kick(silent=False)
+            self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
+        elif self._do_lookupall and client.connections == 1 and self._lookup_all(client):
+            self.debug("Lookup all was positive")
+            self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
+
+    # @deprecated
     def load_penalties(self):
         self.debug("Load penalties")
         self._cache = set()
@@ -125,3 +141,16 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             cursor.moveNext()
         cursor.close()
         self.debug("Loaded %d ips" % len(self._cache))
+
+if __name__ == '__main__':
+    from b3.fake import fakeConsole
+    from b3.fake import joe, simon, moderator, superadmin
+    
+    p = IpbanlistPlugin(fakeConsole, '@b3/extplugins/conf/ipbanlist.xml')
+    p.onStartup()
+    
+    joe.connects(cid=1)
+    simon.connects(cid=2)
+    moderator.connects(cid=3)
+    superadmin.connections=2
+    superadmin.connects(cid=4)

@@ -79,9 +79,10 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
         self.registerEvent(b3.events.EVT_SURVIVOR_WIN)
         self.registerEvent(b3.events.EVT_GAME_ROUND_END)
-	try:
-	    self.registerEvent(b3.events.EVT_VOTEMAP_COMMAND)
-	except:
+
+        try:
+            self.registerEvent(b3.events.EVT_VOTEMAP_COMMAND)
+        except:
             self.warning("Unable to register event VOTEMAP")
 
         self._survivorEnd = False
@@ -136,7 +137,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """
         if event.type == b3.events.EVT_GAME_WARMUP:
             # fix to use scores on status plugin
-	    if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
+            if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
                 self.console.setCvar('g_teamScores','0:0')
             if not self.is_matchmode():
                 self.handle_rotation(event)
@@ -393,7 +394,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             else:
                 client.message('^7cannot find any map like [^4%s^7].' % data)
                 return False
-		return True
+        return True
 
     def cmd_pashuffleteams(self, data, client, cmd=None):
         """\
@@ -631,13 +632,13 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             elif sclient.maxLevel >= group.level:
                 client.message('^7%s ^7is already in a higher level group' % sclient.exactName)
             else:
-				if client.maxLevel >= self._super_reg_level or sclient.connections >= self._min_reg_connections:
-					sclient.setGroup(group)
-					sclient.save()
-					cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_put', sclient.exactName, group.name))
-					return True
-				else:
-					client.message('^7Client with %s connections cannot be regular' % sclient.connections)
+                if client.maxLevel >= self._super_reg_level or sclient.connections >= self._min_reg_connections:
+                    sclient.setGroup(group)
+                    sclient.save()
+                    cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_put', sclient.exactName, group.name))
+                    return True
+                else:
+                    client.message('^7Client with %s connections cannot be regular' % sclient.connections)
         return False
                                               
 if __name__ == '__main__':

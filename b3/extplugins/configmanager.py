@@ -98,7 +98,7 @@ class ConfigmanagerPlugin(b3.plugin.Plugin):
             self._mainconfpath = '%sb3_main.cfg' % (self._confpath)
             self.debug('Main Config: %s' %(self._mainconfpath))
      
-            t1 = threading.Timer(1, self.checkConfig)
+            t1 = threading.Timer(10, self.checkConfig)
             t1.start()
 
     def checkConfig(self):

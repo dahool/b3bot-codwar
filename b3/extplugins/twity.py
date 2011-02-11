@@ -16,15 +16,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-# 08/31/2010 - SGT
-# Use oAuth authentication
-# 01/18/2010 - SGT
-# remove format mark
+# 01/15/2010 - 1.0.0 - SGT
+# Initial
 # 01/16/2010 - SGT
 # add unban event
-# 01/15/2010 - 1.0.0 - SGT
+# 01/18/2010 - SGT
+# remove format mark
+# 08/31/2010 - SGT
+# Use oAuth authentication
+# 02/11/2011 - SGT - 1.0.7
+# Move banlist control to ipbanlist plugin
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 __author__  = 'SGT'
 
 import re
@@ -69,6 +72,11 @@ class TwityPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_PUBLIC)
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
 
+        try:
+            self.registerEvent(b3.events.EVT_BAN_BREAK)
+        except:
+            self.warning("Unable to register event EVT_BAN_BREAK") 
+            
         self.post_update("Online - %s" % time.strftime('%d/%m %H:%M'))
 
         if self._cronTab:
@@ -122,8 +130,11 @@ class TwityPlugin(b3.plugin.Plugin):
             self._public_event(event)
         elif event.type == b3.events.EVT_CLIENT_UNBAN:
             self._unban_event(event)
-        if event.type == b3.events.EVT_CLIENT_AUTH and self._notifynewusers:
-            self.onClientConnect(event.client)
+        #elif event.type == b3.events.EVT_CLIENT_AUTH and self._notifynewusers:
+        #    self.onClientConnect(event.client)
+        elif event.type == b3.events.EVT_BAN_BREAK:
+            client = event.client
+            self.post_update("WARN: [%d] %s possible ban breaker" % (client.id, client.name))
         return
       
     def onClientConnect(self, client):
@@ -140,11 +151,11 @@ class TwityPlugin(b3.plugin.Plugin):
             _timeDiff = 1000000
 
         # don't need to welcome people who got kicked or where already welcomed in the last hour
-        if client.connected and _timeDiff > 3600:
-            if client.connections == 1:
+        #if client.connected and _timeDiff > 3600:
+        #    if client.connections == 1:
                 # this could take some time, so start a new thread
-                p = threading.Thread(target=self._lookup_client, args=(client,))
-                p.start()
+                #p = threading.Thread(target=self._lookup_client, args=(client,))
+                #p.start()
                 
     def _lookup_client(self, client):
         self.debug("Looking for %s" % client.name)

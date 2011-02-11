@@ -43,8 +43,10 @@
 # Add vote mute
 # 2011-02-02 - 1.0.10
 # Add option to allow a spec not be kicked
+# 2011-02-11 - 1.0.11
+# Some reworks
 
-__version__ = '1.0.10'
+__version__ = '1.0.11'
 __author__  = 'SGT'
 
 import sys
@@ -68,16 +70,57 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _no = 0
     _vetoed = 0
     _times = 0
-    _vote_times = 5
-    _vote_interval = 0
 
     _votes = {}
     _lastmaps = []
     _lastmap_max = 5
-    _rate = "*/10" # 15 seconds
     _current_cron = None
     
-    def startup(self):
+    # config
+    _vote_times = 3
+    _vote_interval = 600
+    _minLevel_vote = 2
+    _min_votes = 1
+    _veto_level = 20
+    _cancel_level = 40
+    _rate = "*/15"
+    
+    def onStartup(self):
+        self.registerEvent(b3.events.EVT_GAME_WARMUP)
+        self.registerEvent(b3.events.EVT_GAME_EXIT)
+        self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
+
+    def loadPluginConfig(self):
+        try:
+            self._vote_times = self.config.getint('settings', 'vote_times')
+        except:
+            pass
+        try:
+            self._rate = "*/%d" % self.config.getint('settings', 'rate')
+        except:
+            pass
+        try:
+            self._vote_interval = self.config.getint('settings', 'vote_interval')
+        except:
+            pass
+        try:
+            self._minLevel_vote = self.config.getint('settings', 'min_level_vote')
+        except:
+            pass
+        try:
+            self._veto_level = self.config.getint('settings', 'veto_level')
+        except:
+            pass
+        try:
+            self._cancel_level = self.config.getint('settings', 'cancel_level')
+        except:
+            pass
+        try:
+            self._min_votes = self.config.getint('settings', 'min_votes')
+        except:
+            pass
+        
+    def onLoadConfig(self):
         """\
         Initialize plugin settings
         """
@@ -88,18 +131,10 @@ class Voting2GPlugin(b3.plugin.Plugin):
             # something is wrong, can't start without admin plugin
             self.error('Could not find admin plugin')
             return False
-        
-        self.registerEvent(b3.events.EVT_GAME_WARMUP)
-        self.registerEvent(b3.events.EVT_GAME_EXIT)
-        self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
 
-        self._vote_times = self.config.getint('settings', 'vote_times')
-        self._vote_interval = self.config.getint('settings', 'vote_interval')
-        self._minLevel_vote = self.config.getint('settings', 'min_level_vote')
-        self._veto_level = self.config.getint('settings', 'veto_level')
-        self._cancel_level = self.config.getint('settings', 'cancel_level')
-        self._min_votes = self.config.getint('settings', 'min_votes')
         self._admin_level = self._adminPlugin.config.getint('settings','admins_level')
+        
+        self.loadPluginConfig()
         
         self._adminPlugin.registerCommand(self, 'voteyes', self._minLevel_vote,  self.cmd_voteyes,  'vy')
         self._adminPlugin.registerCommand(self, 'voteno', self._minLevel_vote, self.cmd_voteno,  'vn')
@@ -124,7 +159,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
                 self._adminPlugin.registerCommand(self, cmd, level, self._votes[cmd].run_vote, alias)
             except Exception, e:
                 self.error("Unable to load vote for %s" % cmd)
-		raise
+                raise
                 
     def onEvent(self, event):
         if event.type == b3.events.EVT_GAME_WARMUP:
@@ -488,11 +523,11 @@ class ShuffleVote(Vote):
         super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config, cmd)
         self._schedullerPlugin = self.console.getPlugin('eventscheduller')
         if not self._schedullerPlugin:
-            self.error('Could not find scheduller plugin')
+            self.console.error('Could not find scheduller plugin')
             return False
         self._extraAdminPlugin = self.console.getPlugin('extraadmin')
         if not self._extraAdminPlugin:
-            self.debug('Extra admin not available')
+            self.console.debug('Extra admin not available')
             
 #        if not self._shuffleMaster:
 #            self._shuffleMaster = ShuffleMaster(console)

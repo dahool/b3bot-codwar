@@ -36,7 +36,7 @@
         <set name="kick-k">20</set>
         <set name="admintest">40</set>
         <set name="scream">40</set>
-        <set name="notice">40</set>
+        <set name="notice">20</set>
 
         <set name="find">20</set>
         <set name="aliases-alias">20</set>
@@ -150,10 +150,10 @@
         <set name="rule3">^3Regla #3: Insultar a un admin es motivo de ban</set>
         <set name="rule4">^3Regla #4: No insultes a otros jugadores</set>
         <set name="rule5">^3Regla #5: No uses nombres ofensivos o molestos</set>
-        <set name="rule6">^3Regla #6: No reclutes para tu clan, server o lo que sea</set>
+        <set name="rule6">^3Regla #6: No reclutes para tu clan</set>
         <set name="rule7">^3Regla #7: No hagas publicidad de tu server o sitio web</set>
         <set name="rule8">^3Regla #8: No utilices lenguage ofensivo</set>
-        <set name="rule9">^3Regla #9: ^1NO ^3dispares a tu equipo o dentro de los 10 segundos en su spawn</set>
+        <set name="rule9">^3Regla #9: ^1NO ^3dispares a tu propio equipo</set>
         <set name="rule10">^3Regla #10: No campees en la base del otro equipo</set>
         <set name="rule11">^3Regla #11: No rompas las pelotas</set>
         <set name="rule12">^3Regla #12: No molestes pidiendo mapas</set>

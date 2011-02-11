@@ -3,5 +3,6 @@
         <set name="penalties_since">24</set>
         <set name="refresh_rate">0</set>
         <set name="apply_ban">false</set>
+        <set name="lookup_all">true</set>
 	</settings>
 </configuration>

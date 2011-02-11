@@ -2,11 +2,12 @@
 
 	<settings name="settings">
 		<set name="min_level_vote">2</set>
-		<set name="vote_times">3</set>
+		<set name="vote_times">5</set>
 		<set name="vote_interval">600</set>
 		<set name="veto_level">20</set>
 		<set name="cancel_level">40</set>
         <set name="min_votes">2</set>
+        <set name="rate">10</set>
 	</settings>
 	
 	<settings name="votes">
