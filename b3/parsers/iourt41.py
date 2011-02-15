@@ -110,10 +110,13 @@
 #    * add debugging info for getNextMap()
 # v1.7.12 - 28/05/2010 - xlr8or
 #    * connect bots
-
+# v1.7.13 - 21/12/2010 - SGT
+#    * fix CNCT ping error in getPlayersPings
+#    * fix incorrect game type for ffa
+#    * move getMapList after game initialization
 
 __author__  = 'xlr8or'
-__version__ = '1.7.12'
+__version__ = '1.7.13'
 
 
 import b3.parsers.q3a
