@@ -190,13 +190,14 @@ class Voting2GPlugin(b3.plugin.Plugin):
         try:
             from b3 import maplist
         except:
+	    self.debug("Using alternative map list method")
             self._adminPlugin.cmd_maps(data, client, cmd)
         else:
             if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
                 client.message('^7Do not spam commands')
                 return
             maps = maplist.listCycleMaps(self.console)
-            cmd.sayLoudOrPM(client, "Maps available: " + ", ".join(maps))
+            cmd.sayLoudOrPM(client, "Maps: " + ", ".join(maps))
     
     def pre_vote(self,  client):
         if self._in_progress:

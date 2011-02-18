@@ -42,7 +42,6 @@ import random
 import string
 import traceback
 import datetime
-from b3 import maplist as mplist
 
 #--------------------------------------------------------------------------------------------------
 class ExtraadminPlugin(b3.plugin.Plugin):
@@ -299,14 +298,19 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         self.debug("Next map in rotation %s" % self._nextMap)
     
     def _getMapList(self, client=None):
-        if client:
-            if client.maxLevel >= self._min_maps_level:
-                maplist = self.console.getMaps()
+        try:
+            from b3 import maplist as mplist
+        except:
+            return self.console.getMaps()
+        else:
+            if client:
+                if client.maxLevel >= self._min_maps_level:
+                    maplist = self.console.getMaps()
+                else:
+                    maplist = mplist.listCycleMaps(self.console)
             else:
                 maplist = mplist.listCycleMaps(self.console)
-        else:
-            maplist = mplist.listCycleMaps(self.console)
-        return maplist
+            return maplist
         
     def getMapsSoundingLike(self, mapname, client=None):
         maplist = self._getMapList(client)
