@@ -1,0 +1,22 @@
+<configuration plugin="objective">
+
+	<settings name="settings">
+	</settings>
+	
+    <settings name="default">
+        <set name="ctf">15</set>
+    </settings>
+    
+	<settings name="ctf">
+        <set name="ut4_casa">2</set>
+	</settings>
+	
+    <settings name="messages">
+        <set name="ctf">^2Objetivo:^7 capturar ^4%s ^7banderas.</set>
+        <set name="ts">^2Objetivo:^7 superar al otro equipo por ^4%s ^7rounds.</set>
+        <set name="tdm">^2Objetivo:^7 realizar ^4%s ^7frags.</set>
+        <set name="done">^2%s completo el objetivo.</set>
+        <set name="failed">^2No se completo el objetivo.</set>
+    </settings>
+    
+</configuration>
