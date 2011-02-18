@@ -55,9 +55,7 @@ import b3.plugin
 import b3.cron
 import b3.events
 from b3 import clients
-from b3 import maplist
 import time
-from b3.extrafunctions import ShuffleMaster
 
 class Voting2GPlugin(b3.plugin.Plugin):
     _adminPlugin = None
@@ -189,7 +187,16 @@ class Voting2GPlugin(b3.plugin.Plugin):
         """\
         list maps available to vote
         """
-        client.message("Maps available: " + ", ".join(maplist.listCycleMaps(self.console)))
+        try:
+            from b3 import maplist
+        except:
+            self._adminPlugin.cmd_maps(data, client, cmd)
+        else:
+            if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
+                client.message('^7Do not spam commands')
+                return
+            maps = maplist.listCycleMaps(self.console)
+            cmd.sayLoudOrPM(client, "Maps available: " + ", ".join(maps))
     
     def pre_vote(self,  client):
         if self._in_progress:
@@ -528,9 +535,6 @@ class ShuffleVote(Vote):
         self._extraAdminPlugin = self.console.getPlugin('extraadmin')
         if not self._extraAdminPlugin:
             self.console.debug('Extra admin not available')
-            
-#        if not self._shuffleMaster:
-#            self._shuffleMaster = ShuffleMaster(console)
 
         self._shuffle_percent = self.config.getint('voteshuffle', 'shuffle_percent')
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
