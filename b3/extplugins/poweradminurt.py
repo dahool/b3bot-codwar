@@ -1,12 +1,12 @@
 #
-# PowerAdmin Plugin for BigBrotherBot(B3) (www.bigbrotherbot.com)
+# PowerAdmin Plugin for BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2008 Mark Weirath (xlr8or@xlr8or.com)
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -14,18 +14,18 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # Changelog:
 #
 # 01:49 09/06/2008 by Courgette
-#   * add commands pagear (to change allowed weapons)
-#   * add commands paffa, patdm, pats, paftl, pacah, pactf, pabomb (to change g_gametype)
-#   * now namecheck is disabled during match mode
-#   * _smaxplayers is now set taking care of private slots (this is for speccheck)
-#   * fixes in Mark's code (I suppose I checkout an unstable version)
-#        for LoadRotationManager code, I'm not sure what you meant with all those successives "try:"
-#        maybe this is a python 2.5 syntax ? wasn't working for me
+#  * add commands pagear (to change allowed weapons)
+#  * add commands paffa, patdm, pats, paftl, pacah, pactf, pabomb (to change g_gametype)
+#  * now namecheck is disabled during match mode
+#  * _smaxplayers is now set taking care of private slots (this is for speccheck)
+#  * fixes in Mark's code (I suppose I checkout an unstable version)
+#     for LoadRotationManager code, I'm not sure what you meant with all those successives "try:"
+#     maybe this is a python 2.5 syntax ? wasn't working for me
 # 01:21 09/07/2008 - Courgette
 # * add command !paident <player> : show date / ip / guid of player. Useful when moderators make demo of cheaters
 # 17/08/2008 - xlr8or
@@ -52,16 +52,16 @@
 # * Fixed a default value onLoad for maximum teamdiff setting
 # 02:33 3/15/09 by FSK405|Fear
 # added more rcon cmds:
-#   !waverespawns <on/off> Turn waverespawns on/off
-#   !bluewave <seconds> Set the blue team wave respawn delay
-#   !redwave <seconds> Set the red team wave respawn delay
-#   !setnextmap <mapname> Set the nextmap
-#   !respawngod <seconds> Set the respawn protection
-#   !respawndelay <seconds> Set the respawn delay
-#   !caplimit <caps>
-#   !timelimit <mins>
-#   !fraglimit <frags>
-#   !hotpotato <mins>
+#  !waverespawns <on/off> Turn waverespawns on/off
+#  !bluewave <seconds> Set the blue team wave respawn delay
+#  !redwave <seconds> Set the red team wave respawn delay
+#  !setnextmap <mapname> Set the nextmap
+#  !respawngod <seconds> Set the respawn protection
+#  !respawndelay <seconds> Set the respawn delay
+#  !caplimit <caps>
+#  !timelimit <mins>
+#  !fraglimit <frags>
+#  !hotpotato <mins>
 # 4/4/2009 - 1.4.0b18 - xlr8or
 # * Fixed locked force to stick and not continue with balancing
 # * Helmet and Kevlar messages only when connections < 20 
@@ -1766,7 +1766,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         self.debug('ClientVars set up for %s' % client.name)
 
     def resetVars(self):
-        if self.isEnabled() and self._hsenable and self._hsresetvars:
+        if self.isEnabled() and self._hsenable:
             clients = self.console.clients.getList()
             for c in clients:
                 if c.isvar(self, 'hitvars'):
@@ -2156,10 +2156,10 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
 
     def set_configmode(self, mode=None):
         if mode:
-            if self.gameconfig.has_key('mode%s' % mode):
-                cfgfile = self.gameconfig('mode%s' % mode)
+            if self.gameconfig.has_key('mode_%s' % mode):
+                cfgfile = self.gameconfig('mode_%s' % mode)
                 filename = os.path.join(self.console.game.fs_homepath,self.console.game.fs_game, cfgfile)
-                if os.path.exists(filename):
+                if os.path.isfile(filename):
                     self.debug('Executing configfile = [%s]', cfgfile)
                     self.console.write('exec %s' % cfgfile)
         cfgfile = None
@@ -2171,7 +2171,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
                 cfgfile = self.gameconfig.get('matchoff')
         if cfgfile:
             filename = os.path.join(self.console.game.fs_homepath,self.console.game.fs_game, cfgfile)
-            if os.path.exists(filename):
+            if os.path.isfile(filename):
                 self.debug('Executing configfile = [%s]', cfgfile)
                 self.console.write('exec %s' % cfgfile)
 
