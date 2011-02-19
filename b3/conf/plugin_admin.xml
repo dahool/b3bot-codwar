@@ -160,7 +160,8 @@
         <set name="rule12">^3Regla #12: No molestes pidiendo mapas</set>
         <set name="rule13">^3Regla #13: No acuses de cheat. Graba demo y publicala.</set>
         <set name="rule14">^3Regla #14: El server no es sala de chat</set>
-        <set name="rule15">^3Regla #15: Nombres o temas que aludan a cuestiones politicas y o religiosas no estan permitidos</set>
+	<set name="rule15">^3Regla #15: Nombres o temas que aludan a cuestiones politicas y o religiosas no estan permitidos</set>
+	<set name="rule16">^3Regla #16: No cuestionar la decision de un admin. Cualquier descargo dirigirse a www.codwar.com.ar</set>
     </settings>
     <settings name="warn_reasons">
         <set name="generic">1h, ^7</set>

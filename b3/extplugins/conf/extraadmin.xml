@@ -6,6 +6,7 @@
       <set name="auto_balance">True</set>
       <set name="min_reg_connections">50</set>
       <set name="super_reg_level">90</set>
+      <set name="load_match_only">false</set>
     </settings>
 
     <settings name="commands">

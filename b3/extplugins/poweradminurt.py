@@ -216,15 +216,15 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
 
         # Register our events
         self.verbose('Registering events')
+        self.createEvent('EVT_CLIENT_PUBLIC', 'Server Public Mode Changed')
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
         self.registerEvent(b3.events.EVT_GAME_EXIT)
-        #self.registerEvent(b3.events.EVT_CLIENT_JOIN)
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_CHANGE)
         self.registerEvent(b3.events.EVT_CLIENT_DAMAGE)
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
-
+        
         # don't run cron-checks on startup
         self.ignoreSet(self._ignorePlus)
         self._balancing = False

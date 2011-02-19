@@ -1,6 +1,9 @@
 #
 # BigBrotherBot(B3) (www.bigbrotherbot.com)
-# iourt parser extend for survivor winner catch
+# This parser read map cycle from mapcycle file only.
+# Also catch event Survivor Winner
+# Raise Unban event
+#
 # Copyright (C) 2010 Sergio Gabriel Teves
 # 
 # This program is free software; you can redistribute it and/or modify
@@ -17,19 +20,32 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
-# 2010-05-12 - Initial version
+# 2010-05-12 - SGT
+# Initial version
+# 2011-02-19 - SGT
+# Create Survivor Winner Event
+# Create Unban event
 
 __author__  = 'SGT'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import os
 
 import b3
 import b3.events
-import b3.parsers.iourt41
+from b3.parsers.iourt41 import Iourt41Parser
 
-class Wiourt41Parser(b3.parsers.iourt41.Iourt41Parser):
-          
+class Wiourt41Parser(Iourt41Parser):
+    
+    def startup(self):
+        Iourt41Parser.startup(self)
+        self.Events.createEvent('EVT_SURVIVOR_WIN', 'Survivor Winner')
+        self.Events.createEvent('EVT_CLIENT_UNBAN', 'Client Unbanned')
+
+    def unban(self, client, reason='', admin=None, silent=False, *kwargs):
+        Iourt41Parser.unban(self, client, reason, admin, silent, *kwargs)
+        self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_UNBAN, admin, client))
+            
     def OnSurvivorwinner(self, action, data, match=None):
         self.debug('EVENT: OnSurvivorwinner')
         return b3.events.Event(b3.events.EVT_SURVIVOR_WIN, data)  

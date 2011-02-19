@@ -129,7 +129,11 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             self._announce = self.config.getint('settings','announce')
         except:
             self._announce = 2
-                 
+        try:
+            self._paloadmatchonly = self.config.getboolean('settings', 'load_match_only')
+        except:
+            self._paloadmatchonly = False
+            
     def onEvent(self, event):
         """\
         Handle intercepted events
@@ -489,23 +493,23 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """\
         <conf> Load specific configuration file.
         """        
-#        if self.is_matchmode():
         if not data:
             client.message('^7Invalid or missing data.')
         else:
-            if self._config_location:
+            if self._config_location and os.path.isfile(self._config_location) and (not self._paloadmatchonly or (self._paloadmatchonly and self.is_matchmode())):
                 cfgfile = open(self._config_location,'r')
                 cfglist = cfgfile.read().strip('\n').split('\n')            
                 if cfglist:
                     found = False
                     for cfg in cfglist:
                         if data.lower() == cfg:
-                            if os.path.exists(os.path.join(self.console.game.fs_homepath,self.console.game.fs_game,'%s.cfg' % cfg)):
+                            if os.path.isfile(os.path.join(self.console.game.fs_homepath,self.console.game.fs_game,'%s.cfg' % cfg)):
                                 self.debug('Executing configfile = [%s]',cfg)
                                 self.console.write('exec %s.cfg' % cfg)
+				client.message('^7Loaded: %s' % cfg)
                                 return True
                             else:
-                                client.message('^7File not found!')
+                                client.message('^7Config file not found!')
                             found = True
                             break
                     if not found:
@@ -513,10 +517,10 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                 else:
                     client.message('^7No config found.')
             else:
-                client.message('^7Command disabled')
-#        else:
-#            client.message('^7This command is enabled in match mode only')
-#        return False
+                if self._paloadmatchonly and not self.is_matchmode():
+                    client.message('^7This command is enabled in match mode only')
+                else:
+                    client.message('^7Command disabled')
 
     def cmd_paslapall(self, data, client, cmd=None):
         """\

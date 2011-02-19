@@ -2011,14 +2011,14 @@ class Command:
             return True
         if self.console:
             sql = "SELECT until FROM disabledcmd WHERE cmd = '%s' or cmd = '%s'" % (self.command, self.alias)
-			try:
+            try:
                 cursor = self.console.storage.query(sql)
                 if cursor.rowcount > 0:
                     until = cursor.getRow()['until']
                     if until == 0 or until > self.console.time():
                         return False
-			except:
-			    pass
+            except:
+                pass
             return True
         else:
             return True

@@ -22,7 +22,7 @@
         <set name="pabigtext-bigtext">20</set>
         <!--set name="pashuffleteams-shuffleteams">40</set-->
         <set name="paswapteams-swapteams">40</set>
-        <set name="paforce-force">40</set>
+        <set name="paforce-force">20</set>
         <set name="pavote">60</set>
 
         <set name="papause">80</set>
@@ -152,8 +152,8 @@
   <settings name="headshotcounter">
     <!-- enable the headshot counter? -->
     <set name="hs_enable">True</set>
-    <!-- reset counts after each map? -->
-    <set name="reset_vars">True</set>
+    <!-- reset counts (no, map, round) -->
+    <set name="reset_vars">map</set>
     <!-- set broadcast to True if you want the counter to appear in the upper left, False is in chatarea -->
     <set name="broadcast">True</set>
     <!-- Announce every single headshot? -->

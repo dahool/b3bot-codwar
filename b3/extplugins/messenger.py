@@ -21,7 +21,7 @@
 #    * Initial version
 
 __author__  = 'SGT'
-__version__ = '1.0'
+__version__ = '1.0.1'
 
 
 import b3
@@ -63,7 +63,7 @@ class MessengerPlugin(b3.plugin.Plugin):
         
         sclient = self._adminPlugin.findClientPrompt(input[0], client)
         sclient.message('^5%s^7: %s' % (client.name, input[1]))
-        
+        client.message('^7Message sent to %s' % (sclient.name))
         return True 
         
     def cmd_telladmin(self, data, client, cmd=None):
@@ -82,7 +82,6 @@ class MessengerPlugin(b3.plugin.Plugin):
         for c in clients:
             if c.maxLevel >= self._admin_level:
                 c.message('^5%s^7: %s' % (client.name, input[0]))
-
         return True 
            
 if __name__ == '__main__':
