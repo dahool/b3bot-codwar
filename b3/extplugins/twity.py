@@ -77,7 +77,7 @@ class TwityPlugin(b3.plugin.Plugin):
         except:
             self.warning("Unable to register event EVT_BAN_BREAK") 
             
-        self.post_update("Online - %s" % time.strftime('%d/%m %H:%M'))
+        self.post_update("Online - %s (%s)" % (time.strftime('%d/%m %H:%M'), b3.versionId))
 
         if self._cronTab:
             # remove existing crontab
