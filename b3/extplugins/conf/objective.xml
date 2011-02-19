@@ -29,7 +29,7 @@
         <set name="ctf">^2Objetivo:^7 capturar ^4%s ^7banderas.</set>
         <set name="ts">^2Objetivo:^7 ganar ^4%s ^7rounds.</set>
         <set name="tdm">^2Objetivo:^7 realizar ^4%s ^7frags.</set>
-        <set name="done">^2%s completo el objetivo.</set>
+        <set name="done">^2%s ^7completo el objetivo.</set>
         <set name="failed">^2No se completo el objetivo.</set>
         <set name="disabled">^2No hay objetivos adicionales.</set>
     </settings>

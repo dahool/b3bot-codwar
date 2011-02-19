@@ -109,13 +109,17 @@ class ObjectivePlugin(b3.plugin.Plugin):
     def findObjective(self, map):
         self.debug("findObjective")
         if map in self._configs:
-            self._current = self._configs[c.mapName]
+            self._current = self._configs[map]
         else:
             self._current = self._default
         self.console.setCvar(self._variable,self._current)
     
     def setNextMapObjective(self):
-        self.findObjective(self.console.getNextMap())        
+		try:
+			m = self.console.getNextMap()
+			self.findObjective(m)
+		except:
+			self.error("Couldn't get next map")
         
     def setCurrentMapObjective(self):
         c = self.console.game
