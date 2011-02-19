@@ -1,0 +1,5 @@
+<configuration plugin="configloader">
+	<settings name="settings">
+        <set name="min_level">80</set>
+	</settings>
+</configuration>

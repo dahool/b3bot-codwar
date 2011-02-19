@@ -414,7 +414,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                  
         random.seed(os.urandom(40))
         clients = self.console.clients.getList()
-        for i in range(0,10):
+        for i in range(0,3):
             random.shuffle(clients)
         team = random.choice(['blue','red'])
         teamname = {-1:'UNKNOWN', b3.TEAM_SPEC: 'SPEC', b3.TEAM_RED: 'RED', b3.TEAM_BLUE: 'BLUE'}
@@ -487,36 +487,36 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
     def cmd_paload(self, data, client, cmd=None):
         """\
-        <conf> Load specific configuration file. Only available on match mode
+        <conf> Load specific configuration file.
         """        
-        if self.is_matchmode():
-            if not data:
-                client.message('^7Invalid or missing data.')
-            else:
-                if self._config_location:
-                    cfgfile = open(self._config_location,'r')
-                    cfglist = cfgfile.read().strip('\n').split('\n')            
-                    if cfglist:
-                        found = False
-                        for cfg in cfglist:
-                            if data.lower() == cfg:
-                                if os.path.exists(os.path.join(self.console.game.fs_homepath,self.console.game.fs_game,'%s.cfg' % cfg)):
-                                    self.debug('Executing configfile = [%s]',cfg)
-                                    self.console.write('exec %s.cfg' % cfg)
-                                    return True
-                                else:
-                                    client.message('^7File not found!')
-                                found = True
-                                break
-                        if not found:
-                            client.message('^7Config not found.')
-                    else:
-                        client.message('^7No config found.')
-                else:
-                    client.message('^7Command disabled')
+#        if self.is_matchmode():
+        if not data:
+            client.message('^7Invalid or missing data.')
         else:
-            client.message('^7This command is enabled in match mode only')
-        return False
+            if self._config_location:
+                cfgfile = open(self._config_location,'r')
+                cfglist = cfgfile.read().strip('\n').split('\n')            
+                if cfglist:
+                    found = False
+                    for cfg in cfglist:
+                        if data.lower() == cfg:
+                            if os.path.exists(os.path.join(self.console.game.fs_homepath,self.console.game.fs_game,'%s.cfg' % cfg)):
+                                self.debug('Executing configfile = [%s]',cfg)
+                                self.console.write('exec %s.cfg' % cfg)
+                                return True
+                            else:
+                                client.message('^7File not found!')
+                            found = True
+                            break
+                    if not found:
+                        client.message('^7Config not found.')
+                else:
+                    client.message('^7No config found.')
+            else:
+                client.message('^7Command disabled')
+#        else:
+#            client.message('^7This command is enabled in match mode only')
+#        return False
 
     def cmd_paslapall(self, data, client, cmd=None):
         """\
