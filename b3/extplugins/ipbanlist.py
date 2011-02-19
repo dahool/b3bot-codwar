@@ -19,8 +19,10 @@
 # Initial
 # 2011-02-11 - 1.0.1 
 # Add event. Some code rework.
+# 2011-02-19 - 1.0.2 
+# Fix error in sql
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3
@@ -39,14 +41,14 @@ class IpbanlistPlugin(b3.plugin.Plugin):
     _do_lookupall = False
     
     _SELECT_QUERY = "SELECT c.ip FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
-                    "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
-                    "AND p.time_add >= %(since)d AND p.inactive=0 AND c.ip = %(ip)s"
+    "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
+    "AND p.time_add >= %(since)d AND p.inactive=0 AND c.ip = '%(ip)s'"
 
     _SELECT_QUERY_FULL = "SELECT p.* FROM penalties p WHERE "\
-                    "(p.time_expire=-1 OR p.time_expire > %(time)d) AND p.inactive = 0 AND "\
-                    "(p.type = 'TempBan' or p.type = 'Ban') AND p.client_id IN ("\
-                    "SELECT distinct(c.id) FROM clients c LEFT JOIN aliases a ON c.id = a.client_id "\
-                    "WHERE c.ip = '%(ip)s' or a.ip = '%(ip)s'"
+    "(p.time_expire=-1 OR p.time_expire > %(time)d) AND p.inactive = 0 AND "\
+    "(p.type = 'TempBan' or p.type = 'Ban') AND p.client_id IN ("\
+    "SELECT distinct(c.id) FROM clients c LEFT JOIN aliases a ON c.id = a.client_id "\
+    "WHERE c.ip = '%(ip)s' or a.ip = '%(ip)s')"
                         
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
@@ -54,16 +56,6 @@ class IpbanlistPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.createEvent('EVT_BAN_BREAK', 'Ban Break Event')
         
-        #self.load_penalties()
-        
-        #if self._cronTab:
-            # remove existing crontab
-        #    self.console.cron - self._cronTab
-
-        #if self._refresh_rate > 0:
-        #    self._cronTab = b3.cron.PluginCronTab(self, self.load_penalties, hour="*/%s" % self._refresh_rate)
-        #    self.console.cron + self._cronTab
-
     def onLoadConfig(self):
         try:
             self._since = self.config.getint('settings', 'penalties_since')
@@ -88,9 +80,6 @@ class IpbanlistPlugin(b3.plugin.Plugin):
         if event.type == b3.events.EVT_CLIENT_AUTH:
             self.debug("Queued event [%s]" % event.client.name)
             thread.start_new_thread(self.onClientConnect, (event.client,))
-            #self.onClientConnect(event.client)
-#        elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
-#            thread.start_new_thread(self.load_penalties, ())
         
     def _lookup_all(self, client):
         self.debug("Full lookup for %s" % client.name)
@@ -115,7 +104,6 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             client.pbid == 'WORLD':
             return
         
-        #thread.start_new_thread(self.load_penalties, ())
         if self._lookup_min(client):
             self.debug("Kicked %s (%s)" % (client.name, client.ip))
             client.notice("Suspicion of ban break.", None)
@@ -127,20 +115,6 @@ class IpbanlistPlugin(b3.plugin.Plugin):
         elif self._do_lookupall and client.connections == 1 and self._lookup_all(client):
             self.debug("Lookup all was positive")
             self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
-
-    # @deprecated
-    def load_penalties(self):
-        self.debug("Load penalties")
-        self._cache = set()
-        now = int(time.mktime(datetime.datetime.now().timetuple()))
-        since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
-        cursor = self.console.storage.query(self._SELECT_QUERY % {'now': now, 'since': since})
-        while not cursor.EOF:
-            r = cursor.getRow()
-            self._cache.add(r['ip'])
-            cursor.moveNext()
-        cursor.close()
-        self.debug("Loaded %d ips" % len(self._cache))
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
