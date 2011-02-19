@@ -1,3 +1,8 @@
+# This section is DoxuGen information. More information on how to comment your code
+# is available at http://wiki.bigbrotherbot.net/doku.php/customize:doxygen_rules
+## @file
+# The Windows binary package creator
+
 import sys
 import os
 import glob
@@ -28,9 +33,10 @@ def getVersion():
         return None
     
 myDataFiles = [
-        ('', ['README']),
+        ('', ['README.md']),
         ('', ['b3/PKG-INFO']),
         ('docs', listdirectory('b3/docs/')),
+        ('sql', listdirectory('b3/sql/')),
         ('conf', listdirectory('b3/conf/')),
         ('extplugins', ['b3/extplugins/xlrstats.py']),
         ('extplugins/conf', listdirectory('b3/extplugins/conf/')),

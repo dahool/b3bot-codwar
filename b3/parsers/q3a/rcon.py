@@ -23,12 +23,24 @@
 # call basis
 # 2009/12/11 - 1.3.6 - Courgette
 # * make errors warnings until maxRetries is not reached
-#
+# 2011/2/1 - 1.3.7 - Bravo17
+# * added variables for rcon & qserver send & reply strings
+# 2011/04/02 - 1.3.8 - Just a baka
+# * Quit command should never be retried
  
 __author__ = 'ThorN'
-__version__ = '1.3.6'
+__version__ = '1.3.8'
  
-import socket, sys, select, re, time, thread, threading, Queue
+import socket
+import sys
+import select
+import re
+import time
+import thread
+import threading
+import Queue
+from b3.lib.beaker.cache import CacheManager
+from b3.lib.beaker.util import parse_cache_config_options
 
 #--------------------------------------------------------------------------------------------------
 class Rcon:
@@ -38,11 +50,35 @@ class Rcon:
     socket = None
     queue = None
     console = None
-    socket_timeout = 0.80 # // SET TO 0.30 IF USING LOW LATENCY IOQ3
+    socket_timeout = 0.80
+    rconsendstring = '\377\377\377\377rcon "%s" %s\n'
+    rconreplystring = '\377\377\377\377print\n'
+    qserversendstring = '\377\377\377\377%s\n'
+
+    #caching options
+    cache_opts = {
+    'cache.data_dir': 'b3/cache/data',
+    'cache.lock_dir': 'b3/cache/lock',
+    }
+    #create cache
+    cache = CacheManager(**parse_cache_config_options(cache_opts))
+    #default expiretime for the status cache in seconds and cache type
+    statusCacheExpireTime = 2
+    statusCacheType = 'memory'
 
     def __init__(self, console, host, password):
         self.console = console
         self.queue = Queue.Queue()
+
+        if self.console.config.has_option('caching', 'status_cache_type'):
+            self.statusCacheType = self.console.config.get('caching', 'status_cache_type').lower()
+            if self.statusCacheType not in ['file', 'memory']:
+                self.statusCacheType = 'memory'
+        if self.console.config.has_option('caching', 'status_cache_expire'):
+            self.statusCacheExpireTime = abs(self.console.config.getint('caching', 'status_cache_expire'))
+            if self.statusCacheExpireTime > 5:
+                self.statusCacheExpireTime = 5
+        self.console.bot('rcon status Cache Expire Time: [%s sec] Type: [%s]' %(self.statusCacheExpireTime, self.statusCacheType))
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.host = host
@@ -71,7 +107,7 @@ class Rcon:
                 self.console.warning('QSERVER: %s', str(errors))
             elif len(writeables) > 0:
                 try:
-                    writeables[0].send('\377\377\377\377%s\n' % data)
+                    writeables[0].send(self.qserversendstring % data)
                 except Exception, msg:
                     self.console.warning('QSERVER: ERROR sending: %s', msg)
                 else:
@@ -117,7 +153,7 @@ class Rcon:
                 self.console.warning('RCON: %s', str(errors))
             elif len(writeables) > 0:
                 try:
-                    writeables[0].send('\377\377\377\377rcon "%s" %s\n' % (self.password, data))
+                    writeables[0].send(self.rconsendstring % (self.password, data))
                 except Exception, msg:
                     self.console.warning('RCON: ERROR sending: %s', msg)
                 else:
@@ -128,8 +164,8 @@ class Rcon:
                     except Exception, msg:
                         self.console.warning('RCON: ERROR reading: %s', msg)
 
-                if re.match(r'^map(_rotate)?.*', data):
-                    # do not retry map changes since they prevent the server from responding
+                if re.match(r'^quit|map(_rotate)?.*', data):
+                    # do not retry quits and map changes since they prevent the server from responding
                     self.console.verbose2('RCON: no retry for %s', data)
                     return ''
                     
@@ -183,7 +219,13 @@ class Rcon:
     def writelines(self, lines):
         self.queue.put(lines)
 
-    def write(self, cmd, maxRetries=None, socketTimeout=None):
+    def write(self, cmd, maxRetries=None, socketTimeout=None, Cached=True):
+        #intercept status request for caching construct
+        if cmd == 'status' and Cached:
+            status_cache = self.cache.get_cache('status', type=self.statusCacheType, expire=self.statusCacheExpireTime)
+            data = status_cache.get(key='status', createfunc=self._requestStatusCached)
+            return data
+
         self.lock.acquire()
         try:
             data = self.sendRcon(cmd, maxRetries=maxRetries, socketTimeout=socketTimeout)
@@ -194,6 +236,18 @@ class Rcon:
             return data
         else:
             return ''
+
+    def _requestStatusCached(self):
+        self.lock.acquire()
+        try:
+            data = self.sendRcon('status', maxRetries=5)
+        finally:
+            self.lock.release()
+        if data:
+            return data
+        else:
+            return ''
+
 
     def flush(self):
         pass
@@ -213,7 +267,7 @@ class Rcon:
             else:
                 if d:
                     # remove rcon header
-                    data += d.replace('\377\377\377\377print\n', '')
+                    data += d.replace(self.rconreplystring, '')
                 elif len(data) > 0 and ord(data[-1:]) == 10:
                     break
 
@@ -235,7 +289,7 @@ class Rcon:
 
             if d:
                 # remove rcon header
-                data += d.replace('\377\377\377\377print\n', '')
+                data += d.replace(self.rconreplystring, '')
             
             readables, writeables, errors = select.select([sock], [], [sock], socketTimeout)
 

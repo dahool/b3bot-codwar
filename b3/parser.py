@@ -18,6 +18,17 @@
 #
 #
 # CHANGELOG
+#   2011/02/03 - 1.23 - Bravo17
+#   * allow local log to be appended to instead of overwritten for games with remote logs
+#   2010/11/25 - 1.22 - Courgette
+#   * at start, can load a plugin in 'disabled' state. Use the 'disabled' as follow :
+#         <plugin name="adv" config="@conf/plugin_adv.xml" disabled="Yes"/>
+#   2010/11/18 - 1.21 - Courgette
+#   * do not resolve eventual domain name found in public_ip
+#   2010/11/07 - 1.20.2 - GrosBedo
+#   * edited default values of lines_per_second and delay
+#   2010/11/07 - 1.20.1 - GrosBedo
+#   * added a new dynamical function getMessageVariables to parse messages
 #   2010/10/28 - 1.20.0 - Courgette
 #   * support an new optional syntax for loading plugins in b3.xml which enable
 #     to specify a directory where to find the plugin with the 'path' attribute.
@@ -94,7 +105,7 @@
 #    Added warning, info, exception, and critical log handlers
 
 __author__  = 'ThorN, Courgette, xlr8or, Bakes'
-__version__ = '1.20.0'
+__version__ = '1.22'
 
 # system modules
 import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket
@@ -106,7 +117,7 @@ import b3.output
 
 import b3.game
 import b3.cron
-import b3.parsers.q3a_rcon
+import b3.parsers.q3a.rcon
 import b3.clients
 import b3.functions
 from b3.functions import main_is_frozen, getModule
@@ -127,8 +138,8 @@ class Parser(object):
     _timeStart = None
 
     clients  = None
-    delay = 0.05 # between to apply between each game log lines fetching
-    delay2 = 0.001 # between to apply between each game log line processing
+    delay = 0.33 # to apply between each game log lines fetching (max time before a command is detected by the bot + (delay2*nb_of_lines) )
+    delay2 = 0.02 # to apply between each game log line processing (max number of lines processed in one second)
     game = None
     gameName = None
     type = None
@@ -147,7 +158,8 @@ class Parser(object):
     # Time in seconds of epoch of game log
     logTime = 0
 
-    OutputClass = b3.parsers.q3a_rcon.Rcon
+    # Default outputclass set to the q3a rcon class
+    OutputClass = b3.parsers.q3a.rcon.Rcon
 
     _settings = {}
     _settings['line_length'] = 65
@@ -251,12 +263,6 @@ class Parser(object):
             self._publicIp = f.read().strip()
             f.close()
 
-        try:
-            # resolve domain names
-            self._publicIp = socket.gethostbyname(self._publicIp)
-        except:
-            pass
-
         if self._rconIp[0:1] == '~' or self._rconIp[0:1] == '/':
             # load ip from a file
             f = file(self.getAbsolutePath(self._rconIp))
@@ -292,12 +298,14 @@ class Parser(object):
         # delay between log reads
         if self.config.has_option('server', 'delay'):
             delay = self.config.getfloat('server', 'delay')
-            self.delay = delay
+            if self.delay > 0:
+                self.delay = delay
 
         # delay between each log's line processing
         if self.config.has_option('server', 'lines_per_second'):
             delay2 = self.config.getfloat('server', 'lines_per_second')
-            self.delay2 = 1/delay2
+            if delay2 > 0:
+                self.delay2 = 1/delay2
 
         # demo mode: use log time
         if self.config.has_option('devmode', 'replay'):
@@ -320,8 +328,18 @@ class Parser(object):
                 else:
                     f = os.path.normpath(os.path.expanduser('games_mp.log'))
 
-                ftptempfile = open(f, "w")
-                ftptempfile.close()
+                if self.config.has_option('server', 'log_append'):
+                    if not (self.config.getboolean('server', 'log_append') and os.path.isfile(f)):
+                        self.screen.write('Creating Gamelog : %s\n' % f)
+                        ftptempfile = open(f, "w")
+                        ftptempfile.close()
+                    else:
+                        self.screen.write('Append to Gamelog: %s\n' % f)
+                else:
+                    self.screen.write('Creating Gamelog : %s\n' % f)
+                    ftptempfile = open(f, "w")
+                    ftptempfile.close()
+                    
             else:
                 self.bot('Game log %s', game_log)
                 f = self.config.getpath('server', 'game_log')
@@ -358,7 +376,8 @@ class Parser(object):
             self.output.flush()
             self.screen.write('Testing RCON     : ')
             self.screen.flush()
-            if res == 'Bad rconpassword.':
+            _badRconReplies = ['Bad rconpassword.', 'Invalid password.']
+            if res in _badRconReplies:
                 self.screen.write('>>> Oops: Bad RCON password\n>>> Hint: This will lead to errors and render B3 without any power to interact!\n')
                 self.screen.flush()
                 time.sleep(2)
@@ -511,14 +530,15 @@ class Parser(object):
 
         priority = 1
         for p in self.config.get('plugins/plugin'):
-            plugin = p.get('name')
+            name = p.get('name')
             conf = p.get('config')
-            path = p.get('path')
-
             if conf == None:
-                conf = '@b3/conf/plugin_%s.xml' % plugin
-
-            plugins[priority] = (plugin, self.getAbsolutePath(conf), path)
+                conf = '@b3/conf/plugin_%s.xml' % name
+            disabledconf = p.get('disabled')
+            plugins[priority] = {'name': name, \
+                                 'conf': self.getAbsolutePath(conf), \
+                                 'path': p.get('path'), \
+                                 'disabled': disabledconf is not None and disabledconf.lower() in ('yes', '1', 'on', 'true')}
             pluginSort.append(priority)
             priority += 1
 
@@ -527,13 +547,15 @@ class Parser(object):
         self._pluginOrder = []
         for s in pluginSort:
 
-            p, conf, path = plugins[s]
-            self._pluginOrder.append(p)
-            self.bot('Loading Plugin #%s %s [%s]', s, p, conf)
+            self._pluginOrder.append(plugins[s]['name'])
+            self.bot('Loading Plugin #%s %s [%s]', s, plugins[s]['name'], plugins[s]['conf'])
 
             try:
-                pluginModule = self.pluginImport(p, path)
-                self._plugins[p] = getattr(pluginModule, '%sPlugin' % p.title())(self, conf)
+                pluginModule = self.pluginImport(plugins[s]['name'], plugins[s]['path'])
+                self._plugins[plugins[s]['name']] = getattr(pluginModule, '%sPlugin' % plugins[s]['name'].title())(self, plugins[s]['conf'])
+                if plugins[s]['disabled']:
+                    self.info("disabling plugin %s" % plugins[s]['name'])
+                    self._plugins[plugins[s]['name']].disable()
             except Exception, msg:
                 # critical will exit
                 self.critical('Error loading plugin: %s', msg)
@@ -541,7 +563,7 @@ class Parser(object):
             version = getattr(pluginModule, '__version__', 'Unknown Version')
             author  = getattr(pluginModule, '__author__', 'Unknown Author')
             
-            self.bot('Plugin %s (%s - %s) loaded', p, version, author)
+            self.bot('Plugin %s (%s - %s) loaded', plugins[s]['name'], version, author)
             self.screen.write('.')
             self.screen.flush()
 
@@ -695,6 +717,43 @@ class Parser(object):
                 return msg % args
         else:
             return msg
+
+    def getMessageVariables(self, *args, **kwargs):
+        """Dynamically generate a dictionnary of fields available for messages in config file"""
+        variables = {}
+        for obj in args:
+            if obj is None:
+                continue
+            if type(obj).__name__ == 'str':
+                if variables.has_key(obj) is False:
+                    variables[obj] = obj
+            else:
+                for attr in vars(obj):
+                    pattern = re.compile('[\W_]+')
+                    cleanattr = pattern.sub('', attr) # trim any underscore or any non alphanumeric character
+                    variables[cleanattr] = getattr(obj,attr)
+        for key, obj in kwargs.iteritems():
+            #self.debug('Type of kwarg %s: %s' % (key, type(obj).__name__))
+            if obj is None:
+                continue
+            if type(obj).__name__ == 'str':
+                if variables.has_key(key) is False:
+                    variables[key] = obj
+            #elif type(obj).__name__ == 'instance':
+                #self.debug('Classname of object %s: %s' % (key, obj.__class__.__name__))
+            else:
+                for attr in vars(obj):
+                    pattern = re.compile('[\W_]+')
+                    cleanattr = pattern.sub('', attr) # trim any underscore or any non alphanumeric character
+                    currkey = ''.join([key,cleanattr])
+                    variables[currkey] = getattr(obj,attr)
+        ''' For debug purposes, uncomment to see in the log a list of the available fields
+        allkeys = variables.keys()
+        allkeys.sort()
+        for key in allkeys:
+            self.debug('%s has value %s' % (key, variables[key]))
+        '''
+        return variables
 
     def getCommand(self, cmd, **kwargs):
         """Return a reference to a loaded command"""
@@ -1149,6 +1208,7 @@ class Parser(object):
     def changeMap(self, map):
         """\
         load a given map/level
+        return a list of suggested map names in cases it fails to recognize the map that was provided
         """
         raise NotImplementedError
 

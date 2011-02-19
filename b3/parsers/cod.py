@@ -41,17 +41,20 @@
 # 10/8/2010 - 1.4.13 - xlr8or - fixed a bug where clients would be disconnected after mapchange.  
 # 10/9/2010 - 1.4.14 - xlr8or - don't save client.name on say and sayteam when name is the same (sanitization problem)
 # 24/10/2010 - 1.4.15 - xlr8or - some documentation on line formats
+# 07/11/2010 - 1.4.16 - GrosBedo - messages now support named $variables instead of %s
+# 08/11/2010 - 1.4.17 - GrosBedo - messages can now be empty (no message broadcasted on kick/tempban/ban/unban)
+# 02/02/2011 - 1.4.18 - xlr8or - add cod7 suicide _lineformat
 
 __author__  = 'ThorN, xlr8or'
-__version__ = '1.4.15'
+__version__ = '1.4.18'
 
-import b3.parsers.q3a
 import re, string, threading
 import b3
 import b3.events
+from b3.parsers.q3a.abstractParser import AbstractParser
 import b3.parsers.punkbuster
 
-class CodParser(b3.parsers.q3a.Q3AParser):
+class CodParser(AbstractParser):
     gameName = 'cod'
     IpsOnly = False
     _guidLength = 6 # (minimum) length of the guid
@@ -83,13 +86,16 @@ class CodParser(b3.parsers.q3a.Q3AParser):
     _lineFormats = (
         # server events
         re.compile(r'^(?P<action>[a-z]+):\s?(?P<data>.*)$', re.IGNORECASE),
+
         # world kills
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9-]{1,2});(?P<team>[a-z]+);(?P<name>[^;]+);(?P<aguid>[^;]*);(?P<acid>-1);(?P<ateam>world);(?P<aname>[^;]*);(?P<aweap>[a-z0-9_-]+);(?P<damage>[0-9.]+);(?P<dtype>[A-Z_]+);(?P<dlocation>[a-z_]+))$', re.IGNORECASE),
         # player kills/damage
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<team>[a-z]*);(?P<name>[^;]+);(?P<aguid>[^;]+);(?P<acid>[0-9]{1,2});(?P<ateam>[a-z]*);(?P<aname>[^;]+);(?P<aweap>[a-z0-9_-]+);(?P<damage>[0-9.]+);(?P<dtype>[A-Z_]+);(?P<dlocation>[a-z_]+))$', re.IGNORECASE),
         # suicides (cod4/cod5)
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<team>[a-z]*);(?P<name>[^;]+);(?P<aguid>[^;]*);(?P<acid>-1);(?P<ateam>[a-z]*);(?P<aname>[^;]+);(?P<aweap>[a-z0-9_-]+);(?P<damage>[0-9.]+);(?P<dtype>[A-Z_]+);(?P<dlocation>[a-z_]+))$', re.IGNORECASE),
-        
+        # suicides (cod7)
+        re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<team>[a-z]*);(?P<name>[^;]+);(?P<aguid>[^;]*);(?P<acid>[0-9]{1,2});(?P<ateam>[a-z]*);(?P<aname>[^;]+);(?P<aweap>[a-z0-9_-]+);(?P<damage>[0-9.]+);(?P<dtype>[A-Z_]+);(?P<dlocation>[a-z_]+))$', re.IGNORECASE),
+
         #team actions
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<team>[a-z]+);(?P<name>[^;]+);(?P<type>[a-z_]+))$', re.IGNORECASE),
         
@@ -97,8 +103,10 @@ class CodParser(b3.parsers.q3a.Q3AParser):
         re.compile(r'^(?P<action>[a-z]+);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<name>[^;]+);(?P<aguid>[^;]+);(?P<acid>[0-9]{1,2});(?P<aname>[^;]+);(?P<text>.*))$', re.IGNORECASE),
         # say like events
         re.compile(r'^(?P<action>[a-z]+);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<name>[^;]+);(?P<text>.*))$', re.IGNORECASE),
+
         # Join Team (cod5)
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<team>[a-z]+);(?P<name>[^;]+))$', re.IGNORECASE),
+
         # all other events
         re.compile(r'^(?P<action>[A-Z]);(?P<data>(?P<guid>[^;]+);(?P<cid>[0-9]{1,2});(?P<name>[^;]+))$', re.IGNORECASE)
     )
@@ -410,11 +418,13 @@ class CodParser(b3.parsers.q3a.Q3AParser):
                 if result:                    
                     admin.message('^3Unbanned^7: %s^7: %s' % (client.exactName, result))
 
-                if not silent:
-                    if admin:
-                        self.say(self.getMessage('unbanned_by', client.exactName, admin.exactName, reason))
-                    else:
-                        self.say(self.getMessage('unbanned', client.exactName, reason))
+                if admin:
+                    fullreason = self.getMessage('unbanned_by', self.getMessageVariables(client=client, reason=reason, admin=admin))
+                else:
+                    fullreason = self.getMessage('unbanned', self.getMessageVariables(client=client, reason=reason))
+
+                if not silent and fullreason != '':
+                    self.say(fullreason)
             elif admin:
                 admin.message('%s^7 unbanned but has no punkbuster id' % client.exactName)
         else:
@@ -584,7 +594,7 @@ class CodParser(b3.parsers.q3a.Q3AParser):
             return None
             
         client = self.clients.newClient(cid, name=name, ip=ip, state=b3.STATE_ALIVE, guid=guid, pbid=pbid, data={ 'codguid' : codguid })
-        return b3.events.Event(b3.events.EVT_CLIENT_JOIN, None, client)
+        self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, None, client))
 
     def authorizeClients(self):
         players = self.getPlayerList(maxRetries=4)

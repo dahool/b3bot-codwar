@@ -74,6 +74,7 @@
         <set name="long_tempban_max_duration">99w</set>
         <set name="command_prefix">!</set>
         <set name="command_prefix_loud">@</set>
+		<set name="comamnd_prefix_big"><![CDATA[&]]></set>
 	    <set name="admins_level">20</set>
         <set name="ban_duration">999w</set>
     </settings>

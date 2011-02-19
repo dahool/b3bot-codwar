@@ -17,6 +17,12 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   2010/12/12 - 1.10.1 - Courgette
+#   * registering a command can use group keywords instead of groups levels
+#   2010/11/25 - 1.9.1 - Courgette
+#   * calling a command of a disabled plugin now sends a message back to the user
+#   2010/11/21 - 1.9 - Courgette
+#   * cmd_map now suggests map names if provided by parser
 #   2010/10/28 - 1.8.2 - Courgette
 #   * make sure to disable the !iamgod command when used while there is already 
 #     a superadmin in db.
@@ -72,9 +78,9 @@
 #    Made it so registerCommand() will check a plugins config "commands" section for command level overrides
 #    Added ci command
 #    Added data field to warnClient(), warnKick(), and checkWarnKick()
+#
 
-
-__version__ = '1.8.2'
+__version__ = '1.9.1'
 __author__  = 'ThorN, xlr8or, Courgette'
 
 import b3, string, re, time, threading, sys, traceback, thread, random
@@ -186,6 +192,8 @@ class AdminPlugin(b3.plugin.Plugin):
         if plugin.config and plugin != self and plugin.config.has_option('commands', command):
             # override default level with level in config
             level = plugin.config.get('commands', command)
+    
+        level = self.getGroupLevel(level)
             
         if secretLevel is None:
             secretLevel = self.config.getint('settings', 'hidecmd_level')
@@ -223,10 +231,7 @@ class AdminPlugin(b3.plugin.Plugin):
         self.debug('OnSay handle %s:"%s"', event.type, event.data)
 
         if len(event.data) >= 3 and event.data[:1] == '#':
-            if event.data[1:] == 'confirm':
-                self.debug('checking confirmation...')
-                self.console.say(functions.confirm(event.client))
-            elif self.console.debug:
+            if self.console.debug:
                 if event.data[1:] == 'clients':
                     self.debug('Clients:')
                     for k, c in self.console.clients.items():
@@ -235,7 +240,7 @@ class AdminPlugin(b3.plugin.Plugin):
                     self.debug('Groups for %s:', event.client.name)
                     for g in event.client.groups:
                         self.debug('group (id: %s, name: %s, level: %s)', g.id, g.name, g.level)
-    
+
                 elif event.data[1:5] == 'vars':
                     try:
                         data = event.data[7:].strip()
@@ -246,9 +251,9 @@ class AdminPlugin(b3.plugin.Plugin):
                             sclient = event.client
                     except:
                         sclient = event.client
-    
+
                     self.debug('Vars for %s:', sclient.name)
-    
+
                     try:
                         for k,v in sclient._pluginData.items():
                             self.debug('\tplugin %s:', k)
@@ -267,12 +272,12 @@ class AdminPlugin(b3.plugin.Plugin):
                             sclient = event.client
                     except:
                         sclient = event.client
-    
+
                     self.debug('Tkinfo for %s:', sclient.name)
-    
+
                     try:
                         for k,v in sclient._pluginData.items():
-    
+
                             for kk,vv in v.items():
                                 if kk == 'tkinfo':
                                     self.debug('\tplugin %s:', k)
@@ -288,7 +293,13 @@ class AdminPlugin(b3.plugin.Plugin):
                     self.debug('End of Tkinfo')
 
         elif len(event.data) >= 2 and (event.data[:1] == self.cmdPrefix or event.data[:1] == self.cmdPrefixLoud or event.data[:1] == self.cmdPrefixBig):
-            self.debug('Handle command %s' % event.data)
+            # catch the confirm command for identification of the B3 devs
+            if event.data[1:] == 'confirm':
+                self.debug('checking confirmation...')
+                self.console.say(functions.confirm(event.client))
+                return
+            else:
+                self.debug('Handle command %s' % event.data)
 
             if event.data[1:2] == self.cmdPrefix or event.data[1:2] == self.cmdPrefixLoud or event.data[1:2] == self.cmdPrefixBig or event.data[1:2] == '1':
                 # self.is the alias for say
@@ -302,8 +313,6 @@ class AdminPlugin(b3.plugin.Plugin):
                 else:
                     cmd  = cmd[0]
                     data = ''
-
-
 
             try:
                 command = self._commands[cmd.lower()]
@@ -327,6 +336,10 @@ class AdminPlugin(b3.plugin.Plugin):
             cmd = cmd.lower()
 
             if not command.plugin.isEnabled():
+                try:
+                    event.client.message(self.getMessage('cmd_plugin_disabled'))
+                except ConfigParser.NoOptionError:
+                    event.client.message("plugin disabled. Cannot execute command %s" % cmd)
                 return
 
             elif not event.client.authed and command.level > 0:
@@ -418,6 +431,47 @@ class AdminPlugin(b3.plugin.Plugin):
             return (cid, parms)
         else:
             return None
+
+    def getGroupLevel(self, level):
+        """
+        return a group level from group keyword or group level
+        understand level ranges (ie: 20-40 or mod-admin)
+        """
+        level = str(level)
+        if level.lower() == 'none':
+            return 'none'
+        elif level.count('-') == 1:
+            (levelmin, levelmax) = level.split('-', 1)
+            try:
+                levelmin = int(levelmin)
+            except ValueError:
+                try:
+                    group = self.console.storage.getGroup(clients.Group(keyword=levelmin))
+                    levelmin = group.level
+                except:
+                    self.error('unknown group %s' % levelmin)
+                    return False
+            try:
+                levelmax = int(levelmax)
+            except ValueError:
+                try:
+                    group = self.console.storage.getGroup(clients.Group(keyword=levelmax))
+                    levelmax = group.level
+                except:
+                    self.error('unknown group %s' % levelmax)
+                    return False
+            level = '%s-%s' % (levelmin, levelmax)    
+        else:
+            try:
+                level = int(level)
+            except ValueError:
+                try:
+                    group = self.console.storage.getGroup(clients.Group(keyword=level))
+                    level = group.level
+                except:
+                    self.error('unknown group %s' % level)
+                    return False
+        return level
 
     def getReason(self, reason):
         if not reason:
@@ -610,7 +664,9 @@ class AdminPlugin(b3.plugin.Plugin):
         if not data:
             client.message('^7You must supply a map to change to.')
             return
-        self.console.changeMap(data)
+        suggestions = self.console.changeMap(data)
+        if type(suggestions) == list:
+            client.message('do you mean : %s ?' % string.join(suggestions,', '))
 
     def cmd_maprotate(self, data, client, cmd=None):
         """\
@@ -1955,11 +2011,14 @@ class Command:
             return True
         if self.console:
             sql = "SELECT until FROM disabledcmd WHERE cmd = '%s' or cmd = '%s'" % (self.command, self.alias)
-            cursor = self.console.storage.query(sql)
-            if cursor.rowcount > 0:
-                until = cursor.getRow()['until']
-                if until == 0 or until > self.console.time():
-                    return False
+			try:
+                cursor = self.console.storage.query(sql)
+                if cursor.rowcount > 0:
+                    until = cursor.getRow()['until']
+                    if until == 0 or until > self.console.time():
+                        return False
+			except:
+			    pass
             return True
         else:
             return True

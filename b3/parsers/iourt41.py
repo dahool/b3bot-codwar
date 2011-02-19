@@ -110,22 +110,28 @@
 #    * add debugging info for getNextMap()
 # v1.7.12 - 28/05/2010 - xlr8or
 #    * connect bots
-# v1.7.13 - 21/12/2010 - SGT
+# v1.7.13 - 07/11/2010 - GrosBedo
+#    * messages now support named $variables instead of %s
+# v1.7.14 - 08/11/2010 - GrosBedo
+#    * messages can now be empty (no message broadcasted on kick/tempban/ban/unban)
+# v1.7.15 - 21/12/2010 - SGT
 #    * fix CNCT ping error in getPlayersPings
 #    * fix incorrect game type for ffa
 #    * move getMapList after game initialization
+#
+
 
 __author__  = 'xlr8or'
-__version__ = '1.7.13'
+__version__ = '1.7.15'
 
 
-import b3.parsers.q3a
+from b3.parsers.q3a.abstractParser import AbstractParser
 import re, string, threading, time, os
 import b3
 import b3.events
 
 #----------------------------------------------------------------------------------------------------------------------------------------------
-class Iourt41Parser(b3.parsers.q3a.Q3AParser):
+class Iourt41Parser(AbstractParser):
     gameName = 'iourt41'
     IpsOnly = False
     IpCombi = False
@@ -386,13 +392,13 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
                 return None
 
     def getTeam(self, team):
-        if team == 'red' or team == 'RED': 
+        if str(team).lower() == 'red':
             team = 1
-        elif team == 'blue' or team == 'BLUE': 
+        elif str(team).lower() == 'blue':
             team = 2
-        elif team == 'SPECTATOR':
+        elif str(team).lower() == 'spectator':
             team = 3
-        elif team == 'FREE':
+        elif str(team).lower() == 'free':
             team = -1 # will fall back to b3.TEAM_UNKNOWN
         
         team = int(team)
@@ -1050,9 +1056,9 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
             return self.tempban(client, reason, '1d', admin, silent)
 
         if admin:
-            reason = self.getMessage('banned_by', client.exactName, admin.exactName, reason)
+            fullreason = self.getMessage('banned_by', self.getMessageVariables(client=client, reason=reason, admin=admin))
         else:
-            reason = self.getMessage('banned', client.exactName, reason)
+            fullreason = self.getMessage('banned', self.getMessageVariables(client=client, reason=reason))
 
         if client.cid is None:
             # ban by ip, this happens when we !permban @xx a player that is not connected
@@ -1063,8 +1069,8 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
             self.debug('EFFECTIVE BAN : %s',self.getCommand('ban', cid=client.cid, reason=reason))
             self.write(self.getCommand('ban', cid=client.cid, reason=reason))
 
-        if not silent:
-            self.say(reason)
+        if not silent and fullreason != '':
+            self.say(fullreason)
 
         if admin:
             admin.message('^3banned^7: ^1%s^7 (^2@%s^7). His last ip (^1%s^7) has been added to banlist'%(client.exactName, client.id, client.ip))
@@ -1103,10 +1109,10 @@ class Iourt41Parser(b3.parsers.q3a.Q3AParser):
                     # ignore them, let them not bother us with errors
                     pass
                 else:
-	            try:
+                    try:
                         players[str(m.group('slot'))] = int(m.group('ping'))
                     except:
-			players[str(m.group('slot'))] = 999
+                        players[str(m.group('slot'))] = 999
         return players
 
     def sync(self):

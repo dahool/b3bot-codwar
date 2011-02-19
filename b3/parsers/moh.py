@@ -20,6 +20,10 @@
 # CHANGELOG
 # 2010/11/07 - 0.10 - Courgette
 # * add new maps info
+# 2010/11/08 - 0.9.2 - GrosBedo
+# * messages can now be empty (no message broadcasted on kick/tempban/ban/unban)
+# 2010/10/27 - 0.9.1 - GrosBedo
+# * messages now support named $variables instead of %s
 # 2010/10/27 - 0.9 - Courgette
 # * when banning, also kick to take over MoH engine failure to enforce bans. This
 #   will need more test to determine how to make the MoH engine enforce temp bans.
@@ -44,9 +48,13 @@
 # 2010/09/25 - 0.1 - Bakes
 # * Initial version of MoH parser - hasn't been tested with OnKill events yet
 #   but basic commands seem to work.
-
+# 2010-11-21 - 1.0 - Courgette
+# * add rotateMap and changeMap to fix !maprotate and !map#
+# 2011-02-01 - 1.1 - xlr8or
+# * adapted to server R9 version 615937 - fixed onPlayerSpawn and vars.noCrosshairs errors
+#
 __author__  = 'Bakes, Courgette'
-__version__ = '0.10'
+__version__ = '1.0'
 
 import b3.events
 from b3.parsers.frostbite.abstractParser import AbstractParser
@@ -80,7 +88,7 @@ class MohParser(AbstractParser):
         'playerLimit', # vars.playerLimit [nr of players] Set desired maximum number of players 
         'bannerUrl', # vars.bannerUrl [url] Set banner url 
         'serverDescription', # vars.serverDescription [description] Set server description 
-        'noCrosshair', # vars.noCrosshair [enabled] Set if crosshair for all weapons is hidden 
+        'noCrosshairs', # vars.noCrosshairs [enabled] Set if crosshairs for all weapons is hidden
         'noSpotting', # vars.noSpotting [enabled] Set if spotted targets are disabled in the 3d-world 
         'teamKillCountForKick', # vars.teamKillCountForKick [count] Set number of teamkills allowed during a round 
         'teamKillValueForKick', # vars.teamKillValueForKick [count] Set max kill-value allowed for a player before he/she is kicked 
@@ -341,6 +349,24 @@ class MohParser(AbstractParser):
             return b3.TEAM_UNKNOWN
         
         
+    def OnPlayerSpawn(self, action, data):
+        """
+        Request:  player.onSpawn <soldier name: string> <kit: string> <weapon: string> <specializations: 3 x string>
+        """
+        if len(data) < 2:
+            return None
+
+        spawner = self.getClient(data[0])
+        kit = data[1]
+        weapon = data[2]
+        spec1 = data[3]
+        spec2 = data[4]
+        spec3 = data[5]
+
+        event = b3.events.EVT_CLIENT_SPAWN
+        return b3.events.Event(event, (kit, weapon, spec1, spec2, spec3), spawner)
+
+
     def OnPlayerTeamchange(self, action, data):
         """
         player.onTeamChange <soldier name: player name> <team: Team ID>
@@ -390,9 +416,10 @@ class MohParser(AbstractParser):
             self.write(self.getCommand('kick', cid=client, reason=reason[:80]))
             return
         elif admin:
-            reason = self.getMessage('temp_banned_by', client.exactName, admin.exactName, b3.functions.minutesStr(duration), reason)
+            fullreason = self.getMessage('temp_banned_by', self.getMessageVariables(client=client, reason=reason, admin=admin, banduration=b3.functions.minutesStr(duration)))
         else:
-            reason = self.getMessage('temp_banned', client.exactName, b3.functions.minutesStr(duration), reason)
+            fullreason = self.getMessage('temp_banned', self.getMessageVariables(client=client, reason=reason, banduration=b3.functions.minutesStr(duration)))
+        fullreason = self.stripColors(fullreason)
         reason = self.stripColors(reason)
 
         if self.PunkBuster:
@@ -409,8 +436,8 @@ class MohParser(AbstractParser):
         ## also kick as the MoH server seems not to enforce all bans correctly
         self.write(self.getCommand('kick', cid=client.cid, reason=reason[:80]))
         
-        if not silent:
-            self.say(reason)
+        if not silent and fullreason != '':
+            self.say(fullreason)
 
         self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_BAN_TEMP, reason, client))
 
@@ -454,3 +481,70 @@ class MohParser(AbstractParser):
         self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_BAN, reason, client))
 
 
+    def rotateMap(self):
+        """Load the next map (not level). If the current game mod plays each level twice
+        to get teams the chance to play both sides, then this rotate a second
+        time to really switch to the next map"""
+        nextIndex = self.getNextMapIndex()
+        if nextIndex == -1:
+            # No map in map rotation list, just call admin.runNextLevel
+            self.write(('admin.runNextRound',))
+        else:
+            self.write(('mapList.nextLevelIndex', nextIndex))
+            self.write(('admin.runNextRound',))
+    
+    
+    def changeMap(self, map):
+        """Change to the given map
+        
+        1) determine the level name
+            If map is of the form 'mp_001' and 'Kaboul' is a supported
+            level for the current game mod, then this level is loaded.
+            
+            In other cases, this method assumes it is given a 'easy map name' (like
+            'Port Valdez') and it will do its best to find the level name that seems
+            to be for 'Port Valdez' within the supported levels.
+        
+            If no match is found, then instead of loading the map, this method 
+            returns a list of candidate map names
+            
+        2) if we got a level name
+            if the level is not in the current rotation list, then add it to 
+            the map list and load it
+        """
+
+        supportedMaps = self.getSupportedMaps()
+        if 'levels/%s'%map in supportedMaps:
+            map = 'levels/%s'%map
+
+        if map not in supportedMaps:
+            match = self.getMapsSoundingLike(map)
+            if len(match) == 1:
+                map = match[0]
+            else:
+                return match
+
+        if map in supportedMaps:
+            levelnames = self.write(('mapList.list',))
+            if map not in levelnames:
+                # add the map to the map list
+                nextIndex = self.getNextMapIndex()
+                if nextIndex == -1:
+                    self.write(('mapList.append', map))
+                    nextIndex = 0
+                else:
+                    if nextIndex == 0:
+                        # case where the map list contains only 1 map
+                        nextIndex = 1
+                    self.write(('mapList.insert', nextIndex, map))
+            else:
+                nextIndex = 0
+                while nextIndex < len(levelnames) and levelnames[nextIndex] != map:
+                    nextIndex += 1
+            
+            self.say('Changing map to %s' % map)
+            time.sleep(1)
+            self.write(('mapList.nextLevelIndex', nextIndex))
+            self.write(('admin.runNextRound', ))
+            
+            
