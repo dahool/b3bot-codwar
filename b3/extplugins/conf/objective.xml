@@ -1,0 +1,37 @@
+<configuration plugin="objective">
+
+	<settings name="settings">
+        <set name="ctf">capturelimit</set>
+	</settings>
+	
+    <settings name="default">
+        <set name="ctf">10</set>
+    </settings>
+    
+	<settings name="ctf">
+        <set name="ut4_blitzkrieg">20</set>
+        <set name="ut4_turnpike">12</set>
+        <set name="ut4_uptown">8</set>
+        <set name="ut4_prague">6</set>
+        <set name="ut4_abbey">12</set>
+        <set name="ut4_austria">12</set>
+        <set name="ut4_boxstore_rc2">10</set>
+        <set name="ut4_bar313">8</set>
+        <set name="ut4_algiers">20</set>
+        <set name="ut4_aeropuerto">3</set>
+        <set name="ut4_elgin">5</set>
+        <set name="ut4_kingdom">8</set>
+        <set name="ut4_sanc">4</set>
+        <set name="ut4_imd2_b1">7</set>
+	</settings>
+	
+    <settings name="messages">
+        <set name="ctf">^2Objetivo:^7 capturar ^4%s ^7banderas.</set>
+        <set name="ts">^2Objetivo:^7 ganar ^4%s ^7rounds.</set>
+        <set name="tdm">^2Objetivo:^7 realizar ^4%s ^7frags.</set>
+        <set name="done">^2%s completo el objetivo.</set>
+        <set name="failed">^2No se completo el objetivo.</set>
+        <set name="disabled">^2No hay objetivos adicionales.</set>
+    </settings>
+    
+</configuration>

@@ -37,26 +37,46 @@ class ObjectivePlugin(b3.plugin.Plugin):
     _configs = {}
     _current = None
     _gameType = None
-    _teamName = {'red': 'Red': 'blue': 'Blue'}
+    _teamName = {'red': 'Red', 'blue': 'Blue'}
+    _variable = None
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
         self.registerEvent(b3.events.EVT_GAME_EXIT)
 
-    def onLoadConfig(self):
+        self._adminPlugin = self.console.getPlugin('admin')
+        if not self._adminPlugin:
+            self.error('Could not find admin plugin')
+            return False
+
+        self._adminPlugin.registerCommand(self, 'objective', 0, self.cmd_displayobjetives, 'ob')
+        
+        self.console.cron + b3.cron.OneTimeCronTab(self.loadConfigs, '*/30')
+        
+    def loadConfigs(self):
+        self.debug('Loading configs')
         self._configs = {}
         c = self.console.game
+        
+        if c.gameType == None:
+            self.debug('Unable to determine current gametype')
+            self.console.cron + b3.cron.OneTimeCronTab(self.loadConfigs, '*/15')
+            return
+            
         self._gameType = c.gameType
-
         try:
-            self._default = self.config.get('default',self._gameType)
+            self._default = self.config.getint('default',self._gameType)
+            self._variable = self.config.get('settings',self._gameType)
         except:
+            self.debug("Objectives disabled for %s" % self._gameType)
             self._default = None
         else:
-            if gameType in self.config.sections():
+            self.debug("Loading objectives for %s" % self._gameType)
+            if self._gameType in self.config.sections():
                 for map in self.config.options(self._gameType):
-                    value = self.config.get(self._gameType, map)
+                    value = self.config.getint(self._gameType, map)
                     self._configs[map]=value
+                    self.debug("Found config for map %s" % map)
             try:
                 name = self.console.getCvar('g_teamnameblue').getString()
                 self._teamName['blue']=name
@@ -71,30 +91,54 @@ class ObjectivePlugin(b3.plugin.Plugin):
     def onEvent(self, event):
         if self._default:
             if event.type == b3.events.EVT_GAME_WARMUP:
+                self.setCurrentMapObjective()
                 t1 = threading.Timer(10, self.showMapObjective)
                 t1.start()            
             elif event.type == b3.events.EVT_GAME_EXIT:
                 self.showMapEnd()
                
-    def showMapEnd(self):
-        scores = self.console.getCvar('g_teamScores')
-        if scores:
-            red, blue = scores.getString().split(":")
-            if int(red) == int(self._current):
-                t = 'red'
-            elif int(blue) == int(self._current):
-                t = 'blue'
-            else:
-                t = None
-            if t:
-                self.console.say(self.getMessage('done', self._teamName[t]))
-            else:
-                self.console.say(self.getMessage('failed'))
-        
-    def showMapObjective(self):
-        c = self.console.game
-        if c.mapName in self._configs:
+    def cmd_displayobjetives(self, data, client, cmd=None):
+        """\
+        Display current map objective
+        """         
+        if self._default and self._current:
+            cmd.sayLoudOrPM(client, self.getMessage(self._gameType, self._current))
+        else:
+            client.message(self.getMessage('disabled'))
+    
+    def findObjective(self, map):
+        self.debug("findObjective")
+        if map in self._configs:
             self._current = self._configs[c.mapName]
         else:
             self._current = self._default
+        self.console.setCvar(self._variable,self._current)
+    
+    def setNextMapObjective(self):
+        self.findObjective(self.console.getNextMap())        
+        
+    def setCurrentMapObjective(self):
+        c = self.console.game
+        self.findObjective(c.mapName)
+        
+    def showMapEnd(self):
+        self.debug("showMapEnd")
+        if self._current:
+            scores = self.console.getCvar('g_teamScores')
+            if scores:
+                red, blue = scores.getString().split(":")
+                if int(red) == self._current:
+                    t = 'red'
+                elif int(blue) == self._current:
+                    t = 'blue'
+                else:
+                    t = None
+                if t:
+                    self.console.say(self.getMessage('done', self._teamName[t]))
+                else:
+                    self.console.say(self.getMessage('failed'))
+            self.setNextMapObjective()
+            
+    def showMapObjective(self):
+        self.debug("showMapObjective")
         self.console.say(self.getMessage(self._gameType, self._current))
