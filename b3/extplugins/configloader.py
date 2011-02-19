@@ -72,11 +72,12 @@ class ConfigloaderPlugin(b3.plugin.Plugin):
             client.message('^7Invalid or missing data.')
         filename = os.path.join(self._confpath,"%s.cfg" % data)
         if os.path.isfile(filename):
-            self.console.write('exec %s' % filename)
-            self.debug('Executing %s' %(filename))
+            self.debug('Executing %s' %(filename))            
+            self.console.write('exec %s.cfg' % data)
+            client.message("^7Loaded: ^2%s.cfg" % data)
         else:
             self.debug('Config file %s not found' % filename)
-            client.message('^7File not found')
+            client.message('^7Config file not found')
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
