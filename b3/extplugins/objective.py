@@ -92,7 +92,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
         if self._default:
             if event.type == b3.events.EVT_GAME_WARMUP:
                 self.setCurrentMapObjective()
-                t1 = threading.Timer(10, self.showMapObjective)
+                t1 = threading.Timer(20, self.showMapObjective)
                 t1.start()            
             elif event.type == b3.events.EVT_GAME_EXIT:
                 self.showMapEnd()
