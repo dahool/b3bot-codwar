@@ -18,8 +18,10 @@
 #
 # 2011-02-18 - 1.0.0 - SGT
 # Initial version
+# 2011-02-20 - 1.0.1 - SGT
+# Add bigtext before complete
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -37,10 +39,12 @@ class ObjectivePlugin(b3.plugin.Plugin):
     _configs = {}
     _current = None
     _gameType = None
-    _teamName = {'red': 'Red', 'blue': 'Blue'}
+    _teamName = {'red': '^1Red', 'blue': '^4Blue'}
     _variable = None
+    _announced = False
     
     def onStartup(self):
+        self.registerEvent(b3.events.EVT_CLIENT_ACTION)
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
         self.registerEvent(b3.events.EVT_GAME_EXIT)
 
@@ -79,24 +83,48 @@ class ObjectivePlugin(b3.plugin.Plugin):
                     self.debug("Found config for map %s" % map)
             try:
                 name = self.console.getCvar('g_teamnameblue').getString()
-                self._teamName['blue']=name
+                self._teamName['blue']="^4%s" % name
             except:
                 pass
             try:
                 name = self.console.getCvar('g_teamnamered').getString()
-                self._teamName['red']=name
+                self._teamName['red']="^1%s" % name
             except:
                 pass
         
     def onEvent(self, event):
         if self._default:
+            if (self.console.game.gameType == 'ctf' and
+                event.type == b3.events.EVT_CLIENT_ACTION):
+                self.ctfAction(event.data)
             if event.type == b3.events.EVT_GAME_WARMUP:
+                self._announced = False
                 self.setCurrentMapObjective()
                 t1 = threading.Timer(20, self.showMapObjective)
                 t1.start()            
             elif event.type == b3.events.EVT_GAME_EXIT:
                 self.showMapEnd()
-               
+             
+    def bigtext(self, msg):
+        self.console.write('bigtext "%s"' % (msg))
+        
+    def ctfAction(self, data):
+        if data == 'flag_captured':
+            red, blue = self.get_scores()
+            if self._announced:
+                if red == blue:
+                    self.bigtext(self.getMessage('tie'))
+            else:
+                if red + 1 == self._current:
+                    t = 'red'
+                elif blue + 1 == self._current:
+                    t = 'blue'
+                else:
+                    t = None
+                if t:
+                    self.bigtext(self.getMessage('announce', self._teamName[t]))
+                    self._announced = True
+                    
     def cmd_displayobjetives(self, data, client, cmd=None):
         """\
         Display current map objective
@@ -125,24 +153,126 @@ class ObjectivePlugin(b3.plugin.Plugin):
         c = self.console.game
         self.findObjective(c.mapName)
         
+    def get_scores(self):
+        scores = self.console.getCvar('g_teamScores')
+        if scores:
+            red, blue = scores.getString().split(":")
+        else:
+            red, blue = (0,0)
+        return int(red), int(blue)
+        
     def showMapEnd(self):
         self.debug("showMapEnd")
         if self._current:
-            scores = self.console.getCvar('g_teamScores')
-            if scores:
-                red, blue = scores.getString().split(":")
-                if int(red) == self._current:
-                    t = 'red'
-                elif int(blue) == self._current:
-                    t = 'blue'
-                else:
-                    t = None
-                if t:
-                    self.console.say(self.getMessage('done', self._teamName[t]))
-                else:
-                    self.console.say(self.getMessage('failed'))
+            red, blue = self.get_scores()
+            if red == self._current:
+                t = 'red'
+            elif blue == self._current:
+                t = 'blue'
+            else:
+                t = None
+            if t:
+                self.console.say(self.getMessage('done', self._teamName[t]))
+            else:
+                self.console.say(self.getMessage('failed'))
             self.setNextMapObjective()
             
     def showMapObjective(self):
         self.debug("showMapObjective")
         self.console.say(self.getMessage(self._gameType, self._current))
+
+################################ TESTS #############################
+if __name__ == '__main__':
+    
+    ############# setup test environment ##################
+    from b3.fake import FakeConsole, FakeClient
+    from b3.parsers.iourt41 import Iourt41Parser
+   
+    ## inherits from both FakeConsole and Iourt41Parser
+    class FakeUrtConsole(FakeConsole, Iourt41Parser):
+        pass
+   
+    class UrtClient():
+        def takesFlag(self):
+            if self.team == b3.TEAM_BLUE:
+                print "\n%s takes red flag" % self.name
+                self.doAction('team_CTF_redflag')
+            elif self.team == b3.TEAM_RED:
+                print "\n%s takes blue flag" % self.name
+                self.doAction('team_CTF_blueflag')
+        def returnsFlag(self):
+            print "\n%s returns flag" % self.name
+            self.doAction('flag_returned')
+        def capturesFlag(self):
+            print "\n%s captures flag" % self.name
+            self.doAction('flag_captured')
+       
+    ## use mixins to add methods to FakeClient
+    FakeClient.__bases__ += (UrtClient,)
+  
+    fakeConsole = FakeUrtConsole('/local/codwar/io2/b3.xml')
+    fakeConsole.startup()
+
+    fakeConsole.game.gameType = 'ctf'
+    fakeConsole.game.mapName = 'ut4_turnpike'
+    fakeConsole.setCvar("g_teamScores","0:0")
+    
+    p = ObjectivePlugin(fakeConsole, '/local/codwar/bot/b3/extplugins/conf/objective.xml')
+    p.onStartup()
+    p.loadConfigs()
+    
+    from b3.fake import joe, simon
+    joe.team = b3.TEAM_BLUE
+    simon.team = b3.TEAM_RED
+    joe.console = fakeConsole
+    simon.console = fakeConsole
+    ############# END setup test environment ##################
+
+    joe.connects(cid=1)
+    simon.connects(cid=2)
+    
+    print "================= ROUND 1 ==================="
+    
+    time.sleep(1)
+    fakeConsole.queueEvent(b3.events.Event(b3.events.EVT_GAME_WARMUP, None))
+    time.sleep(10)
+    p._current = 4
+    joe.says('!ob')
+    
+    fakeConsole.setCvar("g_teamScores","1:0")
+    simon.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+    
+    fakeConsole.setCvar("g_teamScores","1:1")
+    joe.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+
+    fakeConsole.setCvar("g_teamScores","2:1")    
+    simon.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+
+    fakeConsole.setCvar("g_teamScores","3:1")    
+    simon.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+
+    fakeConsole.setCvar("g_teamScores","3:2")    
+    joe.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+
+    fakeConsole.setCvar("g_teamScores","3:3")    
+    joe.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+
+    fakeConsole.setCvar("g_teamScores","4:3")    
+    simon.capturesFlag()
+    time.sleep(0.5)
+    print fakeConsole.getCvar("g_teamScores")
+    
+    fakeConsole.queueEvent(b3.events.Event(b3.events.EVT_GAME_EXIT, None))
+    time.sleep(1)
