@@ -20,8 +20,11 @@
 # Initial version
 # 2011-02-20 - 1.0.1 - SGT
 # Add bigtext before complete
+# 2011-02-21 - 1.0.2 - SGT
+# Reload config every hour
+# Reload config command
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -42,6 +45,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
     _teamName = {'red': '^1Red', 'blue': '^4Blue'}
     _variable = None
     _announced = False
+    _cronTab = None
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_ACTION)
@@ -53,13 +57,21 @@ class ObjectivePlugin(b3.plugin.Plugin):
             self.error('Could not find admin plugin')
             return False
 
-        self._adminPlugin.registerCommand(self, 'objective', 0, self.cmd_displayobjetives, 'ob')
+        admin_level = self._adminPlugin.config.getint('settings', 'admins_level')
+        
+        self._adminPlugin.registerCommand(self, 'objective', 0, self.cmd_displayobjectives, 'ob')
+        self._adminPlugin.registerCommand(self, 'obreload', admin_level, self.cmd_reloadobjectives, None)
         
         self.console.cron + b3.cron.OneTimeCronTab(self.loadConfigs, '*/30')
         
+        if self._cronTab:
+            self.console.cron - self._cronTab
+        self._cronTab = b3.cron.PluginCronTab(self, self.loadConfigs, hour="*/2")
+        self.console.cron + self._cronTab
+        
+    
     def loadConfigs(self):
         self.debug('Loading configs')
-        self._configs = {}
         c = self.console.game
         
         if c.gameType == None:
@@ -68,6 +80,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
             return
             
         self._gameType = c.gameType
+        self._configs = {}
         try:
             self._default = self.config.getint('default',self._gameType)
             self._variable = self.config.get('settings',self._gameType)
@@ -124,8 +137,12 @@ class ObjectivePlugin(b3.plugin.Plugin):
                 if t:
                     self.bigtext(self.getMessage('announce', self._teamName[t]))
                     self._announced = True
-                    
-    def cmd_displayobjetives(self, data, client, cmd=None):
+    
+    def cmd_reloadobjectives(self, data, client, cmd=None):
+        self.loadConfigs()
+        client.message("^7%d objectives" % len(self._configs))
+                        
+    def cmd_displayobjectives(self, data, client, cmd=None):
         """\
         Display current map objective
         """         
