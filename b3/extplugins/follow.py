@@ -132,7 +132,7 @@ class FollowPlugin(b3.plugin.Plugin):
         if client.connected:
             if client.maxLevel < self._mod_level:
                 if self._add_list(client):
-                    self.console.queueEvent(self.console.getEvent('EVT_FOLLOW_CONNECTED', (client.var(self, 'follow_data').value,), self.client))
+                    self.console.queueEvent(self.console.getEvent('EVT_FOLLOW_CONNECTED', (client.var(self, 'follow_data').value,), client))
                     self.notify_admins(client)
                     self._event_notify(client)
             else:

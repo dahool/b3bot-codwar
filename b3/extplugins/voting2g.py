@@ -46,7 +46,7 @@
 # 2011-02-11 - 1.0.11
 # Some reworks
 
-__version__ = '1.0.11'
+__version__ = '1.0.12'
 __author__  = 'SGT'
 
 import sys
@@ -190,14 +190,14 @@ class Voting2GPlugin(b3.plugin.Plugin):
         try:
             from b3 import maplist
         except:
-	    self.debug("Using alternative map list method")
-            self._adminPlugin.cmd_maps(data, client, cmd)
+            self.debug("Using alternative map list method")
+            maps = self.console.getMaps()
         else:
             if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
                 client.message('^7Do not spam commands')
                 return
             maps = maplist.listCycleMaps(self.console)
-            cmd.sayLoudOrPM(client, "Maps: " + ", ".join(maps))
+        cmd.sayLoudOrPM(client, "Maps: " + ", ".join(maps))
     
     def pre_vote(self,  client):
         if self._in_progress:
@@ -447,6 +447,43 @@ class MapVote(Vote):
     _caller = None
     _map= None
         
+    def getMapsSoundingLike(self, mapname, client=None):
+        maplist = self._getMapList(client)
+                
+        data = mapname.strip()
+
+        soundex1 = soundex(string.replace(string.replace(data, 'ut4_',''), 'ut_',''))
+
+        match = []
+        if data in maplist:
+            match = [data]
+        else:
+            for m in maplist:
+                s = soundex(string.replace(string.replace(m, 'ut4_',''), 'ut_',''))
+                if s == soundex1:
+                    match.append(m)
+
+        if len(match) == 0:
+        # suggest closest spellings
+            shortmaplist = []
+            for m in maplist:
+                if m.find(data) != -1:
+                    shortmaplist.append(m)
+            if len(shortmaplist) > 0:
+                shortmaplist.sort(key=lambda map: levenshteinDistance(data, string.replace(string.replace(map.strip(), 'ut4_',''), 'ut_','')))
+                self.debug("shortmaplist sorted by distance : %s" % shortmaplist)
+                match = shortmaplist[:3]
+            else:
+                maplist.sort(key=lambda map: levenshteinDistance(data, string.replace(string.replace(map.strip(), 'ut4_',''), 'ut_','')))
+                self.debug("maplist sorted by distance : %s" % maplist)
+                match = maplist[:3]
+            # we have the list sorted by distance. check if the first one match
+            if len(match)>1:
+                if string.replace(string.replace(match[0].lower(), 'ut4_',''), 'ut_','') == data.lower():
+                    return match[0]
+        
+        return match
+        
     def start_vote(self,  data,  client):
         m = self._adminPlugin.parseUserCmd(data)
         if not m:
@@ -457,7 +494,18 @@ class MapVote(Vote):
             return False
         s = m[0]
         try:
-            self._map = maplist.findMap(self.console, data)
+            try:
+                from b3 import maplist
+            except:
+                self.debug("Using alternative map list method")
+                match = self.getMapsSoundingLike(data, client)
+                if len(match) > 1:
+                    client.message('do you mean : %s' % string.join(match,', '))
+                    return False
+                self._map = match[0]
+            else:
+                self._map = maplist.findMap(self.console, data)
+                
             if self._map in self._parent._lastmaps:
                 self._parent.bot("Map %s already played" % self._map)
                 client.message(self._parent.getMessage('map_played', self._map))
