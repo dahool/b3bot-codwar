@@ -367,10 +367,20 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             client.message('^7Invalid parameters')
             return False
 
-        sclient = self.findClientPrompt(data, client)
+        sclient = self._adminPlugin.findClientPrompt(data, client)
         if sclient:
-            cmd.sayLoudOrPM(client, self.getMessage('clientinfo', sclient.__dict__))
-                                  
+            self.debug(sclient.__dict__)
+            cmd.sayLoudOrPM(client, self.getMessage('clientinfo', self._processDict(client.__dict__)))
+
+    def _processDict(self, dct):
+	res = {}
+	for k,v in dct.items():
+	    if k[:1]=="_":
+	        res[k[1:]]=v
+	    else:
+		res[k]=v
+	return res
+
     def cmd_pamap(self, data, client, cmd=None):
         """\
         <map> - switch current map
