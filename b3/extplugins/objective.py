@@ -21,7 +21,6 @@
 # 2011-02-20 - 1.0.1 - SGT
 # Add bigtext before complete
 # 2011-02-21 - 1.0.2 - SGT
-# Reload config every hour
 # Reload config command
 
 __version__ = '1.0.2'
@@ -64,12 +63,6 @@ class ObjectivePlugin(b3.plugin.Plugin):
         
         self.console.cron + b3.cron.OneTimeCronTab(self.loadConfigs, '*/30')
         
-        if self._cronTab:
-            self.console.cron - self._cronTab
-        self._cronTab = b3.cron.PluginCronTab(self, self.loadConfigs, hour="*/2")
-        self.console.cron + self._cronTab
-        
-    
     def loadConfigs(self):
         self.debug('Loading configs')
         c = self.console.game

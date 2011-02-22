@@ -11,7 +11,7 @@
 
         <set name="pause">90</set>
         <set name="rebuild">90</set>
-        <set name="clientinfo">60</set>
+        <!--set name="clientinfo">60</set-->
         <set name="putgroup">90</set>
         <set name="ungroup">90</set>
 
@@ -39,7 +39,7 @@
         <set name="notice">20</set>
 
         <set name="find">20</set>
-        <set name="aliases-alias">20</set>
+        <!-- set name="aliases-alias">20</set-->
         <set name="warns">20</set>
         <set name="warninfo-wi">20</set>
         <set name="warnremove-wr">20</set>
@@ -64,7 +64,7 @@
         <set name="time">1</set>
 
         <set name="help-h">0</set>
-	<set name="register">0-0</set>
+        <set name="register">0-0</set>
         <set name="rules-r">0</set>
     </settings>
     <settings name="settings">
@@ -145,7 +145,6 @@
         <set name="site">^3Soporte: ^2www.codwar.com.ar</set>
         <set name="irc">^3Soporte: irc.freenode.net - canal: #codwar</set>
         <set name="acceso">^7Se reserva el derecho de admision y permanencia</set>
-        <set name="stack">^7No clan stacking, members must split evenly between the teams, go spectator and wait if you have to</set>
         <set name="rule1">^3Regla #1: El racismo o cualquier muestra de discriminacion es motivo de ban</set>
         <set name="rule2">^3Regla #2: Los miembros de un clan deben dividirse entre ambos equipos</set>
         <set name="rule3">^3Regla #3: Insultar a un admin es motivo de ban</set>
@@ -154,14 +153,11 @@
         <set name="rule6">^3Regla #6: No reclutes para tu clan</set>
         <set name="rule7">^3Regla #7: No hagas publicidad de tu server o sitio web</set>
         <set name="rule8">^3Regla #8: No utilices lenguage ofensivo</set>
-        <set name="rule9">^3Regla #9: ^1NO ^3dispares a tu propio equipo</set>
-        <set name="rule10">^3Regla #10: No campees en la base del otro equipo</set>
-        <set name="rule11">^3Regla #11: No rompas las pelotas</set>
-        <set name="rule12">^3Regla #12: No molestes pidiendo mapas</set>
-        <set name="rule13">^3Regla #13: No acuses de cheat. Graba demo y publicala.</set>
-        <set name="rule14">^3Regla #14: El server no es sala de chat</set>
-	<set name="rule15">^3Regla #15: Nombres o temas que aludan a cuestiones politicas y o religiosas no estan permitidos</set>
-	<set name="rule16">^3Regla #16: No cuestionar la decision de un admin. Cualquier descargo dirigirse a www.codwar.com.ar</set>
+        <set name="rule9">^3Regla #9: No molestes pidiendo mapas</set>
+        <set name="rule10">^3Regla #10: No acuses de cheat. Graba demo y publicala.</set>
+        <set name="rule11">^3Regla #11: El server no es sala de chat</set>
+        <set name="rule12">^3Regla #12: Nombres o temas que aludan a cuestiones politicas y o religiosas no estan permitidos</set>
+        <set name="rule13">^3Regla #13: No cuestionar la decision de un admin. Cualquier descargo dirigirse a www.codwar.com.ar</set>
     </settings>
     <settings name="warn_reasons">
         <set name="generic">1h, ^7</set>
@@ -177,8 +173,7 @@
         <set name="rule8">3d, /spam#rule8</set>
         <set name="rule9">3h, /spam#rule9</set>
         <set name="rule10">1h, /spam#rule10</set>
-        <set name="rule13">10m, /spam#rule13</set>
-        <set name="stack">1d, /spam#stack</set>
+        <set name="rule13">1h, /spam#rule13</set>
 
         <set name="lang">/rule8</set>
         <set name="language">/rule8</set>
@@ -189,7 +184,6 @@
         <set name="color">1h, ^7No in-game (double caret (^)) color in names</set>
         <set name="badname">1h, ^7No uses nombres ofensivos o molestos</set>
         <set name="spec">/spectator</set>
-
 
         <set name="adv">/rule7</set>
         <set name="racism">/rule1</set>
@@ -209,6 +203,6 @@
         <set name="ci">5m, ^7conexion interrumpida, reconectar</set>
         <set name="spectator">1h, ^7spec demasiado tiempo en server lleno</set>
         <set name="spam">1h, ^7basta de spam, callate!</set>
-        <set name="autojoin">10m, ^7usa auto-join</set>
+        <set name="badname2">1h, ^7Tu nombre no es apropiado. Cambialo.</set>
     </settings>
 </configuration>

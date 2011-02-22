@@ -1,7 +1,7 @@
 <configuration plugin="extraadmin">
     <settings name="settings">
       <set name="announce">2</set>
-      <set name="load_location">/home/gabriel/.q3a/q3ut4/configs.list</set>
+      <set name="load_location">/local/codwar/q3a/q3ut4/configs.list</set>
       <set name="min_maps_level">90</set>
       <set name="auto_balance">True</set>
       <set name="min_reg_connections">50</set>
@@ -23,11 +23,17 @@
       <set name="pamaps-maps">2</set>
       <set name="makereg-mr">40</set>
       <set name="who">1</set>
+      <set name="clientinfo-cinfo">40</set>
+      <set name="aliases-alias">20</set>
     </settings>
 
     <settings name="maprotation">
       <set name="enable">True</set>
       <set name="use_random">True</set>
     </settings>
+
+	<settings name="messages">
+		<set name="clientinfo">^7[^2$name^7] id: (^3@$id^7), IP: (^3@$ip^7), primera visita: ^3$timeAdd^7, ultima visita: ^3$lastVisit^7, grupo: ^2$group^7, conecciones: ^2$connections^7, advertencias ^2$numWarnings^7, bans ^2$numBans^7, nivel ^2$maxLevel^7</set>
+	</settings>  
   
 </configuration>

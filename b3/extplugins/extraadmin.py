@@ -26,8 +26,10 @@
 # Change GAME_START event for WARMUP
 # 03-13-2010 - SGT
 # Random team shuffle
+# 02-20-2011 - SGT
+# Extended Clientinfo
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -357,6 +359,18 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         client.message('^7Your id is ^3@%s' % client.id)
         return True
                   
+    def cmd_clientinfo(self, data, client=None, cmd=None):
+        """\
+        <name> get info about a client
+        """
+        if not data:
+            client.message('^7Invalid parameters')
+            return False
+
+        sclient = self.findClientPrompt(data, client)
+        if sclient:
+            cmd.sayLoudOrPM(client, self.getMessage('clientinfo', sclient.__dict__))
+                                  
     def cmd_pamap(self, data, client, cmd=None):
         """\
         <map> - switch current map
@@ -648,10 +662,38 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                 else:
                     client.message('^7Client with %s connections cannot be regular' % sclient.connections)
         return False
-                                              
+                  
+    def cmd_aliases(self, data, client=None, cmd=None):
+        """\
+        <name> - list a players aliases
+        """
+        m = self.parseUserCmd(data)
+        if not m:
+            client.message('^7Invalid parameters')
+            return False
+
+        cid = m[0]
+
+        sclient = self.findClientPrompt(cid, client)
+        if sclient:
+            if sclient.maskGroup:
+                cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
+            else:
+                myaliases = []
+                for a in sclient.aliases:
+                    myaliases.append('^5%s^7 [%d]' % (a.alias,a.numUsed))
+                    if len(myaliases) > 14:
+                        myaliases.append('^7[^2and %d more^7]' % (len(sclient.aliases)-15))
+                        break
+
+                if len(myaliases):
+                    cmd.sayLoudOrPM(client, self.getMessage('aliases', sclient.exactName, string.join(myaliases, ', ')))
+                else:
+                    cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
+                                                                  
 if __name__ == '__main__':
     from b3.fake import fakeConsole
-    from b3.fake import joe
+    from b3.fake import superadmin, joe
  
     fakeConsole.setCvar('g_mapcycle','mapcycle.txt')
     setattr(fakeConsole.game,'fs_basepath','/home/gabriel/urbanterror')
@@ -660,7 +702,11 @@ if __name__ == '__main__':
     p = ExtraadminPlugin(fakeConsole, '@b3/extplugins/conf/extraadmin.xml')
     p.onStartup()
     
-    print p._nextMap
-    print p._currentMap
-    p.find_next_map_rotation('ut4_tejen_beta3')
-    print p._nextMap
+    #print p._nextMap
+    #print p._currentMap
+    #p.find_next_map_rotation('ut4_tejen_beta3')
+    #print p._nextMap
+    superadmin.connects(cid=1)
+    joe.connects(cid=2)
+    time.sleep(2)
+    superadmin.says("!cinfo 2")

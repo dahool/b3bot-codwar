@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   2/22/2011  - 1.8a - SGT
+#   Order aliases by num_used
 #   07/01/2011 - 1.8 - xlr8or
 #   Added queryFromFile to execute .sql files
 #   12/12/2010 - 1.7.3 - courgette
@@ -50,7 +52,7 @@
 #   Added data column to penalties table
 
 __author__  = 'ThorN'
-__version__ = '1.8'
+__version__ = '1.8a'
 
 import re, time, traceback, sys, thread, os
 
@@ -503,7 +505,7 @@ class DatabaseStorage(Storage):
 
     def getClientAliases(self, client):
         self.console.debug('Storage: getClientAliases %s' % str(client))
-        cursor = self.query(QueryBuilder(self.db).SelectQuery('*', 'aliases', { 'client_id' : client.id }, 'id'))
+        cursor = self.query(QueryBuilder(self.db).SelectQuery('*', 'aliases', { 'client_id' : client.id }, 'num_used DESC'))
 
         if not cursor:
             return ()
