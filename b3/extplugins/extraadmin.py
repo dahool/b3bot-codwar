@@ -667,14 +667,14 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """\
         <name> - list a players aliases
         """
-        m = self.parseUserCmd(data)
+        m = self._adminPlugin.parseUserCmd(data)
         if not m:
             client.message('^7Invalid parameters')
             return False
 
         cid = m[0]
 
-        sclient = self.findClientPrompt(cid, client)
+        sclient = self._adminPlugin.findClientPrompt(cid, client)
         if sclient:
             if sclient.maskGroup:
                 cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
@@ -687,7 +687,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                         break
 
                 if len(myaliases):
-                    cmd.sayLoudOrPM(client, self.getMessage('aliases', sclient.exactName, string.join(myaliases, ', ')))
+                    cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('aliases', sclient.exactName, string.join(myaliases, ', ')))
                 else:
                     cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
                                                                   
