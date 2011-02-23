@@ -359,28 +359,6 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         client.message('^7Your id is ^3@%s' % client.id)
         return True
                   
-    def cmd_clientinfo(self, data, client=None, cmd=None):
-        """\
-        <name> get info about a client
-        """
-        if not data:
-            client.message('^7Invalid parameters')
-            return False
-
-        sclient = self._adminPlugin.findClientPrompt(data, client)
-        if sclient:
-            self.debug(sclient.__dict__)
-            cmd.sayLoudOrPM(client, self.getMessage('clientinfo', self._processDict(client.__dict__)))
-
-    def _processDict(self, dct):
-	res = {}
-	for k,v in dct.items():
-	    if k[:1]=="_":
-	        res[k[1:]]=v
-	    else:
-		res[k]=v
-	return res
-
     def cmd_pamap(self, data, client, cmd=None):
         """\
         <map> - switch current map
@@ -700,7 +678,28 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                     cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('aliases', sclient.exactName, string.join(myaliases, ', ')))
                 else:
                     cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
-                                                                  
+
+    def cmd_clientinfo(self, data, client=None, cmd=None):
+        """\
+        <name> get info about a client
+        """
+        if not data:
+            client.message('^7Invalid parameters')
+            return False
+
+        sclient = self._adminPlugin.findClientPrompt(data, client)
+        if sclient:
+            data = {'name':sclient.name,
+                    'id':sclient.id,
+                    'ip':sclient.ip,
+                    'connections':sclient.connections,
+                    'numWarnings':sclient.numWarnings,
+                    'numBans':sclient.numBans,
+                    'group':sclient.maxGroup.name,
+                    'timeAdd': self.console.formatTime(sclient.timeAdd),
+                    'lastVisit': self.console.formatTime(sclient.timeEdit)}
+            cmd.sayLoudOrPM(client, self.getMessage('clientinfo', data))
+                                                                              
 if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import superadmin, joe
