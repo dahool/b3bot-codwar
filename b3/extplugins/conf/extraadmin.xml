@@ -33,7 +33,7 @@
     </settings>
 
 	<settings name="messages">
-		<set name="clientinfo">^7[^2$name^7] id: (^3@$id^7), IP: (^3@$ip^7), primera visita: ^3$timeAdd^7, ultima visita: ^3$lastVisit^7, grupo: ^2$group^7, conecciones: ^2$connections^7, advertencias ^2$numWarnings^7, bans ^2$numBans</set>
+		<set name="clientinfo">^7[^2$name^7] id: ^3@$id^7, IP: ^3$ip^7, primera visita: ^3$timeAdd^7, ultima visita: ^3$lastVisit^7, grupo: ^2$group^7, conexiones: ^2$connections^7, advertencias ^2$numWarnings^7, bans ^2$numBans</set>
 	</settings>  
   
 </configuration>

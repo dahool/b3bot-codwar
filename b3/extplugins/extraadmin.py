@@ -78,9 +78,11 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
-        self.registerEvent(b3.events.EVT_SURVIVOR_WIN)
         self.registerEvent(b3.events.EVT_GAME_ROUND_END)
-
+	try:
+            self.registerEvent(b3.events.EVT_SURVIVOR_WIN)
+	except:
+	    self.warning("Event Survivor Winner not available")
         try:
             self.registerEvent(b3.events.EVT_VOTEMAP_COMMAND)
         except:
