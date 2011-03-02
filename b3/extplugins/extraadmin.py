@@ -29,7 +29,7 @@
 # 02-20-2011 - SGT
 # Extended Clientinfo
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -691,13 +691,17 @@ class ExtraadminPlugin(b3.plugin.Plugin):
 
         sclient = self._adminPlugin.findClientPrompt(data, client)
         if sclient:
+            if sclient.maxGroup:
+                group = sclient.maxGroup.name
+            else:
+                group = 'User'
             data = {'name':sclient.name,
                     'id':sclient.id,
                     'ip':sclient.ip,
                     'connections':sclient.connections,
                     'numWarnings':sclient.numWarnings,
                     'numBans':sclient.numBans,
-                    'group':sclient.maxGroup.name,
+                    'group':group,
                     'timeAdd': self.console.formatTime(sclient.timeAdd),
                     'lastVisit': self.console.formatTime(sclient.timeEdit)}
             cmd.sayLoudOrPM(client, self.getMessage('clientinfo', data))
