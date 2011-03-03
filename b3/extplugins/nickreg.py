@@ -17,6 +17,8 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 # CHANGELOG
+# 03/03/11 - SGT
+# Case insensitive filter
 # 26/10/09  - SGT
 # small change to support b3 web control
 # 17/10/09 - SGT
@@ -26,7 +28,7 @@
 # 25/07/09
 # Initial version
 
-__version__ = '1.1'
+__version__ = '1.2'
 __author__  = 'Ismael'
 
 import b3
@@ -69,7 +71,7 @@ class NickregPlugin(b3.plugin.Plugin):
             cursor = self.console.storage.query("""
             SELECT n.clientid
             FROM nicks n 
-            WHERE n.name = '%s'
+            WHERE n.name like '%s'
             """ % (self._process_name(client.name))) #Have to escape quotes (')
             if cursor.rowcount > 0: #This nick is registered
                 r = cursor.getRow()
@@ -133,7 +135,7 @@ class NickregPlugin(b3.plugin.Plugin):
         cursor = self.console.storage.query("""
         SELECT n.name
         FROM nicks n 
-        WHERE n.name = '%s'
+        WHERE n.name like '%s'
         """ % (self._process_name(client.name))) #Have to escape quotes (')
         
         if cursor.rowcount > 0:
