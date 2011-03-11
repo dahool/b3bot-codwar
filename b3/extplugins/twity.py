@@ -26,8 +26,10 @@
 # Use oAuth authentication
 # 02/11/2011 - SGT - 1.0.7
 # Move banlist control to ipbanlist plugin
+# 03/11/2011 - SGT - 1.0.8
+# Update ban event for 1.4.2
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 __author__  = 'SGT'
 
 import re
@@ -36,6 +38,7 @@ import time
 import tweepy
 
 import b3, threading, time
+from b3 import functions
 import b3.events
 import b3.plugin
 import poweradminurt as padmin
@@ -130,8 +133,6 @@ class TwityPlugin(b3.plugin.Plugin):
             self._public_event(event)
         elif event.type == b3.events.EVT_CLIENT_UNBAN:
             self._unban_event(event)
-        #elif event.type == b3.events.EVT_CLIENT_AUTH and self._notifynewusers:
-        #    self.onClientConnect(event.client)
         elif event.type == b3.events.EVT_BAN_BREAK:
             client = event.client
             self.post_update("WARN: [%d] %s possible ban breaker" % (client.id, client.name))
@@ -206,9 +207,21 @@ class TwityPlugin(b3.plugin.Plugin):
         self.post_update(message)
     
     def _ban_event(self, event):
-        if event.data.find("banned by") <> -1:
-            self.post_update(event.data)
-
+        self.debug("Processing ban event")
+        c = event.client
+        lastBan = c.lastBan
+        if lastBan and lastBan.adminId:
+            self.debug("Banned by admin")
+            admin = self._adminPlugin.findClientPrompt(lastBan.adminId, None)
+            s = '[%d] %s was banned by %s for %s because %s' % (c.id,
+                                                                c.name,
+                                                                admin.name,
+                                                                functions.minutesStr(lastBan.duration),
+                                                                lastBan.reason)
+            self.post_update(s)
+        else:
+            self.debug("Banned by bot")
+            
     def _public_event(self, event):
         if event.data == "":
             msg = "Server opened by %s" % event.client.name
