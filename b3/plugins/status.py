@@ -177,7 +177,10 @@ class StatusPlugin(b3.plugin.Plugin):
 
         # SGT - Scores
         if len(clients)>0:
-            scores = self.console.getCvar( 'g_teamScores' )
+	    if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
+                scores = self.console.getCvar( 'g_teamScores' )
+	    else:
+		scores = None
             if scores:
                 scores = scores.getString()
             else:
