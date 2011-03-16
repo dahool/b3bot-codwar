@@ -28,8 +28,11 @@
 # Move banlist control to ipbanlist plugin
 # 03/11/2011 - SGT - 1.0.8
 # Update ban event for 1.4.2
+# 03/16/2011 - SGT - 1.0.9
+# Fix issue in ban event
 
-__version__ = '1.0.8'
+
+__version__ = '1.0.9'
 __author__  = 'SGT'
 
 import re
@@ -212,7 +215,7 @@ class TwityPlugin(b3.plugin.Plugin):
         lastBan = c.lastBan
         if lastBan and lastBan.adminId:
             self.debug("Banned by admin")
-            admin = self._adminPlugin.findClientPrompt(lastBan.adminId, None)
+            admin = self._adminPlugin.findClientPrompt(str(lastBan.adminId), None)
             s = '[%d] %s was banned by %s for %s because %s' % (c.id,
                                                                 c.name,
                                                                 admin.name,
