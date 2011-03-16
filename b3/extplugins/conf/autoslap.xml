@@ -1,0 +1,13 @@
+<configuration plugin="autoslap">
+    <settings name="settings">
+        <set name="admin_level">20</set>
+    </settings>
+    <settings name="commands">
+        <set name="add">40</set>
+        <set name="del">40</set>
+        <set name="list">20</set>
+    </settings>
+    <settings name="messages">
+        <set name="not_welcome">^2$name^7 no sos bienvenido en este server</set>
+    </settings>
+</configuration>
