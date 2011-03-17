@@ -45,8 +45,10 @@
 # Add option to allow a spec not be kicked
 # 2011-02-11 - 1.0.11
 # Some reworks
+# 2011-02-11 - 1.0.13
+# Fix issue with some loggings
 
-__version__ = '1.0.12'
+__version__ = '1.0.13'
 __author__  = 'SGT'
 
 import sys
@@ -471,11 +473,11 @@ class MapVote(Vote):
                     shortmaplist.append(m)
             if len(shortmaplist) > 0:
                 shortmaplist.sort(key=lambda map: levenshteinDistance(data, string.replace(string.replace(map.strip(), 'ut4_',''), 'ut_','')))
-                self.debug("shortmaplist sorted by distance : %s" % shortmaplist)
+                self._parent.debug("shortmaplist sorted by distance : %s" % shortmaplist)
                 match = shortmaplist[:3]
             else:
                 maplist.sort(key=lambda map: levenshteinDistance(data, string.replace(string.replace(map.strip(), 'ut4_',''), 'ut_','')))
-                self.debug("maplist sorted by distance : %s" % maplist)
+                self._parent.debug("maplist sorted by distance : %s" % maplist)
                 match = maplist[:3]
             # we have the list sorted by distance. check if the first one match
             if len(match)>1:
@@ -497,7 +499,7 @@ class MapVote(Vote):
             try:
                 from b3 import maplist
             except:
-                self.debug("Using alternative map list method")
+                self._parent.debug("Using alternative map list method")
                 match = self.getMapsSoundingLike(data, client)
                 if len(match) > 1:
                     client.message('do you mean : %s' % string.join(match,', '))
