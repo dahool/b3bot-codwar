@@ -1,6 +1,7 @@
 <configuration plugin="autoslap">
     <settings name="settings">
         <set name="admin_level">20</set>
+        <set name="wait">150</set>
     </settings>
     <settings name="commands">
         <set name="add">40</set>

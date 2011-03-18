@@ -18,8 +18,10 @@
 #
 # 03-16-2011 - 1.0.0
 # Initial version
+# 03-18-2011 - 1.0.1
+# If user is online, start slapping
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -54,7 +56,12 @@ class AutoslapPlugin(b3.plugin.Plugin):
         level_add = self.config.getint('commands', 'add')
         level_del = self.config.getint('commands', 'del')
         level_list = self.config.getint('commands', 'list')
-            
+        
+        try:
+            self.wait = self.config.getint('settings','wait')
+        except:
+            self.wait = 1
+
         self._adminPlugin.registerCommand(self, 'addslap', level_add, self.cmd_addfollow)
         self._adminPlugin.registerCommand(self, 'delslap', level_del, self.cmd_delfollow)
         self._adminPlugin.registerCommand(self, 'listslap', level_list, self.cmd_listfollow)
@@ -80,6 +87,8 @@ class AutoslapPlugin(b3.plugin.Plugin):
                     thread.start_new_thread(self._slap_client, (client,))
                     
     def _slap_client(self, client):
+        self.debug('Auto slap waiting')
+        time.sleep(self.wait)
         self.debug('Performing auto slap')
         client.message(self.getMessage('not_welcome', {'name': client.name}))
         while client.connected:
@@ -141,6 +150,8 @@ class AutoslapPlugin(b3.plugin.Plugin):
             cursor2 = self.console.storage.query(self._ADD_QUERY % (sclient.id, client.id, self.console.time(), reason))
             self.debug("User added to autoslap list")
             client.message("^7%s has been added to the autoslap list." % sclient.name)
+            if sclient.connected:
+                thread.start_new_thread(self._slap_client, (sclient,))
         else:
             self.debug("User already in autoslap list")
             client.message("^%s already exists in autoslap list." % sclient.name)
@@ -173,4 +184,6 @@ if __name__ == '__main__':
     
     user.authed = True
     user.says('!listslap')
-    time.sleep(2)    
+    time.sleep(2) 
+
+    p._slap_client(user)
