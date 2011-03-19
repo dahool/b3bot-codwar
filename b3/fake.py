@@ -78,19 +78,17 @@ if __name__ == '__main__':
 # 1.4 - 2010/11/01
 #    * improve FakeStorage implementation
 #
-__version__ = '1.4'
+__version__ = '1.6'
 
 
-import thread
 import re
 import time
+import traceback, sys
 from b3.plugins.admin import AdminPlugin
 import b3.parsers.punkbuster
 import b3.parser
 import b3.events
-import b3.cvar
 from sys import stdout
-import Queue
 import StringIO
 
 
@@ -120,13 +118,44 @@ class FakeConsole(b3.parser.Parser):
             self.PunkBuster = b3.parsers.punkbuster.PunkBuster(self)
         
         self.input = StringIO.StringIO()
-        
-        self.queue = Queue.Queue(15)
         self.working = True
-        thread.start_new_thread(self.handleEvents, ())
     
     def run(self):
         pass
+    def queueEvent(self, event, expire=10):
+        """Queue an event for processing. NO QUEUE, NO THREAD for faking speed up"""
+        if not hasattr(event, 'type'):
+            return False
+        elif self._handlers.has_key(event.type):    # queue only if there are handlers to listen for this event
+            self.verbose('Queueing event %s %s', self.Events.getName(event.type), event.data)
+            self._handleEvent(event)
+            return True
+        return False
+    
+    def _handleEvent(self, event):
+        """NO QUEUE, NO THREAD for faking speed up"""
+        if event.type == b3.events.EVT_EXIT or event.type == b3.events.EVT_STOP:
+            self.working = False
+
+        nomore = False
+        for hfunc in self._handlers[event.type]:
+            if not hfunc.isEnabled():
+                continue
+            elif nomore:
+                break
+
+            self.verbose('Parsing Event: %s: %s', self.Events.getName(event.type), hfunc.__class__.__name__)
+            try:
+                hfunc.parseEvent(event)
+                time.sleep(0.001)
+            except b3.events.VetoEvent:
+                # plugin called for event hault, do not continue processing
+                self.bot('Event %s vetoed by %s', self.Events.getName(event.type), str(hfunc))
+                nomore = True
+            except SystemExit, e:
+                self.exitcode = e.code
+            except Exception, msg:
+                self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, self.Events.getName(event.type), msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))
     
     def getPlugin(self, name):
         if name == 'admin':
@@ -392,17 +421,24 @@ class FakeStorage(object):
     
 class FakeClient(b3.clients.Client):
     console = None
+    message_history = [] # this allows unittests to check if a message was sent to the client
     
     def __init__(self, console, **kwargs):
         self.console = console
         b3.clients.Client.__init__(self, **kwargs)
                 
-    def pushEvent(self, event):
-        self.console.queueEvent(event)
-        time.sleep(0.3)
+    def clearMessageHistory(self):
+        self.message_history = []
+    def getMessageHistoryLike(self, needle):
+        for m in self.message_history:
+            if needle in m:
+                return m
+        return None
     
     def message(self, msg):
-        print "sending msg to %s: %s" % (self.name, re.sub(re.compile('\^[0-9]'), '', msg).strip())
+        cleanmsg = re.sub(re.compile('\^[0-9]'), '', msg).strip()
+        self.message_history.append(cleanmsg)
+        print "sending msg to %s: %s" % (self.name, cleanmsg)
         
     def connects(self, cid):
         print "\n%s connects to the game on slot #%s" % (self.name, cid)
@@ -415,7 +451,7 @@ class FakeClient(b3.clients.Client):
 
         self.console.debug('Client Connected: [%s] %s - %s (%s)', clients[self.cid].cid, clients[self.cid].name, clients[self.cid].guid, clients[self.cid].data)
 
-        self.pushEvent(b3.events.Event(b3.events.EVT_CLIENT_CONNECT, self, self))
+        self.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_CONNECT, self, self))
     
         if self.guid:
             self.auth()
@@ -432,11 +468,11 @@ class FakeClient(b3.clients.Client):
     
     def says(self, msg):
         print "\n%s says \"%s\"" % (self.name, msg)
-        self.pushEvent(b3.events.Event(b3.events.EVT_CLIENT_SAY, msg, self))
+        self.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_SAY, msg, self))
         
     def says2team(self, msg):
         print "\n%s says to team \"%s\"" % (self.name, msg)
-        self.pushEvent(b3.events.Event(b3.events.EVT_CLIENT_TEAM_SAY, msg, self))
+        self.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_TEAM_SAY, msg, self))
         
     def damages(self, victim, points=34.0):
         print "\n%s damages %s for %s points" % (self.name, victim.name, points)
@@ -446,7 +482,7 @@ class FakeClient(b3.clients.Client):
             e = b3.events.EVT_CLIENT_DAMAGE_TEAM
         else:
             e = b3.events.EVT_CLIENT_DAMAGE
-        self.pushEvent( b3.events.Event(e, (points, 1, 1, 1), self, victim))
+        self.console.queueEvent( b3.events.Event(e, (points, 1, 1, 1), self, victim))
         
     def kills(self, victim):
         print "\n%s kills %s" % (self.name, victim.name)
@@ -457,11 +493,11 @@ class FakeClient(b3.clients.Client):
             e = b3.events.EVT_CLIENT_KILL_TEAM
         else:
             e = b3.events.EVT_CLIENT_KILL
-        self.pushEvent(b3.events.Event(e, (100, 1, 1, 1), self, victim))
+        self.console.queueEvent(b3.events.Event(e, (100, 1, 1, 1), self, victim))
         
     def suicides(self):
         print "\n%s kills himself" % self.name
-        self.pushEvent(b3.events.Event(b3.events.EVT_CLIENT_SUICIDE, 
+        self.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_SUICIDE, 
                                                        (100, 1, 1, 1), 
                                                        self, victim))
         
@@ -470,7 +506,7 @@ class FakeClient(b3.clients.Client):
 
     def triggerEvent(self, type, data, target=None):
         print "\n%s trigger event %s" % (self.name, type)
-        self.pushEvent(b3.events.Event(type, data, self, target))
+        self.console.queueEvent(b3.events.Event(type, data, self, target))
 
 
 #####################################################################################
