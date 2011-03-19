@@ -95,8 +95,8 @@
         <badname name="nigger">
             <regexp>n[1i!.]gger</regexp>
         </badname>
-        <badname name="hitler" lang="en">
-            <penalty type="tempban" reasonkeyword="cuss" duration="5d"/>
+        <badname name="hitler">
+            <penalty type="tempban" reasonkeyword="cuss" duration="1d"/>
             <regexp>h[i!1]tler</regexp>
         </badname>        
         <badname name="cunt">
@@ -138,5 +138,9 @@
         <badname name="basuras">
             <word>[Kk]irchner</word>
         </badname>
+        <badname name="badchars">
+            <penalty type="warning" reasonkeyword="badname2"/>
+            <regexp>^[@*\d\W]*$</regexp>
+        </badname>        
     </badnames>
 </configuration>

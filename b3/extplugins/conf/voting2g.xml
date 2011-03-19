@@ -1,48 +1,49 @@
 <configuration plugin="voting2g">
 
-	<settings name="settings">
-		<set name="min_level_vote">2</set>
-		<set name="vote_times">5</set>
-		<set name="vote_interval">600</set>
-		<set name="veto_level">20</set>
-		<set name="cancel_level">40</set>
-        <set name="min_votes">2</set>
+    <settings name="settings">
+        <set name="min_level_vote">2</set>
+        <set name="vote_times">5</set>
+        <set name="vote_interval">600</set>
+        <set name="veto_level">20</set>
+        <set name="cancel_level">40</set>
+        <set name="min_votes">1</set>
         <set name="rate">10</set>
-	</settings>
-	
-	<settings name="votes">
-	  <set name="votekick-vk">KickVote</set>
-	  <set name="votemap-vm">MapVote</set>
-	  <set name="votenextmap-vx">NextMapVote</set>
-	  <set name="voteshuffle-vs">ShuffleVote</set>
-	  <set name="votecycle-vc">CycleMapVote</set>
-      <set name="votemute-vmu">MuteVote</set>
-	</settings>
-	
-	<settings name="votekick">   
-		<set name="tempban_percent_diff">60</set>
-		<set name="tempban_interval">5</set>
-		<set name="tempban_percent">90</set>
-        <set name="allow_spec">0</set>
-	</settings>	
-	
-	<settings name="votemap">
-	</settings>
-
-	<settings name="votenextmap">
-	</settings>
-
-	<settings name="voteshuffle">
-		<set name="shuffle_percent">20</set>	
-		<set name="shuffle_diff_percent">70</set>
-	</settings>
-	
-	<settings name="votecycle">
-	</settings>
+    </settings>
     
-	<settings name="votemute">
-        <set name="allow_victim_to_vote">false</set>	
-	</settings>
+    <settings name="votes">
+        <set name="votekick-vk">KickVote</set>
+        <set name="votemap-vm">MapVote</set>
+        <set name="votenextmap-vx">NextMapVote</set>
+        <set name="voteshuffle-vs">ShuffleVote</set>
+        <set name="votecycle-vc">CycleMapVote</set>
+        <set name="votemute-vmu">MuteVote</set>
+    </settings>
+    
+    <settings name="votekick">   
+        <set name="tempban_percent_diff">60</set>
+        <set name="tempban_interval">5</set>
+        <set name="tempban_percent">90</set>
+        <set name="allow_spec">0</set>
+    </settings> 
+    
+    <settings name="votemap">
+    </settings>
+
+    <settings name="votenextmap">
+    </settings>
+
+    <settings name="voteshuffle">
+        <set name="shuffle_percent">20</set>    
+        <set name="shuffle_diff_percent">70</set>
+        <set name="shuffle_now">false</set>
+    </settings>
+    
+    <settings name="votecycle">
+    </settings>
+    
+    <settings name="votemute">
+        <set name="allow_victim_to_vote">false</set>    
+    </settings>
         
     <settings name="messages">
         <set name="vote_in_progress">^7Ya hay un voto en progeso, espera a que finalice</set>
@@ -79,6 +80,7 @@
         <set name="next_map">^1El proximo mapa es ^3%s</set>
         <set name="next_map_stay">^7El proximo mapa queda en ^2%s</set>
         <set name="reason_shuffle">^7para ^6mezclar los equipos ^3en el SIGUIENTE ENCUENTRO</set>
+        <set name="reason_shuffle_now">^7para ^6mezclar los equipos ^3AHORA</set>
         <set name="cant_shuffle">^7Al menos %s jugadores deben votar para mezclar</set>
         <set name="cant_shuffle2">^7Necesita al menos %s%% de votos positivos para mezclar</set>
         <set name="shuffle">^7Se mezclaran los equipos en el siguiente encuentro</set>

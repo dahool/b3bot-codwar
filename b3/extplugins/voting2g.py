@@ -1,4 +1,4 @@
-#  BigBrotherBot(B3) (www.bigbrotherbot.com)
+#  BigBrotherBot(B3) (www.bigbrotherbot.net)
 #  Plugin for allowing registered users to vote
 #  Copyright (C) 2010 Sergio Gabriel Teves
 #  Originaly developed by Ismal Garrido
@@ -47,8 +47,11 @@
 # Some reworks
 # 2011-02-11 - 1.0.13
 # Fix issue with some loggings
+# 2011-02-11 - 1.1.0
+# Move custom functions to avoid external libs requeriments
+# Use shuffe now when scheduller plugin is not available
 
-__version__ = '1.0.13'
+__version__ = '1.1.0'
 __author__  = 'SGT'
 
 import sys
@@ -185,20 +188,24 @@ class Voting2GPlugin(b3.plugin.Plugin):
         mod = sys.modules[modname]
         return getattr(mod,claz)
         
-    def cmd_maplist(self,  data,  client,  cmd=None):
-        """\
-        list maps available to vote
-        """
+    def getMapList(self):
         try:
             from b3 import maplist
         except:
             self.debug("Using alternative map list method")
             maps = self.console.getMaps()
         else:
-            if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
-                client.message('^7Do not spam commands')
-                return
             maps = maplist.listCycleMaps(self.console)
+        return maps
+        
+    def cmd_maplist(self,  data,  client,  cmd=None):
+        """\
+        list maps available to vote
+        """
+        if not self._adminPlugin.aquireCmdLock(cmd, client, 60, True):
+            client.message('^7Do not spam commands')
+            return
+        maps = self.getMapList()
         cmd.sayLoudOrPM(client, "Maps: " + ", ".join(maps))
     
     def pre_vote(self,  client):
@@ -450,7 +457,7 @@ class MapVote(Vote):
     _map= None
         
     def getMapsSoundingLike(self, mapname, client=None):
-        maplist = self._getMapList(client)
+        maplist = self._parent.getMapList()
                 
         data = mapname.strip()
 
@@ -496,18 +503,11 @@ class MapVote(Vote):
             return False
         s = m[0]
         try:
-            try:
-                from b3 import maplist
-            except:
-                self._parent.debug("Using alternative map list method")
-                match = self.getMapsSoundingLike(data, client)
-                if len(match) > 1:
-                    client.message('do you mean : %s' % string.join(match,', '))
-                    return False
-                self._map = match[0]
-            else:
-                self._map = maplist.findMap(self.console, data)
-                
+            match = self.getMapsSoundingLike(data, client)
+            if len(match) > 1:
+                client.message('do you mean : %s' % string.join(match,', '))
+                return False
+            self._map = match[0]
             if self._map in self._parent._lastmaps:
                 self._parent.bot("Map %s already played" % self._map)
                 client.message(self._parent.getMessage('map_played', self._map))
@@ -577,19 +577,29 @@ class NextMapVote(MapVote):
 
 class ShuffleVote(Vote):
 
+    _schedullerPlugin = None
+    _extraAdminPlugin = None
+    
     def startup(self, parent, adminPlugin,  console,  config, cmd):
         super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config, cmd)
-        self._schedullerPlugin = self.console.getPlugin('eventscheduller')
-        if not self._schedullerPlugin:
-            self.console.error('Could not find scheduller plugin')
-            return False
+        
+        try:
+            shuffle_now = self.config.getboolean('voteshuffle', 'shuffle_now')
+        else:
+            shuffle_now = False
+
+        if not shuffle_now:
+            self._schedullerPlugin = self.console.getPlugin('eventscheduller')
+            if not self._schedullerPlugin:
+                self.console.debug('Could not find scheduller plugin')
+        
         self._extraAdminPlugin = self.console.getPlugin('extraadmin')
         if not self._extraAdminPlugin:
             self.console.debug('Extra admin not available')
 
         self._shuffle_percent = self.config.getint('voteshuffle', 'shuffle_percent')
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
-    
+            
     def _doShuffle(self):
         self._parent.bot("Performing shuffle")
         if self._extraAdminPlugin:
@@ -608,6 +618,8 @@ class ShuffleVote(Vote):
         super(ShuffleVote, self).run_vote(data, client, cmd)
 
     def vote_reason(self):
+        if not self._schedullerPlugin:
+            return self._parent.getMessage('reason_shuffle_now')
         return self._parent.getMessage('reason_shuffle')
 
     def end_vote_yes(self,  yes,  no):
@@ -621,9 +633,13 @@ class ShuffleVote(Vote):
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
             self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
-            self._parent.bot("Will try shuffle in next round")
-            self.console.say(self._parent.getMessage('shuffle'))
-            self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
+            if not self._schedullerPlugin:
+                self._parent.bot("Will try shuffle now")
+                self._doShuffle()
+            else:
+                self._parent.bot("Will try shuffle in next round")
+                self.console.say(self._parent.getMessage('shuffle'))
+                self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
 
     def end_vote_no(self,  yes,  no):
         self.console.say(self._parent.getMessage('no_shuffle'))

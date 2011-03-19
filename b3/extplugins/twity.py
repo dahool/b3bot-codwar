@@ -30,9 +30,11 @@
 # Update ban event for 1.4.2
 # 03/16/2011 - SGT - 1.0.9
 # Fix issue in ban event
+# 03/19/2011 - SGT - 1.0.10
+# Fix admin search method in ban event
+# Remove unused methods
 
-
-__version__ = '1.0.9'
+__version__ = '1.0.10'
 __author__  = 'SGT'
 
 import re
@@ -153,26 +155,6 @@ class TwityPlugin(b3.plugin.Plugin):
             _timeDiff = self.console.time() - client.lastVisit
         else:
             _timeDiff = 1000000
-
-        # don't need to welcome people who got kicked or where already welcomed in the last hour
-        #if client.connected and _timeDiff > 3600:
-        #    if client.connections == 1:
-                # this could take some time, so start a new thread
-                #p = threading.Thread(target=self._lookup_client, args=(client,))
-                #p.start()
-                
-    def _lookup_client(self, client):
-        self.debug("Looking for %s" % client.name)
-        cursor = self.console.storage.query("""
-                    SELECT p.* FROM penalties p WHERE
-                    (p.time_expire=-1 OR p.time_expire > %(time)d) AND p.inactive = 0 AND
-                    (p.type = 'TempBan' or p.type = 'Ban') AND p.client_id IN (
-                    SELECT distinct(c.id) FROM clients c LEFT JOIN aliases a ON c.id = a.client_id
-                    WHERE c.ip = '%(ip)s' or a.ip = '%(ip)s')
-        """ % {'ip': client.ip, 'time': int(time.time())})
-        if cursor.rowcount > 0:
-            self.post_update("WARN: [%d] %s possible ban breaker" % (client.id, client.name))
-        cursor.close()
             
     def post_update(self, message):
         message = "(%s) %s" % (self.servername,message)
@@ -214,8 +196,8 @@ class TwityPlugin(b3.plugin.Plugin):
         c = event.client
         lastBan = c.lastBan
         if lastBan and lastBan.adminId:
-            self.debug("Banned by admin")
-            admin = self._adminPlugin.findClientPrompt(str(lastBan.adminId), None)
+            self.debug("Banned by admin %s" % lastBan.adminId)
+            admin = self._adminPlugin.findClientPrompt('@%s' % str(lastBan.adminId), None)
             s = '[%d] %s was banned by %s for %s because %s' % (c.id,
                                                                 c.name,
                                                                 admin.name,
