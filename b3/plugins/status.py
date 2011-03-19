@@ -86,10 +86,10 @@ class StatusPlugin(b3.plugin.Plugin):
             self._enableDBclientSaving = self.config.getboolean('settings', 'enableDBclientSaving')
         except:
             self._enableDBclientSaving = False
-		try:
-	        self._matchinterval = self.config.getint('settings', 'match_interval')
-		except:
-			self._matchinterval = self._interval
+        try:
+            self._matchinterval = self.config.getint('settings', 'match_interval')
+        except:
+            self._matchinterval = self._interval
         try:
             self._showpass = self.config.getboolean('settings','show_password')
         except:
@@ -210,16 +210,15 @@ class StatusPlugin(b3.plugin.Plugin):
 
         # SGT - Scores
         if len(clients)>0:
-	    if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
+            if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
                 scores = self.console.getCvar( 'g_teamScores' )
-	    else:
-		scores = None
-            if scores:
-                scores = scores.getString()
-            else:
-                scores = '--:--'
+        else:
+            scores = None
+        if scores:
+            scores = scores.getString()
         else:
             scores = '--:--'
+            
         data = xml.createElement("Data")
         data.setAttribute("Name", "g_teamScores")
         data.setAttribute("Value", scores)

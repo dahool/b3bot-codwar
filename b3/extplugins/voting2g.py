@@ -585,7 +585,7 @@ class ShuffleVote(Vote):
         
         try:
             shuffle_now = self.config.getboolean('voteshuffle', 'shuffle_now')
-        else:
+        except:
             shuffle_now = False
 
         if not shuffle_now:
