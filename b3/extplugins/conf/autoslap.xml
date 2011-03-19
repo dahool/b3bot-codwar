@@ -1,7 +1,10 @@
 <configuration plugin="autoslap">
     <settings name="settings">
         <set name="admin_level">20</set>
-        <set name="wait">150</set>
+        <set name="wait">100</set>
+        <set name="slaptime">1</set>
+        <set name="nuke">true</set>
+        <set name="tempban">5</set>
     </settings>
     <settings name="commands">
         <set name="add">40</set>

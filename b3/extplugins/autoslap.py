@@ -20,14 +20,18 @@
 # Initial version
 # 03-18-2011 - 1.0.1
 # If user is online, start slapping
+# 03-19-2011 - 1.0.2
+# Limit slap time
+# Add nuke and temp ban
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3, threading, thread
 import b3.plugin
 from b3 import clients
 import time
+import datetime
 
 class AutoslapPlugin(b3.plugin.Plugin):
     _adminPlugin = None
@@ -36,6 +40,11 @@ class AutoslapPlugin(b3.plugin.Plugin):
     _ADD_QUERY = "INSERT INTO tb_autoslap (client_id, admin_id, time_add, reason) VALUES ('%s','%s',%d,'%s')"
     _DEL_QUERY = "DELETE FROM tb_autoslap WHERE client_id = %s"
     _LIST_QUERY = "SELECT client_id, reason FROM tb_autoslap ORDER BY time_add DESC"
+    
+    _wait = 1
+    _slaptime = 1
+    _nuke = True
+    _ban = 5 # 5 minutes
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
@@ -58,10 +67,22 @@ class AutoslapPlugin(b3.plugin.Plugin):
         level_list = self.config.getint('commands', 'list')
         
         try:
-            self.wait = self.config.getint('settings','wait')
+            self._wait = self.config.getint('settings','wait')
         except:
-            self.wait = 1
-
+            pass
+        try:
+            self._slaptime = self.config.getint('settings', 'slaptime')
+        except:
+            pass
+        try:
+            self._nuke = self.config.getboolean('settings', 'nuke')
+        except:
+            pass
+        try:
+            self._ban = self.config.getDuration('settings','tempban')
+        except:
+            pass
+        
         self._adminPlugin.registerCommand(self, 'addslap', level_add, self.cmd_addfollow)
         self._adminPlugin.registerCommand(self, 'delslap', level_del, self.cmd_delfollow)
         self._adminPlugin.registerCommand(self, 'listslap', level_list, self.cmd_listfollow)
@@ -88,14 +109,23 @@ class AutoslapPlugin(b3.plugin.Plugin):
                     
     def _slap_client(self, client):
         self.debug('Auto slap waiting')
-        time.sleep(self.wait)
+        time.sleep(self._wait)
         self.debug('Performing auto slap')
         client.message(self.getMessage('not_welcome', {'name': client.name}))
-        while client.connected:
+        slapEnd = datetime.datetime.now() + datetime.timedelta(minutes=self._slaptime)
+        while client.connected and datetime.datetime.now() <= slapEnd:
             self.debug('Perform slap')
             self.console.write('slap %s' % (client.cid))
-            time.sleep(1)
-        self.debug('Client disconnected')
+            time.sleep(5)
+        if self._nuke and client.connected:
+            for i in range(0,5):
+                self.debug('Nuke player')
+                self.console.write('nuke %s' % (client.cid))
+                time.sleep(2)
+        if self._ban and client.connected:
+            self.debug('Ban player')
+            client.tempban('Not welcome on this server', '', self._ban, None)
+        self.debug('Autoslap done.')
     
     def _is_flagged(self, client):
         cursor = self.console.storage.query(self._SELECT_QUERY % client.id)
