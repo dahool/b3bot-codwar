@@ -114,10 +114,11 @@ class AutoslapPlugin(b3.plugin.Plugin):
         client.message(self.getMessage('not_welcome', {'name': client.name}))
         slapEnd = datetime.datetime.now() + datetime.timedelta(minutes=self._slaptime)
         while client.connected and datetime.datetime.now() <= slapEnd:
+            time.sleep(5)
             self.debug('Perform slap')
             self.console.write('slap %s' % (client.cid))
-            time.sleep(5)
         if self._nuke and client.connected:
+            time.sleep(10)
             for i in range(0,5):
                 self.debug('Nuke player')
                 self.console.write('nuke %s' % (client.cid))
