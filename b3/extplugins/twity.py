@@ -33,8 +33,10 @@
 # 03/19/2011 - SGT - 1.0.10
 # Fix admin search method in ban event
 # Remove unused methods
+# 03/20/2011 - SGT - 1.0.11
+# BAN event is raised every time the banned user connect. Workaround this.
 
-__version__ = '1.0.10'
+__version__ = '1.0.11'
 __author__  = 'SGT'
 
 import re
@@ -195,7 +197,7 @@ class TwityPlugin(b3.plugin.Plugin):
         self.debug("Processing ban event")
         c = event.client
         lastBan = c.lastBan
-        if lastBan and lastBan.adminId:
+        if lastBan and lastBan.adminId and lastBan.timeAdd >= client.timeEdit:
             self.debug("Banned by admin %s" % lastBan.adminId)
             admin = self._adminPlugin.findClientPrompt('@%s' % str(lastBan.adminId), None)
             s = '[%d] %s was banned by %s for %s because %s' % (c.id,
