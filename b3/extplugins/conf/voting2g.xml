@@ -46,7 +46,7 @@
     </settings>
         
     <settings name="messages">
-        <set name="vote_in_progress">^7Ya hay un voto en progeso, espera a que finalice</set>
+        <set name="vote_in_progress">^7Ya hay un voto en progreso, espera a que finalice</set>
         <set name="wait_vote">^7Debes esperar entre votos fallidos!</set>
         <set name="call_vote">^7Votando %s</set>
         <set name="vote_notice">^7Escribe ^1!vy ^7para ^1SI^7, ^2!vn ^7para ^2NO</set>

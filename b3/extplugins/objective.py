@@ -119,15 +119,17 @@ class ObjectivePlugin(b3.plugin.Plugin):
             red, blue = self.get_scores()
             if self._announced:
                 if red == blue:
+                    time.sleep(1)
                     self.bigtext(self.getMessage('tie'))
             else:
-                if red + 1 == self._current:
+                if (self._current - red) == 1:
                     t = 'red'
-                elif blue + 1 == self._current:
+                elif (self._current - blue) == 1:
                     t = 'blue'
                 else:
                     t = None
                 if t:
+                    time.sleep(1)
                     self.bigtext(self.getMessage('announce', self._teamName[t]))
                     self._announced = True
     
