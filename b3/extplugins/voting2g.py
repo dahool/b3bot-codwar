@@ -726,3 +726,24 @@ class MuteVote(Vote):
     def end_vote_no(self,  yes,  no):
         self.console.say(self._parent.getMessage('failed_vote'))
         self._victim = None
+
+if __name__ == '__main__':
+    from b3.fake import fakeConsole
+    from b3.fake import superadmin, reg, admin
+ 
+    fakeConsole.setCvar('g_mapcycle','mapcycle.txt')
+    setattr(fakeConsole.game,'fs_basepath','/home/gabriel/.q3a')
+    setattr(fakeConsole.game,'fs_game','q3ut4')
+
+    p = Voting2GPlugin(fakeConsole, '@b3/extplugins/conf/voting2g.xml')
+    p.onStartup()
+    
+    superadmin.connects(cid=1)
+    reg.connects(cid=2)
+    admin.connects(cid=3)
+    time.sleep(2)
+    superadmin.says("!maplist")
+    time.sleep(2)
+    admin.says("!votemap ut4_turnpike")
+    time.sleep(1)
+    reg.says("!vy")

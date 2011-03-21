@@ -88,9 +88,9 @@ from b3.plugins.admin import AdminPlugin
 import b3.parsers.punkbuster
 import b3.parser
 import b3.events
+from b3.cvar import Cvar
 from sys import stdout
 import StringIO
-
 
 class FakeConsole(b3.parser.Parser):
     Events = b3.events.eventManager
@@ -226,7 +226,7 @@ class FakeConsole(b3.parser.Parser):
 
     def setCvar(self, key, value):
         print "set cvar %s" % key
-        c = b3.cvar.Cvar(name=key,value=value)
+        c = Cvar(name=key,value=value)
         self.cvars[key] = c
         
     ##############################
@@ -520,6 +520,7 @@ fakeAdminPlugin.onStartup()
 
 joe = FakeClient(fakeConsole, name="Joe", exactName="Joe", guid="zaerezarezar", groupBits=1, team=b3.TEAM_UNKNOWN)
 simon = FakeClient(fakeConsole, name="Simon", exactName="Simon", guid="qsdfdsqfdsqf", groupBits=0, team=b3.TEAM_UNKNOWN)
+reg = FakeClient(fakeConsole, name="Reg", exactName="Reg", guid="qsdfdsqfdsqf33", groupBits=4, team=b3.TEAM_UNKNOWN)
 moderator = FakeClient(fakeConsole, name="Moderator", exactName="Moderator", guid="sdf455ezr", groupBits=8, team=b3.TEAM_UNKNOWN)
 admin = FakeClient(fakeConsole, name="Level-40-Admin", exactName="Level-40-Admin", guid="875sasda", groupBits=16, team=b3.TEAM_UNKNOWN)
 superadmin = FakeClient(fakeConsole, name="God", exactName="God", guid="f4qfer654r", groupBits=128, team=b3.TEAM_UNKNOWN)
