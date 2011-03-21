@@ -45,13 +45,15 @@
 # Add option to allow a spec not be kicked
 # 2011-02-11 - 1.0.11
 # Some reworks
-# 2011-02-11 - 1.0.13
+# 2011-03-11 - 1.0.13
 # Fix issue with some loggings
-# 2011-02-11 - 1.1.0
+# 2011-03-19 - 1.1.0
 # Move custom functions to avoid external libs requeriments
 # Use shuffe now when scheduller plugin is not available
+# 2011-03-21 - 1.1.1
+# Fix imports
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 __author__  = 'SGT'
 
 import sys
@@ -60,6 +62,7 @@ import b3.plugin
 import b3.cron
 import b3.events
 from b3 import clients
+from b3.functions import soundex, levenshteinDistance
 import time
 
 class Voting2GPlugin(b3.plugin.Plugin):
