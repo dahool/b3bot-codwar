@@ -53,7 +53,7 @@
 # 2011-03-21 - 1.1.1
 # Fix imports
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __author__  = 'SGT'
 
 import sys
@@ -64,6 +64,7 @@ import b3.events
 from b3 import clients
 from b3.functions import soundex, levenshteinDistance
 import time
+import string
 
 class Voting2GPlugin(b3.plugin.Plugin):
     _adminPlugin = None
