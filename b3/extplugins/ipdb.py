@@ -41,7 +41,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class IpdbPlugin(b3.plugin.Plugin):
-    _url = 'http://ipdbs.appspot.com/xmlrpc'
+    _url = 'http://ipdburt.appspot.com/xmlrpc'
     _cronTab    = None
     _banCronTab = None
     _rpc_proxy  = None
