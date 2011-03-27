@@ -23,7 +23,7 @@
 # Send ban info
 
 __author__  = 'Lake'
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -81,7 +81,7 @@ class IpdbPlugin(b3.plugin.Plugin):
         self._interval = self.config.getint('settings', 'interval')
         self._key = self.config.get('settings', 'key')
         self._always_update = self.config.getboolean('settings','always_update')
-        self._hostname = self.console.getCvar('sv_hostname').getString()
+        self._hostname = self.console.stripColors(self.console.getCvar('sv_hostname').getString())
 
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     
     fakeConsole.setCvar('sv_hostname','IPDB Test Server')    
     
-    p = IpdbPlugin(fakeConsole,'conf/plugin_ipdb1.xml')
+    p = IpdbPlugin(fakeConsole,'conf/ipdb.xml')
     p._url = 'http://localhost:8888/xmlrpc'
     p.onStartup()
     
