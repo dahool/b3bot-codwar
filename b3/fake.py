@@ -77,6 +77,15 @@ if __name__ == '__main__':
 #    * FakeConsole.write() do not fail when arg is not a string
 # 1.4 - 2010/11/01
 #    * improve FakeStorage implementation
+# 1.5 - 2010/11/21
+#    * FakeConsole event mechanism does not involve a Queue anymore as this
+#      class is meant to test one plugin at a time there is no need for 
+#      producer/consumer pattern. This speeds up tests and simplifies the use
+#      of a debugger. Also tests do not neet time.sleep() to make sure the events
+#      were handled before checking results and moving on (unittest friendly)
+# 1.6 - 2010/11/21
+# * remove more time.sleep()
+# * add message_history for FakeClient which allow to test if a client was sent a message afterward (unittest)
 #
 __version__ = '1.6'
 
