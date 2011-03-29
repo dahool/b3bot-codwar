@@ -52,6 +52,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _inqueue = []
     _outqueue = []
     
+    _color_re = re.compile(r'\^[0-9]')
+    
     _BAN_QUERY = "SELECT c.guid as guid,p.duration as duration,p.reason as reason FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_add >= %(since)d AND p.inactive=0"
@@ -77,7 +79,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def onLoadConfig(self):
         self._interval = self.config.getint('settings', 'interval')
         self._key = self.config.get('settings', 'key')
-        self._hostname = self.console.stripColors(self.console.getCvar('sv_hostname').getString())
+        self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString())
 
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
@@ -109,7 +111,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
             if self.increaseFail():
-                self.console.cron + = b3.cron.OneTimeCronTab(self.updateName, '*/30')
+                self.console.cron + b3.cron.OneTimeCronTab(self.updateName, '*/30')
         else:
             self.enable()
             
@@ -125,7 +127,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 try:
                     self.debug("Updating connected")
                     self._rpc_proxy.server.updateConnect(self._key, status)
-                except Exception, e
+                except Exception, e:
                     self.error("Error updating ipdb. %s" % str(e))
                     self.increaseFail()
 

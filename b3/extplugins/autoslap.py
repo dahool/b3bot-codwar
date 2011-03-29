@@ -23,8 +23,11 @@
 # 03-19-2011 - 1.0.2
 # Limit slap time
 # Add nuke and temp ban
+# 03-29-2011 - 1.0.3
+# Mix nuke with slap
+# Add mute
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -42,13 +45,13 @@ class AutoslapPlugin(b3.plugin.Plugin):
     _LIST_QUERY = "SELECT client_id, reason FROM tb_autoslap ORDER BY time_add DESC"
     
     _wait = 1
-    _slaptime = 1
+    _slaptime = 2
     _nuke = True
     _ban = 5 # 5 minutes
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
-
+        
     def onLoadConfig(self):
         """\
         Initialize plugin settings
@@ -113,19 +116,24 @@ class AutoslapPlugin(b3.plugin.Plugin):
         self.debug('Performing auto slap')
         client.message(self.getMessage('not_welcome', {'name': client.name}))
         slapEnd = datetime.datetime.now() + datetime.timedelta(minutes=self._slaptime)
+        self.console.write('mute %s' % (client.cid))
+        
         while client.connected and datetime.datetime.now() <= slapEnd:
-            time.sleep(5)
             self.debug('Perform slap')
             self.console.write('slap %s' % (client.cid))
-        if self._nuke and client.connected:
-            time.sleep(10)
-            for i in range(0,5):
+            if self._nuke:
+                time.sleep(2)
                 self.debug('Nuke player')
                 self.console.write('nuke %s' % (client.cid))
-                time.sleep(2)
-        if self._ban and client.connected:
-            self.debug('Ban player')
-            client.tempban('Not welcome on this server', '', self._ban, None)
+            time.sleep(3)
+                
+        if client.connected:
+            if self._ban:
+                self.debug('Ban player')
+                client.tempban('Not welcome on this server', '', self._ban, None)
+            else:
+                self.debug('Kick player')
+                client.kick('Not welcome on this server')
         self.debug('Autoslap done.')
     
     def _is_flagged(self, client):
