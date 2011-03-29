@@ -122,10 +122,10 @@ class AutoslapPlugin(b3.plugin.Plugin):
             self.debug('Perform slap')
             self.console.write('slap %s' % (client.cid))
             if self._nuke:
-                time.sleep(2)
+                time.sleep(3)
                 self.debug('Nuke player')
                 self.console.write('nuke %s' % (client.cid))
-            time.sleep(3)
+            time.sleep(4)
                 
         if client.connected:
             if self._ban:
