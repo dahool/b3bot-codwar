@@ -88,7 +88,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
             self.onClientConnect(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.onClientDisconnect(event.client)
+            self.onClientDisconnect(event.data)
             
     def onClientConnect(self, client):
         if not client or \
@@ -101,8 +101,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._outqueue.remove(client)
         self._inqueue.append(client)
         
-    def onClientDisconnect(self, client):
-        self._outqueue.append(client)
+    def onClientDisconnect(self, cid):
+        client = self.console.clients.getByCID(acid)
+        if client:
+            self._outqueue.append(client)
 
     def updateName(self):
         try:
