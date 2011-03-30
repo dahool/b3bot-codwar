@@ -115,6 +115,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         else:
             self.enable()
             
+    def update(self):
+        self.updateConnect()
+        self.updateDisconnect()
+        
     def updateConnect(self):
         if self.isEnabled():
             status = []
