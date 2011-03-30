@@ -1,4 +1,11 @@
 -- phpMyAdmin SQL Dump
+-- version 2.6.0-pl2
+-- http://www.phpmyadmin.net
+-- 
+-- Host: localhost
+-- Generation Time: Apr 20, 2005 at 12:55 PM
+-- Server version: 3.23.58
+-- PHP Version: 4.3.2
 -- 
 -- Database: `b3`
 -- 
@@ -13,13 +20,14 @@ CREATE TABLE IF NOT EXISTS aliases (
   id int(10) unsigned NOT NULL auto_increment,
   num_used int(10) unsigned NOT NULL default '0',
   alias varchar(32) NOT NULL default '',
+  ip VARCHAR( 16 ) NOT NULL default '',
   client_id int(10) unsigned NOT NULL default '0',
   time_add int(10) unsigned NOT NULL default '0',
   time_edit int(10) unsigned NOT NULL default '0',
   PRIMARY KEY  (id),
   UNIQUE KEY alias (alias,client_id),
   KEY client_id (client_id)
-) ENGINE=MyISAM;
+) TYPE=MyISAM;
 
 -- --------------------------------------------------------
 
@@ -46,7 +54,7 @@ CREATE TABLE IF NOT EXISTS clients (
   UNIQUE KEY guid (guid),
   KEY group_bits (group_bits),
   KEY name (name)
-) ENGINE=MyISAM;
+) TYPE=MyISAM;
 
 -- --------------------------------------------------------
 
@@ -64,7 +72,7 @@ CREATE TABLE IF NOT EXISTS groups (
   PRIMARY KEY  (id),
   UNIQUE KEY keyword (keyword),
   KEY level (level)
-) ENGINE=MyISAM;
+) TYPE=MyISAM;
 
 -- 
 -- Dumping data for table `groups`
@@ -105,4 +113,5 @@ CREATE TABLE IF NOT EXISTS penalties (
   KEY admin_id (admin_id),
   KEY inactive (inactive),
   KEY client_id (client_id)
-) ENGINE=MyISAM;
+) TYPE=MyISAM;
+        
