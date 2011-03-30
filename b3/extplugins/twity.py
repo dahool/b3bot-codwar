@@ -36,7 +36,7 @@
 # 03/20/2011 - SGT - 1.0.11
 # BAN event is raised every time the banned user connect. Workaround this.
 
-__version__ = '1.0.11'
+__version__ = '1.0.12'
 __author__  = 'SGT'
 
 import re
@@ -78,10 +78,13 @@ class TwityPlugin(b3.plugin.Plugin):
 
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
-        self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
         self.registerEvent(b3.events.EVT_CLIENT_PUBLIC)
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
 
+        try:
+            self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
+        except:
+            self.warning("Unable to register event EVT_CLIENT_UNBAN") 
         try:
             self.registerEvent(b3.events.EVT_BAN_BREAK)
         except:
