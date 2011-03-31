@@ -1,6 +1,5 @@
-<configuration plugin="ipdb">
+<configuration plugin="ipdb2">
 	<settings name="settings">
-	    <set name="always_update">False</set>
 		<set name="interval">1</set>
 		<set name="key">--------</set>
 	</settings>

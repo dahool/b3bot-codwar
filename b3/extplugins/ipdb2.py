@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -167,6 +167,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._failureCount += 1
         if self._failureCount >= self._failureMax:
             self.disable()
+            next = (datetime.datetime.now() + datetime.timedelta(hours=4)).hour
+            self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute=0, hour=next)
+            self._failureCount = 0
             return False
         return True
             
