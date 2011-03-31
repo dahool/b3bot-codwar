@@ -102,7 +102,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._inqueue.append(client)
         
     def onClientDisconnect(self, cid):
-        client = self.console.clients.getByCID(acid)
+        client = self.console.clients.getByCID(cid)
         if client:
             self._outqueue.append(client)
 
