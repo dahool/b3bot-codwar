@@ -104,7 +104,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def onClientDisconnect(self, cid):
         client = self.console.clients.getByCID(cid)
-        if client and not in self._outqueue:
+        if client and client not in self._outqueue:
             self._outqueue.append(client)
 
     def updateName(self):
