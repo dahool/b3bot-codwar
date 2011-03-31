@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -99,11 +99,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
         if client in self._outqueue:
             self._outqueue.remove(client)
-        self._inqueue.append(client)
+        elif client not in self._inqueue:
+            self._inqueue.append(client)
         
     def onClientDisconnect(self, cid):
         client = self.console.clients.getByCID(cid)
-        if client:
+        if client and not in self._outqueue:
             self._outqueue.append(client)
 
     def updateName(self):
