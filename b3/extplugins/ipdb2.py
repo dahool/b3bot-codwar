@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -54,7 +54,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     _color_re = re.compile(r'\^[0-9]')
     
-    _BAN_QUERY = "SELECT c.guid as guid,p.duration as duration,p.reason as reason FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
+    _BAN_QUERY = "SELECT c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_add >= %(since)d AND p.inactive=0"
         
@@ -193,7 +193,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     reason = 'Permanent banned. Reason: %s' % r['reason']
                 else:
                     reason = 'Temp banned for %s. Reason: %s' % (minutesStr(r['duration']), r['reason'])
-                list.append((self._hash(r['guid']),reason))
+                list.append((self._hash(r['guid']),reason, r['name'], r['ip']))
                 cursor.moveNext()
             
             self.debug('Update ban info')
