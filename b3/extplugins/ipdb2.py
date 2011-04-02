@@ -238,7 +238,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def dumpClientInfo(self):
         self.debug('Collect client info')
         todate = 1301626800
-        fromdate = 1262314800
+        fromdate = 1285902000 # oct 2010
         cursor = self.console.storage.query(self._ALL_C_QUERY % {'fromdate': fromdate,
                                                                   'todate': todate})
 
