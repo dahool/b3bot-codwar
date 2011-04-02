@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -40,7 +40,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _cronTab    = []
     _banCronTab = None
     _rpc_proxy  = None
-    _interval   = None
+    _interval   = 2
     _key        = None
     _hostname   = None
     _last       = None
@@ -51,13 +51,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _failureMax = 20
     _inqueue = []
     _outqueue = []
-    
+    _updateAllTime = 7
     _color_re = re.compile(r'\^[0-9]')
     
-    _BAN_QUERY = "SELECT c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
+    _BAN_QUERY = "SELECT p.id as id, c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason,p.time_add as time_add, c.time_edit as time_edit "\
+    "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
-    "AND p.time_add >= %(since)d AND p.inactive=0"
+    "AND p.time_add >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
         
+    _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate) LIMIT 30"
+    
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
@@ -68,18 +71,36 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
             
-        self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
-        rmin = random.randint(0,59)
-            
+        rmin = random.randint(5,59)
+    
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
-        self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
+        if self._banInfoInterval > 0:
+            self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
+        if self._updateAllTime >= 0:
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateAllClient, 0, rmin - 5, self._updateAllTime, '*', '*', '*'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateAllBanInfo, 0, rmin, self._updateAllTime, '*', '*', '*'))
         
         self.updateName()
             
     def onLoadConfig(self):
-        self._interval = self.config.getint('settings', 'interval')
-        self._key = self.config.get('settings', 'key')
         self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString())
+        try:
+            self._key = self.config.get('settings', 'key')
+        except:
+            raise Exception("Invalid key")
+        try:
+            self._interval = self.config.getint('settings', 'interval')
+        except:
+            pass
+        try:
+            self._updateAllTime = self.config.getint('settings', 'baninfodump')
+        except:
+            pass
+        try:
+            self._banInfoInterval = self.config.getint('settings', 'baninfointerval')
+        except:
+            pass
 
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
@@ -174,26 +195,35 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             return False
         return True
             
-    def updateBanInfo(self):
+    def updateBanInfo(self, sendAll = False):
         if self.isEnabled():
             self.debug('Collect ban info')
             now = int(time.mktime(datetime.datetime.now().timetuple()))
-            since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
-            cursor = self.console.storage.query(self._BAN_QUERY % {'now': now,
-                                                                      'since': since})
-
+            if sendAll:
+                since = 1262314800
+                q = self._BAN_QUERY + " LIMIT 30"
+            else:
+                since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+                q = self._BAN_QUERY
+            cursor = self.console.storage.query(q % {'now': now,
+                                                    'since': since})
+                                                                      
             if cursor.rowcount == 0:
                 self.debug('No ban info to send')
                 return
             
             list = []
+            keys = []
             while not cursor.EOF:
                 r = cursor.getRow()
+                keys.append(str(r['id']))
+                timeAdd = datetime.datetime.fromtimestamp(r['time_add']).strftime("%d/%m/%Y")
+                timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
                 if r['duration'] == -1 or r['duration'==0]:
-                    reason = 'Permanent banned. Reason: %s' % r['reason']
+                    reason = 'Permanent banned since %s. Reason: %s' % (timeAdd, r['reason'])
                 else:
-                    reason = 'Temp banned for %s. Reason: %s' % (minutesStr(r['duration']), r['reason'])
-                list.append((self._hash(r['guid']),reason, r['name'], r['ip']))
+                    reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd, minutesStr(r['duration']), r['reason'])
+                list.append((self._hash(r['guid']),reason, r['name'], r['ip'], timeEdit))
                 cursor.moveNext()
             
             self.debug('Update ban info')
@@ -202,8 +232,43 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except Exception, e:
                 self.error("Error updating ipdb. %s" % str(e))
                 self.increaseFail()
-            cursor.close()
+            else:
+                cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb' WHERE id IN (%s)" % ",".join(keys))
+
+    def updateAllBanInfo(self):
+        self.updateBanInfo(True)
+    
+    def updateAllClient(self):
+        if self.isEnabled():
+            self.debug('Collect client info')
+            todate = 1301626800
+            fromdate = 1262314800
+            cursor = self.console.storage.query(self._ALL_C_QUERY % {'fromdate': fromdate,
+                                                                      'todate': todate})
+
+            if cursor.rowcount == 0:
+                self.debug('All clients synced.')
+                return
             
+            list = []
+            keys = []
+            while not cursor.EOF:
+                r = cursor.getRow()
+                keys.append(str(row['id']))
+                guid = self._hash(row['guid'])
+                timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
+                status.append( ( row['name'], row['ip'], guid, timeEdit ) )     
+                cursor.moveNext()
+            
+            self.debug('Send clients')
+            try:
+                self._rpc_proxy.server.updateConnect(self._key, list)
+            except Exception, e:
+                self.error("Error updating ipdb. %s" % str(e))
+                self.increaseFail()
+            else:
+                cursor = self.console.storage.query("UPDATE clients SET auto_login = 0 WHERE id IN (%s)" % ",".join(keys))
+                    
 if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import joe, simon, moderator, superadmin
@@ -211,7 +276,7 @@ if __name__ == '__main__':
     
     fakeConsole.setCvar('sv_hostname','IPDB Test Server')    
     
-    p = IpdbPlugin(fakeConsole,'conf/ipdb.xml')
+    p = Ipdb2Plugin(fakeConsole,'conf/ipdb.xml')
     p._url = 'http://localhost:8888/xmlrpc'
     p.onStartup()
     
