@@ -263,7 +263,7 @@ class Cron(object):
             if abs(self.time() - nextTime) > 120:
                 nextTime = self.getNextTime()
 
-            t = time.gmtime(nextTime)
+            t = time.localtime(nextTime)
             for k,c in self._tabs.items():
                 if c.match(t):
                     if c.maxRuns > 0 and c.numRuns + 1 > c.maxRuns:

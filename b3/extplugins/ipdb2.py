@@ -78,8 +78,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
         if self._updateAllTime >= 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateAllClient, 0, rmin - 5, self._updateAllTime, '*', '*', '*'))
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateAllBanInfo, 0, rmin, self._updateAllTime, '*', '*', '*'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpClientInfo, 0, rmin - 5, self._updateAllTime, '*', '*', '*'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._updateAllTime, '*', '*', '*'))
         
         self.updateName()
             
@@ -94,7 +94,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         except:
             pass
         try:
-            self._updateAllTime = self.config.getint('settings', 'baninfodump')
+            self._updateAllTime = self.config.getint('settings', 'infodump')
         except:
             pass
         try:
@@ -144,42 +144,40 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.updateDisconnect()
         
     def updateConnect(self):
-        if self.isEnabled():
-            status = []
-            for i in range(0,len(self._inqueue)):
-                c = self._inqueue.pop()
-                if c.connected:
-                    guid = self._hash(c.guid)
-                    status.append( ( c.name, c.ip, guid ) )
-            if len(status) > 0:
-                try:
-                    self.debug("Updating connected")
-                    self._rpc_proxy.server.updateConnect(self._key, status)
-                except Exception, e:
-                    self.error("Error updating ipdb. %s" % str(e))
-                    self.increaseFail()
+        status = []
+        for i in range(0,len(self._inqueue)):
+            c = self._inqueue.pop()
+            if c.connected:
+                guid = self._hash(c.guid)
+                status.append( ( c.name, c.ip, guid ) )
+        if len(status) > 0:
+            try:
+                self.debug("Updating connected")
+                self._rpc_proxy.server.updateConnect(self._key, status)
+            except Exception, e:
+                self.error("Error updating ipdb. %s" % str(e))
+                self.increaseFail()
 
     def updateDisconnect(self):
-        if self.isEnabled():
-            status = []
-            for i in range(0,len(self._outqueue)):
-                c = self._outqueue.pop()
-                guid = self._hash(c.guid)
-                status.append( ( c.name, c.ip, guid ) )                
-            if len(status) > 0:
-                try:
-                    self.debug("Updating disconnected")
-                    self._rpc_proxy.server.updateDisconnect(self._key, status)
-                except Exception, e:
-                    self.error("Error updating ipdb. %s" % str(e))
-                    self.increaseFail()
+        status = []
+        for i in range(0,len(self._outqueue)):
+            c = self._outqueue.pop()
+            guid = self._hash(c.guid)
+            status.append( ( c.name, c.ip, guid ) )                
+        if len(status) > 0:
+            try:
+                self.debug("Updating disconnected")
+                self._rpc_proxy.server.updateDisconnect(self._key, status)
+            except Exception, e:
+                self.error("Error updating ipdb. %s" % str(e))
+                self.increaseFail()
                     
     def enable(self):
         self._failureCount = 0
         self._enabled = True
         for ct in self._cronTab:
             self.console.cron + ct
-
+            
     def disable(self):
         self._enabled = False
         for ct in self._cronTab:
@@ -196,36 +194,32 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return True
             
     def updateBanInfo(self, sendAll = False):
-        if self.isEnabled():
-            self.debug('Collect ban info')
-            now = int(time.mktime(datetime.datetime.now().timetuple()))
-            if sendAll:
-                since = 1262314800
-                q = self._BAN_QUERY + " LIMIT 30"
+        self.debug('Collect ban info')
+        now = int(time.time())
+        if sendAll:
+            since = 1262314800
+            q = self._BAN_QUERY + " LIMIT 30"
+        else:
+            since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+            q = self._BAN_QUERY
+        cursor = self.console.storage.query(q % {'now': now,
+                                                'since': since})
+                                                                  
+        list = []
+        keys = []
+        while not cursor.EOF:
+            r = cursor.getRow()
+            keys.append(str(r['id']))
+            timeAdd = datetime.datetime.fromtimestamp(r['time_add']).strftime("%d/%m/%Y")
+            timeEdit = datetime.datetime.fromtimestamp(r['time_edit'])
+            if r['duration'] == -1 or r['duration'] == 0:
+                reason = 'Permanent banned since %s. Reason: %s' % (timeAdd, r['reason'])
             else:
-                since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
-                q = self._BAN_QUERY
-            cursor = self.console.storage.query(q % {'now': now,
-                                                    'since': since})
-                                                                      
-            if cursor.rowcount == 0:
-                self.debug('No ban info to send')
-                return
-            
-            list = []
-            keys = []
-            while not cursor.EOF:
-                r = cursor.getRow()
-                keys.append(str(r['id']))
-                timeAdd = datetime.datetime.fromtimestamp(r['time_add']).strftime("%d/%m/%Y")
-                timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
-                if r['duration'] == -1 or r['duration'==0]:
-                    reason = 'Permanent banned since %s. Reason: %s' % (timeAdd, r['reason'])
-                else:
-                    reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd, minutesStr(r['duration']), r['reason'])
-                list.append((self._hash(r['guid']),reason, r['name'], r['ip'], timeEdit))
-                cursor.moveNext()
-            
+                reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd, minutesStr(r['duration']), r['reason'])
+            list.append((self._hash(r['guid']),reason, r['name'], r['ip'], timeEdit))
+            cursor.moveNext()
+        
+        if len(list) > 0:
             self.debug('Update ban info')
             try:
                 self._rpc_proxy.server.updateBanInfo(self._key, list)
@@ -234,40 +228,42 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self.increaseFail()
             else:
                 cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb' WHERE id IN (%s)" % ",".join(keys))
-
-    def updateAllBanInfo(self):
+        else:
+            self.debug('No ban info to send')
+                
+    def dumpBanInfo(self):
+        self.debug('Collect all ban info')
         self.updateBanInfo(True)
     
-    def updateAllClient(self):
-        if self.isEnabled():
-            self.debug('Collect client info')
-            todate = 1301626800
-            fromdate = 1262314800
-            cursor = self.console.storage.query(self._ALL_C_QUERY % {'fromdate': fromdate,
-                                                                      'todate': todate})
+    def dumpClientInfo(self):
+        self.debug('Collect client info')
+        todate = 1301626800
+        fromdate = 1262314800
+        cursor = self.console.storage.query(self._ALL_C_QUERY % {'fromdate': fromdate,
+                                                                  'todate': todate})
 
-            if cursor.rowcount == 0:
-                self.debug('All clients synced.')
-                return
-            
-            list = []
-            keys = []
-            while not cursor.EOF:
-                r = cursor.getRow()
-                keys.append(str(row['id']))
-                guid = self._hash(row['guid'])
-                timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
-                status.append( ( row['name'], row['ip'], guid, timeEdit ) )     
-                cursor.moveNext()
-            
-            self.debug('Send clients')
-            try:
-                self._rpc_proxy.server.updateConnect(self._key, list)
-            except Exception, e:
-                self.error("Error updating ipdb. %s" % str(e))
-                self.increaseFail()
-            else:
-                cursor = self.console.storage.query("UPDATE clients SET auto_login = 0 WHERE id IN (%s)" % ",".join(keys))
+        if cursor.rowcount == 0:
+            self.debug('All clients synced.')
+            return
+        
+        list = []
+        keys = []
+        while not cursor.EOF:
+            row = cursor.getRow()
+            keys.append(str(row['id']))
+            guid = self._hash(row['guid'])
+            timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
+            status.append( ( row['name'], row['ip'], guid, timeEdit ) )     
+            cursor.moveNext()
+        
+        self.debug('Send clients')
+        try:
+            self._rpc_proxy.server.updateConnect(self._key, list)
+        except Exception, e:
+            self.error("Error updating ipdb. %s" % str(e))
+            self.increaseFail()
+        else:
+            cursor = self.console.storage.query("UPDATE clients SET auto_login = 0 WHERE id IN (%s)" % ",".join(keys))
                     
 if __name__ == '__main__':
     from b3.fake import fakeConsole
