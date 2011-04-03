@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.4'
+__version__ = '1.0.4a'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -59,7 +59,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_add >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
         
-    _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate) LIMIT 30"
+    _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate)d LIMIT 30"
     
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
