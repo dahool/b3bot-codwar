@@ -1,6 +1,9 @@
 <configuration plugin="ipdb2">
 	<settings name="settings">
-		<set name="interval">2</set>
+        <set name="baninfodump">7</set> <!-- FIXED HOUR EJ: RUN EVERY DAY AT 7AM UTC || -1 DISABLE -->
+        <set name="clientinfodump">7</set> <!-- FIXED HOUR EJ: RUN EVERY DAY AT 7AM UTC || -1 DISABLE -->
+        <set name="baninfointerval">2</set> <!-- EVERY 2 HOURS  || 0 DISABLE -->
+		<set name="interval">5</set> <!-- EVERY 5 MINUTES -->
 		<set name="key">--------</set>
 	</settings>
 </configuration>

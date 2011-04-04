@@ -18,7 +18,7 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.4a'
+__version__ = '1.0.4b'
 
 import b3, time, thread, xmlrpclib, re
 import b3.events
@@ -51,7 +51,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _failureMax = 20
     _inqueue = []
     _outqueue = []
-    _updateAllTime = 7
+    _banInfoDumpTime = 7
+    _clientInfoDumpTime = 7
     _color_re = re.compile(r'\^[0-9]')
     
     _BAN_QUERY = "SELECT p.id as id, c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason,p.time_add as time_add, c.time_edit as time_edit "\
@@ -77,10 +78,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if self._banInfoInterval > 0:
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
-        if self._updateAllTime >= 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpClientInfo, 0, rmin - 5, self._updateAllTime, '*', '*', '*'))
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._updateAllTime, '*', '*', '*'))
-        
+        if self._clientInfoDumpTime >= 0:
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpClientInfo, 0, rmin - 5, self._clientInfoDumpTime, '*', '*', '*'))
+        if self._banInfoDumpTime >= 0:
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime, '*', '*', '*'))
         self.updateName()
             
     def onLoadConfig(self):
@@ -94,7 +95,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         except:
             pass
         try:
-            self._updateAllTime = self.config.getint('settings', 'infodump')
+            self._banInfoDumpTime = self.config.getint('settings', 'baninfodump')
+        except:
+            pass
+        try:
+            self._clientInfoDumpTime = self.config.getint('settings', 'clientinfodump')
         except:
             pass
         try:
