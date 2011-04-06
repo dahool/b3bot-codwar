@@ -141,11 +141,17 @@ class TwityPlugin(b3.plugin.Plugin):
             self._ban_event(event)
         elif event.type == b3.events.EVT_CLIENT_PUBLIC:
             self._public_event(event)
-        elif event.type == b3.events.EVT_CLIENT_UNBAN:
-            self._unban_event(event)
-        elif event.type == b3.events.EVT_BAN_BREAK:
-            client = event.client
-            self.post_update("WARN: [%d] %s possible ban breaker" % (client.id, client.name))
+        try:
+            if event.type == b3.events.EVT_CLIENT_UNBAN:
+                self._unban_event(event)
+        except:
+            self.verbose("EVT_CLIENT_UNBAN not supported") 
+        try:
+            if event.type == b3.events.EVT_BAN_BREAK:
+                client = event.client
+                self.post_update("WARN: [%d] %s possible ban breaker" % (client.id, client.name))
+        except:
+            self.verbose("EVT_BAN_BREAK not supported")
         return
       
     def onClientConnect(self, client):

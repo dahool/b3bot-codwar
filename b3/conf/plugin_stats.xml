@@ -8,7 +8,7 @@
 
     <!-- !testscore or !ts: minimum level to be able to make a calculation
       on how much skill points you would get by killing the specified player -->
-    <set name="testscore-ts">0</set>
+    <set name="testscore-tscore">0</set>
 
     <!-- !topstats or !top: minimum level to be able to see a list of the
       top skills scored players for the gaming session -->
