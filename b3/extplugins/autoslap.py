@@ -26,8 +26,10 @@
 # 03-29-2011 - 1.0.3
 # Mix nuke with slap
 # Add mute
+# 04-07-2011 - 1.0.4
+# Force to team if spec
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -35,6 +37,7 @@ import b3.plugin
 from b3 import clients
 import time
 import datetime
+import random
 
 class AutoslapPlugin(b3.plugin.Plugin):
     _adminPlugin = None
@@ -125,7 +128,9 @@ class AutoslapPlugin(b3.plugin.Plugin):
                 time.sleep(3)
                 self.debug('Nuke player')
                 self.console.write('nuke %s' % (client.cid))
-            time.sleep(4)
+            client.message(self.getMessage('not_welcome', {'name': client.name}))
+            time.sleep(3)
+            self.moveFromSpec(client)
                 
         if client.connected:
             if self._ban:
@@ -136,6 +141,11 @@ class AutoslapPlugin(b3.plugin.Plugin):
                 client.kick('Not welcome on this server')
         self.debug('Autoslap done.')
     
+    def moveFromSpec(self, client):
+        if b3.TEAM_SPEC == client.team:
+            self.debug('Client moved from spec')
+            self.console.write('forceteam %s %s' % (client.cid, random.choice(['blue','red'])))
+        
     def _is_flagged(self, client):
         cursor = self.console.storage.query(self._SELECT_QUERY % client.id)
         return cursor.rowcount > 0

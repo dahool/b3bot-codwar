@@ -127,7 +127,7 @@
             <regexp>hu[o0]r[a@]</regexp>
         </badname>
         <badname name="puta">
-            <regexp>p[uo@0e]t[0ea@o]\s</regexp>
+            <regexp>p[u@e]t[0ea@o]\s</regexp>
         </badname>
         <badname name="pelotudo">
             <regexp>pel[o0]tud[a@o0]</regexp>
