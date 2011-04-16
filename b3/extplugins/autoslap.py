@@ -29,7 +29,7 @@
 # 04-07-2011 - 1.0.4
 # Force to team if spec
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -111,8 +111,15 @@ class AutoslapPlugin(b3.plugin.Plugin):
             if client.maxLevel < self._admin_level:
                 if self._is_flagged(client):
                     self.debug("Client %s flagged." % client.name)
+		    client.notice("not welcome on this server", None)
                     thread.start_new_thread(self._slap_client, (client,))
-                    
+
+    def doslap(self, client):
+	self.console.write('slap %s' % (client.cid))
+
+    def donuke(self, client):
+	self.console.write('nuke %s' % (client.cid))
+
     def _slap_client(self, client):
         self.debug('Auto slap waiting')
         time.sleep(self._wait)
@@ -123,13 +130,15 @@ class AutoslapPlugin(b3.plugin.Plugin):
         
         while client.connected and datetime.datetime.now() <= slapEnd:
             self.debug('Perform slap')
-            self.console.write('slap %s' % (client.cid))
+	    self.doslap(client)
             if self._nuke:
-                time.sleep(3)
+                time.sleep(1)
                 self.debug('Nuke player')
-                self.console.write('nuke %s' % (client.cid))
+		self.donuke(client)
+	    else:
+		time.sleep(1)
+            time.sleep(1)
             client.message(self.getMessage('not_welcome', {'name': client.name}))
-            time.sleep(3)
             self.moveFromSpec(client)
                 
         if client.connected:

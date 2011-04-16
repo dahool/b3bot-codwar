@@ -1,0 +1,10 @@
+<configuration plugin="configdump">
+	<settings name="settings">
+		<!-- This can either be a path on  the local filesystem, or an ftp directory.
+		To use an ftp directory, use this syntax: ftp://username:password@host/path/to/config.cfg
+		-->
+	<set name="output_file">/local/codwar/j4f/q3ut4/dump.cfg</set>
+	<set name="cvars">g_password,g_gametype,timelimit,fraglimit,capturelimit,g_warmup,g_respawnDelay,g_forcerespawn,g_waverespawns,g_bluewave,g_redwave,g_respawnProtection,g_deadchat,g_antiwarp,g_antiwarptol,g_gear,g_allowvote,g_failedvotetime,g_followstrict,sv_floodprotect,g_matchmode,g_timeouts,g_timeoutlength,g_pauselength,g_teamnamered,g_teamnameblue,g_swaproles,g_maxrounds,g_RoundTime,g_survivorrule,g_suddendeath,g_bombdefusetime,g_bombexplodetime,g_flagreturntime,g_hotpotato,sv_timeout,g_inactivity,sv_maxping,g_cahtime,map</set>
+	<set name="time">5:50</set>
+	</settings>
+</configuration>
