@@ -1,11 +1,4 @@
 -- phpMyAdmin SQL Dump
--- version 2.6.0-pl2
--- http://www.phpmyadmin.net
--- 
--- Host: localhost
--- Generation Time: Apr 20, 2005 at 12:55 PM
--- Server version: 3.23.58
--- PHP Version: 4.3.2
 -- 
 -- Database: `b3`
 -- 
@@ -27,7 +20,7 @@ CREATE TABLE IF NOT EXISTS aliases (
   PRIMARY KEY  (id),
   UNIQUE KEY alias (alias,client_id),
   KEY client_id (client_id)
-) TYPE=MyISAM;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -46,15 +39,15 @@ CREATE TABLE IF NOT EXISTS clients (
   mask_level tinyint(1) unsigned NOT NULL default '0',
   group_bits mediumint(8) unsigned NOT NULL default '0',
   greeting varchar(128) NOT NULL default '',
-  login varchar(16) NOT NULL default '',
-  password varchar(32) NOT NULL default '',
-  time_add varchar(11) NOT NULL default '',
+  time_add int(11) unsigned NOT NULL default '0',
   time_edit int(11) unsigned NOT NULL default '0',
+  password varchar(32) default NULL,
+  login varchar(16) default NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY guid (guid),
   KEY group_bits (group_bits),
   KEY name (name)
-) TYPE=MyISAM;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -63,7 +56,7 @@ CREATE TABLE IF NOT EXISTS clients (
 -- 
 
 CREATE TABLE IF NOT EXISTS groups (
-  id int(10) unsigned NOT NULL auto_increment,
+  id int(10) unsigned NOT NULL,
   name varchar(32) NOT NULL default '',
   keyword varchar(32) NOT NULL default '',
   level int(10) unsigned NOT NULL default '0',
@@ -72,7 +65,7 @@ CREATE TABLE IF NOT EXISTS groups (
   PRIMARY KEY  (id),
   UNIQUE KEY keyword (keyword),
   KEY level (level)
-) TYPE=MyISAM;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- 
 -- Dumping data for table `groups`
@@ -85,6 +78,7 @@ INSERT INTO `groups` (id, time_edit, name, keyword, time_add, level) VALUES (16,
 INSERT INTO `groups` (id, time_edit, name, keyword, time_add, level) VALUES (8, 0, 'Moderator', 'mod', UNIX_TIMESTAMP(), 20);
 INSERT INTO `groups` (id, time_edit, name, keyword, time_add, level) VALUES (2, 0, 'Regular', 'reg', UNIX_TIMESTAMP(), 2);
 INSERT INTO `groups` (id, time_edit, name, keyword, time_add, level) VALUES (1, 0, 'User', 'user', UNIX_TIMESTAMP(), 1);
+INSERT INTO `groups` (id, time_edit, name, keyword, time_add, level) VALUES (0, 0, 'Guest', 'guest', UNIX_TIMESTAMP(), 0);
 
 -- --------------------------------------------------------
 
@@ -102,8 +96,8 @@ CREATE TABLE IF NOT EXISTS penalties (
   keyword varchar(16) NOT NULL default '',
   reason varchar(255) NOT NULL default '',
   data varchar(255) NOT NULL default '',
-  time_add int(10) unsigned NOT NULL default '0',
-  time_edit int(10) unsigned NOT NULL default '0',
+  time_add int(11) unsigned NOT NULL default '0',
+  time_edit int(11) unsigned NOT NULL default '0',
   time_expire int(11) NOT NULL default '0',
   PRIMARY KEY  (id),
   KEY keyword (keyword),
@@ -113,5 +107,5 @@ CREATE TABLE IF NOT EXISTS penalties (
   KEY admin_id (admin_id),
   KEY inactive (inactive),
   KEY client_id (client_id)
-) TYPE=MyISAM;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
         

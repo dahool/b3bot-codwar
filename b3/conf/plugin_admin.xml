@@ -115,6 +115,7 @@
         <set name="aliases">^7%s^7 aliases: %s</set>
         <set name="warn_kick_alert">^1ATENCION^7: $name^7 auto-kick por exceso de advertencias (^3$warnings^7)</set>
         <set name="warn_ban_alert">^1ATENCION^7: $name^7 auto-ban por exceso de advertencias (^3$warnings^7)</set>
+	<set name="cmd_plugin_disabled">^7cannot execute command. Plugin disabled</set>
     </settings>
     <settings name="warn">
 <!-- This setting determines whether the warning is sent to the the whole server, or just the player and admin, to reduce chatbox spam.

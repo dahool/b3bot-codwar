@@ -47,7 +47,7 @@
 # Converted to use new event handlers
 
 __author__    = 'ThorN'
-__version__ = '1.4.4-SGT'
+__version__ = '1.4.5a'
 
 import b3, time, os, StringIO
 import b3.plugin

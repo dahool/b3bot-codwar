@@ -122,7 +122,7 @@
 
 
 __author__  = 'xlr8or'
-__version__ = '1.7.15'
+__version__ = '1.7.16a'
 
 
 from b3.parsers.q3a.abstractParser import AbstractParser
@@ -287,10 +287,9 @@ class Iourt41Parser(AbstractParser):
         self.Events.createEvent('EVT_GAME_FLAG_RETURNED', 'Flag returned')
         self.Events.createEvent('EVT_CLIENT_GEAR_CHANGE', 'Client gear change')
         self.Events.createEvent('EVT_SURVIVOR_WIN', 'Survivor Winner')
-        self.Events.createEvent('EVT_CLIENT_UNBAN', 'Client Unbanned')
 
         # add the world client
-        self.clients.newClient(-1, guid='WORLD', name='World', hide=True, pbid='WORLD')
+        self.clients.newClient('-1', guid='WORLD', name='World', hide=True, pbid='WORLD')
 
         # PunkBuster for iourt is not supported!
         #if not self.config.has_option('server', 'punkbuster') or self.config.getboolean('server', 'punkbuster'):
