@@ -18,9 +18,9 @@
 #
 
 __author__  = 'SGT'
-__version__ = '1.0.4b'
+__version__ = '1.0.5'
 
-import b3, time, thread, xmlrpclib, re
+import b3, time, thread, threading, xmlrpclib, re
 import b3.events
 import b3.plugin
 import b3.cron
@@ -55,7 +55,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _clientInfoDumpTime = 7
     _color_re = re.compile(r'\^[0-9]')
     
-    _BAN_QUERY = "SELECT p.id as id, c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason,p.time_add as time_add, c.time_edit as time_edit "\
+    _BAN_QUERY = "SELECT p.id as id, c.id as client_id, c.guid as guid,c.name as name, c.ip as ip, p.duration as duration,p.reason as reason,p.time_add as time_add, c.time_edit as time_edit "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_add >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
@@ -112,21 +112,25 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
-            self.onClientConnect(event.client)
-        elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.onClientDisconnect(event.data)
+            b = threading.Timer(10, self.onClientConnect, (event.client,))
+            b.start()
+#            self.onClientConnect(event.client)
+#        elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
+#            self.onClientDisconnect(event.data)
             
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
             client.cid == None or \
-            client.pbid == 'WORLD':
+            client.pbid == 'WORLD' or \
+            not client.connected:
             return
-        
-        if client in self._outqueue:
-            self._outqueue.remove(client)
-        elif client not in self._inqueue:
-            self._inqueue.append(client)
+    
+        self._inqueue.append((client, client.name))
+        #if client in self._outqueue:
+        #    self._outqueue.remove(client)
+        #elif client not in self._inqueue:
+        #    self._inqueue.append(client)
         
     def onClientDisconnect(self, cid):
         client = self.console.clients.getByCID(cid)
@@ -146,15 +150,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def update(self):
         self.updateConnect()
-        self.updateDisconnect()
+        #self.updateDisconnect()
         
     def updateConnect(self):
         status = []
         for i in range(0,len(self._inqueue)):
-            c = self._inqueue.pop()
-            if c.connected:
-                guid = self._hash(c.guid)
-                status.append( ( c.name, c.ip, guid ) )
+            c, name = self._inqueue.pop()
+            guid = self._hash(c.guid)
+            status.append( ( name, c.ip, guid, c.id ) )
         if len(status) > 0:
             try:
                 self.debug("Updating connected")
@@ -163,6 +166,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self.error("Error updating ipdb. %s" % str(e))
                 self.increaseFail()
 
+    # deprecated
     def updateDisconnect(self):
         status = []
         for i in range(0,len(self._outqueue)):
@@ -221,7 +225,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 reason = 'Permanent banned since %s. Reason: %s' % (timeAdd, r['reason'])
             else:
                 reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd, minutesStr(r['duration']), r['reason'])
-            list.append((self._hash(r['guid']),reason, r['name'], r['ip'], timeEdit))
+            list.append((self._hash(r['guid']),reason, r['name'], r['ip'], timeEdit, r['client_id']))
             cursor.moveNext()
         
         if len(list) > 0:
@@ -258,7 +262,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             keys.append(str(row['id']))
             guid = self._hash(row['guid'])
             timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
-            status.append( ( row['name'], row['ip'], guid, timeEdit ) )     
+            status.append( ( row['name'], row['ip'], guid, timeEdit, r['id'] ) )     
             cursor.moveNext()
         
         self.debug('Send clients')
