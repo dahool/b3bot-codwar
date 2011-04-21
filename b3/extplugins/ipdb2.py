@@ -112,7 +112,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
-            b = threading.Timer(10, self.onClientConnect, (event.client,))
+            b = threading.Timer(5, self.onClientConnect, (event.client,))
             b.start()
 #            self.onClientConnect(event.client)
 #        elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
@@ -140,7 +140,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def updateName(self):
         try:
             self.debug('Update server name')
-            self._rpc_proxy.server.updateName(self._key, self._hostname)
+            self._rpc_proxy.server.updateName(self._key, self._hostname, __version__)
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
             if self.increaseFail():
@@ -273,7 +273,82 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.increaseFail()
         else:
             cursor = self.console.storage.query("UPDATE clients SET auto_login = 0 WHERE id IN (%s)" % ",".join(keys))
-                    
+
+    def checkNewVersion(self):
+        p = PluginUpdater(__version__, self)
+        self.updated = p.verifiy()
+            
+import urllib2, urllib
+try:
+    from xml.etree import ElementTree
+except:
+    from lib.elementtree import ElementTree
+from distutils import version
+import shutil, os
+
+class PluginUpdater(object):
+    _update_url = 'http://dl.dropbox.com/u/9131337/ipdb/update.xml'
+    _timeout = 10
+    _currentVersion = None
+    _path = None
+    _parent = None
+    
+    def __init__(self, current, plugin):
+        self._currentVersion = current
+        self._path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+        self._parent = plugin
+        
+    def verifiy(self):
+        import socket
+        original_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(self._timeout)
+        errorMessage = None
+        updated = False
+        try:
+            self._parent.debug("Checking new version...")
+            f = urllib2.urlopen(self._update_url)
+            _xml = ElementTree.parse(f)
+            latestVersion = _xml.getroot().find('version').text
+            _lver = version.LooseVersion(latestVersion)
+            _cver = version.LooseVersion(self._currentVersion)
+            if _cver < _lver:
+                self._parent.debug("New version available")
+                self._doUpdate(list(_xml.getroot().find('files')))
+                updated = True
+        except IOError, e:
+            if hasattr(e, 'reason'):
+                errorMessage = "%s" % e.reason
+            elif hasattr(e, 'code'):
+                errorMessage = "error code: %s" % e.code
+            else:
+                errorMessage = "%s" % e
+        except OSError, e:
+            errorMessage = "%s" % e 
+        except Exception, e:
+            errorMessage = "%s" % e
+        finally:
+            socket.setdefaulttimeout(original_timeout)
+        if errorMessage:
+            self._parent.warning(errorMessage)
+        return updated
+    
+    def _doUpdate(self, files):
+        for elem in files:
+            temp = self._getFile(elem.text, elem.attrib['hash'])
+            fname = os.path.join(self._path,elem.attrib['name'])
+            if os.path.exists(fname):
+                os.remove(fname)
+            shutil.move(temp, fname)
+            
+    def _getFile(self, url, sum):
+        d = urllib.urlretrieve(url)
+        f = file(d[0], 'rb')
+        s = hash(f.read()).hexdigest()
+        f.close()
+        if s == sum:
+            return d[0]
+        raise Exception("Checksums doesn't match")
+                        
 if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import joe, simon, moderator, superadmin
