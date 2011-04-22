@@ -306,9 +306,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
 import urllib2, urllib
 try:
-    from xml.etree import ElementTree
+    from b3.lib.elementtree import ElementTree
 except:
-    from lib.elementtree import ElementTree
+    from xml.etree import ElementTree
 from distutils import version
 import shutil, os
 
