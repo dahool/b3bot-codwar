@@ -64,6 +64,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _EVENT_DISCONNECT = "disconnect"
     _EVENT_UPDATE = "update"
     _EVENT_BAN = "banned"
+    _EVENT_ADDNOTE = "addnote"
+    _EVENT_DELNOTE = "delnote"
     
     _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
@@ -83,6 +85,31 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
         self.setupCron()
         self.updateName()
+        
+        # get the admin plugin so we can register commands
+        self._adminPlugin = self.console.getPlugin('admin')
+        if not self._adminPlugin:
+            self.error('Could not find admin plugin')
+        else:
+            # register our commands
+            if 'commands' in self.config.sections():
+                for cmd in self.config.options('commands'):
+                    level = self.config.get('commands', cmd)
+                    sp = cmd.split('-')
+                    alias = None
+                    if len(sp) == 2:
+                        cmd, alias = sp
+                    func = self.getCmd(cmd)
+                    if func:
+                        self._adminPlugin.registerCommand(self, cmd, level, func, alias)
+
+    def getCmd(self, cmd):
+        cmd = 'cmd_%s' % cmd
+        if hasattr(self, cmd):
+            func = getattr(self, cmd)
+            return func
+
+        return None
             
     def setupCron(self):
         rmin = random.randint(5,59)
@@ -303,7 +330,50 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def checkNewVersion(self):
         p = PluginUpdater(__version__, self)
         self._updated = p.verifiy()
+
+    def cmd_addnote(self ,data , client, cmd=None):
+        """\
+        <player> <text>: Add/Update a notice on ipdb for given player
+        """
+        input = self._adminPlugin.parseUserCmd(data)
+        if input:
+            # input[0] is the player id
+            sclient = self._adminPlugin.findClientPrompt(input[0], client)
+            if not sclient:
+                return False
+        else:
+            client.message('^7Invalid data, try !help addnote')
+            return False
+
+        if not len(input)==2:
+            client.message('^7Missing data, try !help addnote')
+            return False
+        
+        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
+        status = self._buildEventInfo(self._EVENT_ADDNOTE, sclient, timeEdit)
+        status.append(input[1])
+        self._eventqueue.append(status)
+        client.message('^7Done.')
             
+    def cmd_delnote(self ,data , client, cmd=None):
+        """\
+        <player>: Remove a notice on ipdb for given player
+        """
+        input = self._adminPlugin.parseUserCmd(data)
+        if input:
+            # input[0] is the player id
+            sclient = self._adminPlugin.findClientPrompt(input[0], client)
+            if not sclient:
+                return False
+        else:
+            client.message('^7Invalid data, try !help delnote')
+            return False
+        
+        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
+        status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, timeEdit)
+        self._eventqueue.append(status)
+        client.message('^7Done.')
+                        
 import urllib2, urllib
 try:
     from b3.lib.elementtree import ElementTree
@@ -362,10 +432,13 @@ class PluginUpdater(object):
     def _doUpdate(self, files):
         for elem in files:
             temp = self._getFile(elem.text, elem.attrib['hash'])
-            fname = os.path.join(self._path,elem.attrib['name'])
-            if os.path.exists(fname):
-                os.remove(fname)
-            shutil.move(temp, fname)
+            fname = os.path.join(self._path,elem.attrib['dst'], elem.attrib['name'])
+            if elem.attrib.has_key('conf') and elem.attrib['conf'] and os.path.exists(fname):
+                self._updateConfigFile(temp, fname)
+            else:
+                if os.path.exists(fname):
+                    os.remove(fname)
+                shutil.move(temp, fname)
             
     def _getFile(self, url, sum):
         d = urllib.urlretrieve(url)
@@ -375,7 +448,19 @@ class PluginUpdater(object):
         if s == sum:
             return d[0]
         raise Exception("Checksums doesn't match")
-                        
+    
+    def _updateConfigFile(self, newFile, currentFile):
+        _newConfig = ElementTree.parse(newFile)
+        _currentConfig = ElementTree.parse(currentFile)
+        
+        for element in _newConfig.getroot().getchildren(): 
+            self._processConfigElement(element, _currentConfig)
+    
+    def _processConfigElement(self, element, currentConfig):
+        if currentConfig.find(element.tag):        
+            # not implemented
+            pass
+                
 if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import joe, simon, moderator, superadmin

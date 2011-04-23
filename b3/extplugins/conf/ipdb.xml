@@ -6,4 +6,10 @@
 		<set name="interval">5</set> <!-- EVERY 5 MINUTES -->
 		<set name="key">--------</set>
 	</settings>
+   
+   <settings name="commands">
+        <set name="addnote">40</set>
+        <set name="delnote">40</set>
+   </settings>
+   	
 </configuration>
