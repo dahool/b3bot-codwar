@@ -68,7 +68,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
-    "AND p.time_add >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
+    "AND p.time_edit >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
         
     _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate)d LIMIT 30"
     
