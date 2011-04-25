@@ -59,6 +59,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _autoUpdate = True
     _running = False
     _onlinePlayers = []
+    _skip = 100
     
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
@@ -82,6 +83,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
+        
+        try:
+            self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
+        except:
+            self.warn('Unban event not available')
         
         self.setupCron()
         self.updateName()
@@ -154,7 +160,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._autoUpdate = self.config.getboolean('settings', 'enableautoupdate')
         except:
             pass
-
+        try:
+            self._skip = self.config.getboolean('settings', 'skip')
+        except:
+            pass
+            
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
             b = threading.Timer(5, self.onClientConnect, (event.client,))
@@ -163,6 +173,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.onClientUpdate(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
             self.onClientDisconnect(event.data)
+        else:
+            try:
+                if event.type == b3.events.EVT_CLIENT_UNBAN:
+                    self.onClientUnban(event.client)
+            except:
+                pass
+                
 
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
@@ -181,7 +198,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             not client.connected:
             return
     
-        self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
+        if client.maxLevel < self._skip:
+            self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         
         if self._updated:
             if client.maxLevel >= self._notifyUpdateLevel:
@@ -191,12 +209,17 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def onClientDisconnect(self, cid):
         client = self.console.clients.getByCID(cid)
-        if client:
+        if client and client.maxLevel < self._skip:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
 
     def onClientUpdate(self, client):
-        self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
-        
+        if client.maxLevel < self._skip:
+            self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
+
+    def onClientUnban(self, client):
+        timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
+        self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client, timeEdit))
+                    
     def notifyUpdate(self, client):
         client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
         client.setvar(self, 'ipdb_warn', True)        
@@ -250,7 +273,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._failureCount = 0
             return False
         return True
-            
+        
     def updateBanInfo(self, sendAll = False):
         self.debug('Collect ban info')
         now = int(time.time())
@@ -296,36 +319,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def dumpBanInfo(self):
         self.debug('Collect all ban info')
         self.updateBanInfo(True)
-    
-#    def dumpClientInfo(self):
-#        self.debug('Collect client info')
-#        todate = 1301626800
-#        fromdate = 1285902000 # oct 2010
-#        cursor = self.console.storage.query(self._ALL_C_QUERY % {'fromdate': fromdate,
-#                                                                  'todate': todate})
-#
-#        if cursor.rowcount == 0:
-#            self.debug('All clients synced.')
-#            return
-#        
-#        list = []
-#        keys = []
-#        while not cursor.EOF:
-#            row = cursor.getRow()
-#            keys.append(str(row['id']))
-#            guid = self._hash(row['guid'])
-#            timeEdit = datetime.datetime.fromtimestamp(row['time_edit'])
-#            list.append( ( row['name'], row['ip'], guid, timeEdit, row['id'] ) )     
-#            cursor.moveNext()
-#        
-#        self.debug('Send clients')
-#        try:
-#            self._rpc_proxy.server.updateConnect(self._key, list)
-#        except Exception, e:
-#            self.error("Error updating ipdb. %s" % str(e))
-#            self.increaseFail()
-#        else:
-#            cursor = self.console.storage.query("UPDATE clients SET auto_login = 0 WHERE id IN (%s)" % ",".join(keys))
 
     def checkNewVersion(self):
         p = PluginUpdater(__version__, self)
