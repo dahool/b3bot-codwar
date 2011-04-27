@@ -60,6 +60,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _running = False
     _onlinePlayers = []
     _skip = 100
+    _banqueue = []
     
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
@@ -67,6 +68,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _EVENT_BAN = "banned"
     _EVENT_ADDNOTE = "addnote"
     _EVENT_DELNOTE = "delnote"
+    _EVENT_UNBAN = "unbanned"
     
     _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
@@ -79,10 +81,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
         self._eventqueue = []
-            
+        self._banqueue = []
+        self._onlinePlayers = []
+        
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
+        self.registerEvent(b3.events.EVT_CLIENT_BAN)
+        self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         
         try:
             self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
@@ -120,11 +126,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def setupCron(self):
         rmin = random.randint(5,59)
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/30'))
         if self._banInfoInterval > 0:
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
-#        if self._clientInfoDumpTime >= 0:
-#            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpClientInfo, 0, rmin - 5, self._clientInfoDumpTime, '*', '*', '*'))
         if self._banInfoDumpTime >= 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime, '*', '*', '*'))
         if self._autoUpdate:
@@ -144,10 +150,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._banInfoDumpTime = self.config.getint('settings', 'baninfodump')
         except:
             pass
-#        try:
-#            self._clientInfoDumpTime = self.config.getint('settings', 'clientinfodump')
-#        except:
-#            pass
         try:
             self._banInfoInterval = self.config.getint('settings', 'baninfointerval')
         except:
@@ -173,6 +175,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.onClientUpdate(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
             self.onClientDisconnect(event.data)
+        elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
+            self.onClientBanned(event.client)
         else:
             try:
                 if event.type == b3.events.EVT_CLIENT_UNBAN:
@@ -189,7 +193,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if not timeEdit:
             timeEdit = datetime.datetime.now()
         return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
-            
+          
+    def validateOnlinePlayers(self):
+        clients = self.console.clients.getList()
+        for client in self._onlinePlayers:
+            if client not in clients:
+                self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+        
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
@@ -198,6 +208,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             not client.connected:
             return
     
+        self._onlinePlayers.append(client)
+        
         if client.maxLevel < self._skip:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         
@@ -207,10 +219,20 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     b = threading.Timer(30, self.notifyUpdate, (client,))
                     b.start()                
         
+    def onClientBanned(self, client):
+        self._banqueue.append(client)
+            
     def onClientDisconnect(self, cid):
         client = self.console.clients.getByCID(cid)
+
         if client and client.maxLevel < self._skip:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+            
+        try:
+            if client in self._onlinePlayers:            
+                self._onlinePlayers.remove(client)
+        except Exception, e:
+            self.error(e)
 
     def onClientUpdate(self, client):
         if client.maxLevel < self._skip:
@@ -218,8 +240,23 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def onClientUnban(self, client):
         timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
-        self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client, timeEdit))
-                    
+        self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, timeEdit))
+            
+    def updateBanQueue(self):
+        while len(self._banqueue) > 0:
+            client = self._banqueue.pop()
+            lastBan = client.lastBan
+            if lastBan:
+                timeAdd = datetime.datetime.fromtimestamp(lastBan.timeAdd)
+                if lastBan.duration == -1 or lastBan.duration == 0:
+                    reason = 'Permanent banned since %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), lastBan.reason)
+                else:
+                    reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), minutesStr(lastBan.duration), lastBan.reason)
+                timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
+                status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
+                status.append(reason)
+                self._eventqueue.append(status)
+                                            
     def notifyUpdate(self, client):
         client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
         client.setvar(self, 'ipdb_warn', True)        
