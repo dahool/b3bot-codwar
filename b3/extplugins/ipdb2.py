@@ -361,7 +361,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         p = PluginUpdater(__version__, self)
         self._updated = p.verifiy()
 
-    def cmd_addnote(self ,data , client, cmd=None):
+    def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
         <player> <text>: Add/Update a notice on ipdb for given player
         """
@@ -385,7 +385,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._eventqueue.append(status)
         client.message('^7Done.')
             
-    def cmd_delnote(self ,data , client, cmd=None):
+    def cmd_dbdelnote(self ,data , client, cmd=None):
         """\
         <player>: Remove a notice on ipdb for given player
         """
@@ -403,7 +403,26 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, timeEdit)
         self._eventqueue.append(status)
         client.message('^7Done.')
-                        
+
+    def cmd_dbclearban(self ,data , client, cmd=None):
+        """\
+        <player>: Remove a notice on ipdb for given player
+        """
+        input = self._adminPlugin.parseUserCmd(data)
+        if input:
+            # input[0] is the player id
+            sclient = self._adminPlugin.findClientPrompt(input[0], client)
+            if not sclient:
+                return False
+        else:
+            client.message('^7Invalid data, try !help delnote')
+            return False
+        
+        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
+        status = self._buildEventInfo(self._EVENT_UNBAN, sclient, timeEdit)
+        self._eventqueue.append(status)
+        client.message('^7Done.')
+                                
 import urllib2, urllib
 try:
     from b3.lib.elementtree import ElementTree
