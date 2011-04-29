@@ -58,7 +58,7 @@
 #     Added data parameter to Client.tempban()
 
 __author__  = 'ThorN'
-__version__ = '1.3.4a'
+__version__ = '1.3.5a'
 
 import b3, string, re, time, functions, threading, traceback, sys
 
@@ -1093,7 +1093,7 @@ class Clients(dict):
     def clear(self):
         self.resetIndex()
         for cid,c in self.items():
-            if cid != '-1':
+            if not c.hide:
                 del self[cid]
 
     def sync(self):

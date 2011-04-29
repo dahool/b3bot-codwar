@@ -25,7 +25,7 @@
 
 
 __author__  = 'ThorN'
-__version__ = '1.6.0a'
+__version__ = '1.6.1a'
 
 import sys
 import logging
@@ -95,14 +95,14 @@ class stdoutLogger:
         self.logger = logger
 
     def write(self, msg):
-        self.logger.info('STDOUT %s' % msg)
+        self.logger.info('STDOUT %r' % msg)
         
 class stderrLogger:
     def __init__(self, logger):
         self.logger = logger
 
     def write(self, msg):
-        self.logger.error('STDERR %s' % msg)
+        self.logger.error('STDERR %r' % msg)
 
 #--------------------------------------------------------------------------------------------------
 logging.setLoggerClass(OutputHandler)
@@ -132,14 +132,15 @@ def getInstance(logfile='b3.log', loglevel=21, log2console=False):
         __output.addHandler(handler)
         
         if log2console:
-            consoleFormatter = logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s', '%M:%S')
-            handler2 = logging.StreamHandler(strm=sys.stdout)
+            consoleFormatter = logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)r', '%M:%S')
+            handler2 = logging.StreamHandler(sys.stdout)
             handler2.setFormatter(consoleFormatter)
             __output.addHandler(handler2)
-            handlerError = logging.StreamHandler(strm=sys.stderr)
+            handlerError = logging.StreamHandler(sys.stderr)
             handlerError.setFormatter(consoleFormatter)
             handlerError.setLevel(logging.ERROR)
             __output.addHandler(handlerError)
+           
         __output.setLevel(loglevel)
     return __output
 

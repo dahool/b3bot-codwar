@@ -16,9 +16,17 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+# CHANGELOG
+#
+# 2011-04-16 - 1.0.2 - Courgette
+# * fix bug in escaping strings containing "
+# 2011-04-17 - 1.0.3 / 1.0.4 - Courgette
+# * fix bug introduced in 1.0.2
+#
+
 
 __author__  = 'ThorN'
-__version__ = '1.0.1'
+__version__ = '1.0.4'
 
 class QueryBuilder(object):
     def __init__(self, db=None):
@@ -27,10 +35,13 @@ class QueryBuilder(object):
         pass
 
     def escape(self, word):
-        if isinstance(word, int):
+        if isinstance(word, int) or isinstance(word, long) \
+            or isinstance(word, complex) or isinstance(word, float):
             return str(word)
+        elif word is None:
+            return '"None"'
         else:
-            return '"%s"' % word
+            return '"%s"' % word.replace('"','\\"')
 
     def quoteArgs(self, args):
         if type(args[0]) is tuple or type(args[0]) is list:

@@ -17,6 +17,10 @@
 #
 # CHANGELOG
 #
+# 25/04/2011 - v0.6 - xlr8or
+#  * action logging - get client by name.
+# 24/04/2011 - v0.5 - xlr8or
+#  * disable action logging - game engine bug.
 # 18/03/2011 - v0.4 - Freelander
 #  * Fixed a typo causing permanent bans fail
 # 24/01/2010 - v0.3 - xlr8or
@@ -28,7 +32,7 @@
 
 
 __author__  = 'NTAuthority'
-__version__ = '0.4'
+__version__ = '0.6'
 
 import b3.parsers.cod4
 import re
@@ -57,3 +61,16 @@ class Cod6Parser(b3.parsers.cod4.Cod4Parser):
         except:
             self.game.sv_hostname = None
             self.warning('Could not query server for sv_hostname')
+
+    # action
+    def OnA(self, action, data, match=None):
+        #bugged: cid and guid both 0
+        #10420 19:24:38   CONSOLE   67:19 A;0;0;allies;clubdegamers12;hq_destroyed
+        #can only get client by name...
+        client = self.clients.getByName(name)
+        if not client:
+            return None
+
+        actiontype = match.group('type')
+        self.verbose('OnAction: %s: %s' % (client.name, actiontype) )
+        return b3.events.Event(b3.events.EVT_CLIENT_ACTION, actiontype, client)

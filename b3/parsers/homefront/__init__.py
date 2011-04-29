@@ -29,9 +29,20 @@
 # * fix the "empty name in database bug" reported by Platanos
 # 2011-04-09 : 0.6
 # * unban using UID if available
+# 2011-04-16 : 0.6.1
+# * getPlayerScores do not raise an exception when client has no kills attribute
+# 2011-04-17 : 0.7.0
+# * implements sync()
+# * fix bug with UID '0'
+# 2011-04-18 : 0.7.1
+# * clear clients list on HF connection loss
+# 2011-04-18 : 0.7.2
+# * remove color codes before sending each line in say, saybig and message
+# 2011-04-25 : 0.8.0
+# * read game server info through Source Query Protocol
 
 __author__  = 'Courgette, xlr8or, Freelander, 82ndab-Bravo17'
-__version__ = '0.6'
+__version__ = '0.8.0'
 
 from b3.parsers.homefront.protocol import MessageType, ChannelType
 import sys
@@ -48,6 +59,7 @@ import protocol
 from ftplib import FTP
 import ftplib
 from b3 import functions
+from b3.lib.SourceLib import SourceQuery
 
 
 class HomefrontParser(b3.parser.Parser):
@@ -72,11 +84,8 @@ class HomefrontParser(b3.parser.Parser):
     _connectionTimeout = 30
     maplist = None
     mapgamelist = None
-    _cronTab = None
     _playerlistInterval = 15
     _server_banlist = {}
-    _cronTab_banlist = None
-    _banlistInterval = 60
 
     _commands = {}
     _commands['message'] = ('say %(prefix)s [%(name)s] %(message)s')
@@ -119,12 +128,7 @@ class HomefrontParser(b3.parser.Parser):
             self.debug('Incorrect ini file or no ini file specified, map commands other than nextmap not available')
             
         # start crontab to trigger playerlist events
-        self._cronTab = b3.cron.CronTab(self.retrievePlayerList, second='*/%s' % self._playerlistInterval)
-        self.cron + self._cronTab
-
-        # start crontab to retrive banlist
-        self._cronTab_banlist = b3.cron.CronTab(self.retrieveBanList, minute='*/%s' % self._banlistInterval)
-        self.cron + self._cronTab_banlist
+        self.cron + b3.cron.CronTab(self.retrievePlayerList, second='*/%s' % self._playerlistInterval)
 
         # add specific events
         self.Events.createEvent('EVT_CLIENT_SQUAD_SAY', 'Squad Say')
@@ -134,6 +138,22 @@ class HomefrontParser(b3.parser.Parser):
                 
         ## read game server info and store as much of it in self.game wich
         ## is an instance of the b3.game.Game class
+        sq = SourceQuery.SourceQuery(self._publicIp, self._port, timeout=10)
+        try:
+            serverinfo = sq.info()
+            self.debug("server info : %r", serverinfo)
+            if 'map' in serverinfo:
+                self.game.mapName = serverinfo['map'].lower()
+            if 'steamid' in serverinfo:
+                self.game.steamid = serverinfo['steamid']
+            if 'hostname' in serverinfo:
+                self.game.sv_hostname = serverinfo['hostname']
+            if 'maxplayers' in serverinfo:
+                self.game.sv_maxclients = serverinfo['maxplayers']
+        except Exception, err:
+            self.exception(err)
+
+
     
     
     def routePacket(self, packet):
@@ -217,7 +237,15 @@ class HomefrontParser(b3.parser.Parser):
                 if self._serverConnection is None:
                     self.bot('Connecting to Homefront server ...')
                     self._serverConnection = protocol.Client(self, self._rconIp, self._rconPort, self._rconPassword, keepalive=True)
+                    
+                    # hook on handle_close to protocol.Client
+                    self._original_connection_handle_close_method = self._serverConnection.handle_close
+                    self._serverConnection.handle_close = self._handle_connection_close
+                    
+                    # listen for incoming HF packets
                     self._serverConnection.add_listener(self.routePacket)
+                    
+                    # setup Rcon
                     self.output.set_homefront_client(self._serverConnection)
                 
                 self._nbConsecutiveConnFailure = 0
@@ -237,6 +265,12 @@ class HomefrontParser(b3.parser.Parser):
                 sys.exit(self.exitcode)
 
 
+    def _handle_connection_close(self):
+        if len(self.clients.getList()): 
+            self.debug("clearing player list")
+            self.clients.empty()
+        self._original_connection_handle_close_method()
+
 
     # ================================================
     # handle Game events.
@@ -255,7 +289,7 @@ class HomefrontParser(b3.parser.Parser):
         ## [boolean: Result]
         if data == 'true':
             self.bot("B3 correctly authenticated on game server")
-            self.retrievePlayerList()
+            self.clients.sync()
             self.retrieveBanList()
         else:
             self.warning("B3 failed to authenticate on game server (%s)" % data)
@@ -264,8 +298,10 @@ class HomefrontParser(b3.parser.Parser):
     def onServerLogin(self, data):
         # [string: Name]
         # (onServerLogin also occurs after a mapchange...)
-        # we ignore that event as Name is not reliable
-        pass
+        # we need this event for xlrstats (counting playerrounds)
+        client = self.getClient(data)
+        if client:
+            self.queueEvent(self.getEvent('EVT_CLIENT_JOIN', None, client))
 
     
     def onServerUid(self, data):
@@ -282,6 +318,7 @@ class HomefrontParser(b3.parser.Parser):
         if client is None:
             name = match.group('name')
             client = self.clients.newClient(name, guid=match.group('uid'), name=name, team=b3.TEAM_UNKNOWN)
+            client.last_update_time = time.time()
     
     def onServerLogout(self, data):
         ## [string: Name]
@@ -381,6 +418,9 @@ class HomefrontParser(b3.parser.Parser):
         if not match:
             self.error('onServerChange_level failed match')
             return
+        
+        # resync players to get rid of eventual 'phantom' players
+        self.clients.sync()
 
         levelname = match.group('level')
         self.verbose('onServerChange_level, levelname: %s' % levelname)
@@ -421,10 +461,13 @@ class HomefrontParser(b3.parser.Parser):
 
     def onServerBan_remove(self, data):
         self.write(self.getCommand('saybig',  prefix='', message="%s unbanned" % data))
+        # update banlist
+        self.retrieveBanList()
     
     def onServerBan_added(self, data):
         self.write(self.getCommand('saybig',  prefix='', message="%s banned" % data))
-        return self.getEvent('EVT_CLIENT_BAN', data)
+        # update banlist
+        self.retrieveBanList()
 
     def onServerPlayer(self, data):
         # [int: Team] [string: Clan] [string: Name] [int: Kills] [int: Deaths]
@@ -432,16 +475,27 @@ class HomefrontParser(b3.parser.Parser):
         if not match:
             self.error("onServerPlayer failed match")
             return
+        
+        uid = match.group('uid')
+        
+        if uid == '0':
+            # connecting player with no UID resolved yet --> ignore
+            return
+        
+        if len(uid) != 17:
+            self.warning(u"weird UID : [%s]" % uid)
+        
         # try to get the client by guid
-        client = self.clients.getByGUID(match.group('uid'))
+        client = self.clients.getByGUID(uid)
         if not client:
-            client = self.clients.newClient(match.group('name'), guid=match.group('uid'), name=match.group('name'), team=b3.TEAM_UNKNOWN)
+            client = self.clients.newClient(match.group('name'), guid=uid, name=match.group('name'), team=b3.TEAM_UNKNOWN)
         # update client data
         client.name = match.group('name')
         client.team = self.getTeam(match.group('team'))
         client.clan = match.group('clan')
         client.kills = match.group('kills')
         client.deaths = match.group('deaths')
+        client.last_update_time = time.time() ## save the timestamp so sync() can use that info
         self.verbose2('onServerPlayer: name: %s, clan: %s, team: %s, kills: %s, deaths: %s' %( client.name, client.clan, client.team, client.kills, client.deaths ))
 
     def onServerBan_item(self, data):
@@ -459,13 +513,6 @@ class HomefrontParser(b3.parser.Parser):
     # =======================================
     # implement parser interface
     # =======================================
-        
-    def retrievePlayerList(self):
-        """\
-        Send RETRIEVE PLAYERLIST to the server to trigger onServerPlayer return events
-        """
-        self.verbose2('Retrieving Playerlist')
-        self.write('RETRIEVE PLAYERLIST')
 
     def getPlayerList(self):
         """\
@@ -473,13 +520,6 @@ class HomefrontParser(b3.parser.Parser):
         """
         clients = self.clients.getList()
         return clients
-
-    def retrieveBanList(self):
-        """\
-        Send RETRIEVE BANLIST to the server
-        """
-        self.verbose2('Retrieving Banlist')
-        self.write('RETRIEVE BANLIST')
 
     def authorizeClients(self):
         """\
@@ -501,8 +541,22 @@ class HomefrontParser(b3.parser.Parser):
         occupy. On map change, a player A on slot 1 can leave making room for player B who
         connects on slot 1.
         """
-        self.getPlayerList()
-        raise NotImplementedError
+        ## we are unable to get the exact list of connected players in a synchronous
+        ## way. So we use .last_update_time timestamp to detect player we still
+        ## have in self.clients but that are no longer on the game server
+        self.debug("synchronizing clients")
+        mlist = {}
+        now = time.time()
+        for client in self.clients.getList():
+            howlongago = now - client.last_update_time
+            self.debug(u"%s last seen %d seconds ago" % (client, howlongago))
+            if howlongago < (self._playerlistInterval * 2):
+                mlist[client.cid] = client
+            else:
+                self.info(u"%s last update is too old" % client)
+                client.disconnect()
+        return mlist
+        
     
     def say(self, msg):
         """\
@@ -510,6 +564,7 @@ class HomefrontParser(b3.parser.Parser):
         """
         msg = self.stripColors(msg)
         for line in self.getWrap(msg, self._settings['line_length'], self._settings['min_wrap_length']):
+            line = self.stripColors(line)
             self.write(self.getCommand('say',  prefix=self.msgPrefix, message=line))
 
     def saybig(self, msg):
@@ -518,16 +573,18 @@ class HomefrontParser(b3.parser.Parser):
         """
         msg = self.stripColors(msg)
         for line in self.getWrap(msg, self._settings['line_length'], self._settings['min_wrap_length']):
+            line = self.stripColors(line)
             self.write(self.getCommand('saybig',  prefix=self.msgPrefix, message=line))
 
+    ## @todo Change private messages when the rcon protocol will allow us to
     def message(self, client, text):
         """\
         display a message to a given player
         """
-        ## @todo: message: change that when the rcon protocol will allow us to
         # actually send private messages
         text = self.stripColors(text)
         for line in self.getWrap(text, self._settings['line_length'], self._settings['min_wrap_length']):
+            line = self.stripColors(line)
             self.write(self.getCommand('message', name=client.name, prefix=self.msgPrefix, message=line))
 
     def kick(self, client, reason='', admin=None, silent=False, *kwargs):
@@ -579,6 +636,7 @@ class HomefrontParser(b3.parser.Parser):
         self.queueEvent(self.getEvent('EVT_CLIENT_BAN', reason, client))
         client.disconnect()
 
+    ## @todo Need to test response from the server
     def unban(self, client, reason='', admin=None, silent=False, *kwargs):
         """\
         unban a given players
@@ -591,7 +649,6 @@ class HomefrontParser(b3.parser.Parser):
             banid = client.name
         self.debug('UNBAN: %s' % banid)
         response = self.write(self.getCommand('unban', name=banid))
-        ## @todo: unban: need to test response from the server
         self.verbose(response)
         if response:
             self.verbose('UNBAN: Removed name (%s) from banlist' %client.name)
@@ -723,7 +780,7 @@ class HomefrontParser(b3.parser.Parser):
         """\
         returns a dict having players' id for keys and players' ping for values
         """
-        raise NotImplementedError
+        return {}
 
     def getPlayerScores(self):
         """\
@@ -735,7 +792,10 @@ class HomefrontParser(b3.parser.Parser):
         scores = {}
         clients = self.clients.getList()
         for c in clients:
-            scores[c.name] = int(c.kills)
+            try:
+                scores[c.name] = int(c.kills)
+            except AttributeError:
+                pass
         return scores
 
     def getTeam(self, team):
@@ -768,16 +828,13 @@ class HomefrontParser(b3.parser.Parser):
 
     def getClient(self, name):
         """return a already connected client by searching the 
-        clients cid index. If not found, call getPlayerList()
-        so next time we'll have more chances to get that player
-        
+        clients cid index.
+
         This method can return None
         """
         client = self.clients.getByCID(name)
         if client:
             return client
-        #self.debug('client not found calling getPlayerList()')
-        #self.getPlayerList()
         return None
 
     def getftpini(self):
@@ -824,3 +881,20 @@ class HomefrontParser(b3.parser.Parser):
         self.debug('trying to cwd to [%s]' % dir)
         ftp.cwd(dir)
         return ftp
+    
+
+    def retrieveBanList(self):
+        """\
+        Send RETRIEVE BANLIST to the server
+        """
+        self.verbose2('Retrieving Banlist')
+        self.write('RETRIEVE BANLIST')
+
+
+    def retrievePlayerList(self):
+        """\
+        Send RETRIEVE PLAYERLIST to the server to trigger onServerPlayer return events
+        """
+        self.verbose2('Retrieving Playerlist')
+        self.write('RETRIEVE PLAYERLIST')
+

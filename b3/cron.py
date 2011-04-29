@@ -27,7 +27,7 @@
 #    * removing a non existing crontab does not raise a KeyError anymore
 #
 __author__  = 'ThorN, Courgette'
-__version__ = '1.4.1'
+__version__ = '1.4.1a'
 
 import re, thread, threading, time, traceback, sys
 
