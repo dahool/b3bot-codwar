@@ -46,12 +46,12 @@ class ConfigdumpPlugin(b3.plugin.Plugin):
             self._outputFile = os.path.expanduser(self.config.get('settings', 'output_file'))
         
         self._cvars = [var.strip() for var in self.config.get('settings', 'cvars').split(',')]
-	
-	dump = self.config.get('settings','time').split(':')
+    
+        dump = self.config.get('settings','time').split(':')
 
         if self._crontab:
-	    self.console.cron - self._crontab
-	self._crontab = b3.cron.PluginCronTab(self, self.update, 0, dump[1], dump[0])
+            self.console.cron - self._crontab
+        self._crontab = b3.cron.PluginCronTab(self, self.update, 0, dump[1], dump[0])
         self.console.cron + self._crontab
 
     def onEvent(self, event):
@@ -60,14 +60,14 @@ class ConfigdumpPlugin(b3.plugin.Plugin):
             self.update()
 
     def update(self):
-	self.bot("Dump config")
+        self.bot("Dump config")
         out = StringIO.StringIO()
         for var in self._cvars:
             value = self.console.getCvar(var)
             if value:
                 out.write('set %s "%s"\n' % (var, value.getString()))
 
-	out.seek(0)
+        out.seek(0)
         self.write(out)
 
     def write(self, out):
