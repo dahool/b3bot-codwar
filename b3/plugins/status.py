@@ -209,11 +209,10 @@ class StatusPlugin(b3.plugin.Plugin):
                 self.error('Error: inserting svars. sqlqry=%s' % (sql))
 
         # SGT - Scores
+        scores = None
         if len(clients)>0:
             if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
                 scores = self.console.getCvar( 'g_teamScores' )
-        else:
-            scores = None
         if scores:
             scores = scores.getString()
         else:
