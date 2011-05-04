@@ -176,8 +176,12 @@ class StatusPlugin(b3.plugin.Plugin):
             rounds = c.rounds
         if c.roundTime:
             roundTime = c.roundTime()
-        if c.mapTime:
-            mapTime = c.mapTime()
+        try:
+            # something maptime is None
+            if c.mapTime:
+                mapTime = c.mapTime()
+        except:
+            mapTime = ''
         game = xml.createElement("Game")
         game.setAttribute("Name", str(gamename))
         game.setAttribute("Type", str(gametype))
