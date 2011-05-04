@@ -22,8 +22,10 @@
 # Add bigtext before complete
 # 2011-02-21 - 1.0.2 - SGT
 # Reload config command
+# 2011-05-04 - 1.0.3 - SGT
+# fix issue when no objetive is set
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -77,6 +79,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
         try:
             self._default = self.config.getint('default',self._gameType)
             self._variable = self.config.get('settings',self._gameType)
+            self._current = self._default
         except:
             self.debug("Objectives disabled for %s" % self._gameType)
             self._default = None
@@ -97,6 +100,8 @@ class ObjectivePlugin(b3.plugin.Plugin):
                 self._teamName['red']="^1%s" % name
             except:
                 pass
+            # set objetives for current map
+            self.setCurrentMapObjective()
         
     def onEvent(self, event):
         if self._default:
@@ -108,7 +113,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
                 self.setCurrentMapObjective()
                 t1 = threading.Timer(20, self.showMapObjective)
                 t1.start()            
-            elif event.type == b3.events.EVT_GAME_EXIT:
+            elif event.type == b3.events.EVT_GAME_EXIT and event.data:
                 self.showMapEnd()
              
     def bigtext(self, msg):

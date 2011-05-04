@@ -976,6 +976,8 @@ class Iourt41Parser(AbstractParser):
         self.game.mapEnd()
         # self.clients.sync()
         # self.debug('Synchronizing client info')
+        # set data to true to differentiaty from the EXIT event sent by abstract
+        data = True
         self._maplist = None # when UrT server reloads, newly uploaded maps get available: force refresh
         return b3.events.Event(b3.events.EVT_GAME_EXIT, data)
 

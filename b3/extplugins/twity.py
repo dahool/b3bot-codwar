@@ -35,7 +35,7 @@
 # Remove unused methods
 # 03/20/2011 - SGT - 1.0.11
 # BAN event is raised every time the banned user connect. Workaround this.
-# 04/05/2011 - SGT - 1.0.12
+# 05/04/2011 - SGT - 1.0.12
 # Fix issue in ban event handling
 
 __version__ = '1.0.12'
