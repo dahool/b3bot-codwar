@@ -32,8 +32,10 @@
 # 01-25-2011 - 1.1.4
 # Add option to use twitter
 # Fix minor error in followinfo
+# 05-04-2011 - 1.1.5
+# Fix error in show message when no admin is set (added through web interface)
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 __author__  = 'SGT'
 
 import b3, threading
@@ -152,10 +154,17 @@ class FollowPlugin(b3.plugin.Plugin):
                 time.sleep(0.5)
     
     def _show_message(self, client, player):
+        admin = player.var(self, 'follow_admin').value
+        if admin:
+            admin_name = admin.name
+            admin_id = admin.id
+        else:
+            admin_name = 'B3'
+            admin_id = '0'
         data = {'client_name': player.name,
                 'client_id': player.id,
-                'admin_name': player.var(self, 'follow_admin').value.name,
-                'admin_id': player.var(self, 'follow_admin').value.id,
+                'admin_name': admin_name,
+                'admin_id': admin_id,
                 'reason': player.var(self, 'follow_reason').value}
         client.message(self._NOTIFY_MSG % data)
         
