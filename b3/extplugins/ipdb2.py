@@ -247,14 +247,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client = self._banqueue.pop()
             lastBan = client.lastBan
             if lastBan:
-                timeAdd = datetime.datetime.fromtimestamp(lastBan.timeAdd)
                 if lastBan.duration == -1 or lastBan.duration == 0:
-                    reason = 'Permanent banned since %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), lastBan.reason)
+                    pType = "pb"
                 else:
-                    reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), minutesStr(lastBan.duration), lastBan.reason)
+                    pType = "tb"
+                baninfo = "%s::%s::%s::%s" % (pType, lastBan.timeAdd, lastBan.duration, lastBan.reason)
                 timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
                 status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
-                status.append(reason)
+                status.append(baninfo)
                 self._eventqueue.append(status)
                                             
     def notifyUpdate(self, client):
@@ -330,14 +330,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client = self.console.clients.getByDB("@%s" % r['client_id'])
             if client:
                 keys.append(str(r['id']))
-                timeAdd = datetime.datetime.fromtimestamp(r['time_add'])
                 if r['duration'] == -1 or r['duration'] == 0:
-                    reason = 'Permanent banned since %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), r['reason'])
+                    pType = 'pb'
                 else:
-                    reason = 'Temp banned since %s for %s. Reason: %s' % (timeAdd.strftime("%d/%m/%Y"), minutesStr(r['duration']), r['reason'])
+                    pType = 'tb'
+                baninfo = "%s::%s::%s::%s" % (pType, r['time_add'], r['duration'], r['reason'])
                 timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
                 status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
-                status.append(reason)
+                status.append(baninfo)
                 list.append(status)
             cursor.moveNext()
         
