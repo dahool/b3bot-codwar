@@ -406,7 +406,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def cmd_dbclearban(self ,data , client, cmd=None):
         """\
-        <player>: Remove a notice on ipdb for given player
+        <player>: Remove baninfo on ipdb for given player
         """
         input = self._adminPlugin.parseUserCmd(data)
         if input:
