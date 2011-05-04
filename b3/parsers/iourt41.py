@@ -118,11 +118,14 @@
 #    * fix CNCT ping error in getPlayersPings
 #    * fix incorrect game type for ffa
 #    * move getMapList after game initialization
+# v1.7.16b - 04/05/2010 - SGT
+#    * try to fix issue with OnSay when something like this come and the match could find the name group
+#    say: 7 -crespino-:
 #
 
 
 __author__  = 'xlr8or'
-__version__ = '1.7.16a'
+__version__ = '1.7.16b'
 
 
 from b3.parsers.q3a.abstractParser import AbstractParser
@@ -194,7 +197,7 @@ class Iourt41Parser(AbstractParser):
         #15:37 say: 9 .:MS-T:.BstPL: this name is quite a challenge
         #2:28 sayteam: 12 New_UrT_Player_v4.1: woekele
         #16:33 Flag: 2 0: team_CTF_redflag
-        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s+(?P<text>.*))$', re.IGNORECASE),
+        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s*(?P<text>.*))$', re.IGNORECASE),
 
         #15:42 Flag Return: RED
         #15:42 Flag Return: BLUE
