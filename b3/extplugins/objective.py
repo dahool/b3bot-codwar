@@ -113,7 +113,7 @@ class ObjectivePlugin(b3.plugin.Plugin):
                 self.setCurrentMapObjective()
                 t1 = threading.Timer(20, self.showMapObjective)
                 t1.start()            
-            elif event.type == b3.events.EVT_GAME_EXIT and event.data:
+            elif event.type == b3.events.EVT_GAME_EXIT and not event.data:
                 self.showMapEnd()
              
     def bigtext(self, msg):
