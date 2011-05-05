@@ -246,7 +246,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         while len(self._banqueue) > 0:
             client = self._banqueue.pop()
             lastBan = client.lastBan
-            if lastBan:
+            if lastBan and (lastBan.duration < 1 or lastBan.duration > 30): # no tempban less than 30 minutes
                 if lastBan.duration == -1 or lastBan.duration == 0:
                     pType = "pb"
                 else:
@@ -305,8 +305,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._failureCount += 1
         if self._failureCount >= self._failureMax:
             self.disable()
-            next = (datetime.datetime.now() + datetime.timedelta(hours=4)).hour
-            self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute=0, hour=next)
+            #next = (datetime.datetime.now() + datetime.timedelta(hours=4)).hour
+            #self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute=0, hour=next)
+            self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/30')
             self._failureCount = 0
             return False
         return True
@@ -329,16 +330,17 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             r = cursor.getRow()
             client = self.console.clients.getByDB("@%s" % r['client_id'])
             if client:
-                keys.append(str(r['id']))
-                if r['duration'] == -1 or r['duration'] == 0:
-                    pType = 'pb'
-                else:
-                    pType = 'tb'
-                baninfo = "%s::%s::%s::%s" % (pType, r['time_add'], r['duration'], r['reason'])
-                timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
-                status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
-                status.append(baninfo)
-                list.append(status)
+                if r['duration'] < 1 or r['duration'] > 30:
+                    keys.append(str(r['id']))
+                    if r['duration'] == -1 or r['duration'] == 0:
+                        pType = 'pb'
+                    else:
+                        pType = 'tb'
+                    baninfo = "%s::%s::%s::%s" % (pType, r['time_add'], r['duration'], r['reason'])
+                    timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
+                    status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
+                    status.append(baninfo)
+                    list.append(status)
             cursor.moveNext()
         
         if len(list) > 0:
