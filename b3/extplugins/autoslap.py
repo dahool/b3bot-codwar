@@ -16,20 +16,22 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
-# 03-16-2011 - 1.0.0
+# 16-03-2011 - 1.0.0
 # Initial version
-# 03-18-2011 - 1.0.1
+# 18-03-2011 - 1.0.1
 # If user is online, start slapping
-# 03-19-2011 - 1.0.2
+# 19-03-2011 - 1.0.2
 # Limit slap time
 # Add nuke and temp ban
-# 03-29-2011 - 1.0.3
+# 29-03-2011 - 1.0.3
 # Mix nuke with slap
 # Add mute
-# 04-07-2011 - 1.0.4
+# 07-04-2011 - 1.0.4
 # Force to team if spec
+# 05-05-2011 - 1.0.6
+# Do not wait is client already kicked in the last hour
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -111,34 +113,39 @@ class AutoslapPlugin(b3.plugin.Plugin):
             if client.maxLevel < self._admin_level:
                 if self._is_flagged(client):
                     self.debug("Client %s flagged." % client.name)
-		    client.notice("not welcome on this server", None)
+                    client.notice("not welcome on this server", None)
                     thread.start_new_thread(self._slap_client, (client,))
 
     def doslap(self, client):
-	self.console.write('slap %s' % (client.cid))
+        self.console.write('slap %s' % (client.cid))
 
     def donuke(self, client):
-	self.console.write('nuke %s' % (client.cid))
+        self.console.write('nuke %s' % (client.cid))
 
     def _slap_client(self, client):
-        self.debug('Auto slap waiting')
-        time.sleep(self._wait)
+        self.debug('Auto slap waiting %s' % client.name)
+        _timeDiff = 0
+        if client.lastVisit:
+            _timeDiff = self.console.time() - client.lastVisit
+        else:
+            _timeDiff = 1000000
+
+        if client.connected and _timeDiff < 3600:
+            time.sleep(self._wait)
+            
         self.debug('Performing auto slap')
+        self.console.write('mute %s' % (client.cid))
         client.message(self.getMessage('not_welcome', {'name': client.name}))
         slapEnd = datetime.datetime.now() + datetime.timedelta(minutes=self._slaptime)
-        self.console.write('mute %s' % (client.cid))
-        
         while client.connected and datetime.datetime.now() <= slapEnd:
             self.debug('Perform slap')
-	    self.doslap(client)
+            self.doslap(client)
             if self._nuke:
                 time.sleep(1)
                 self.debug('Nuke player')
-		self.donuke(client)
-	    else:
-		time.sleep(1)
+                self.donuke(client)
+                time.sleep(2)
             time.sleep(1)
-            client.message(self.getMessage('not_welcome', {'name': client.name}))
             self.moveFromSpec(client)
                 
         if client.connected:
@@ -209,6 +216,7 @@ class AutoslapPlugin(b3.plugin.Plugin):
             self.debug("User added to autoslap list")
             client.message("^7%s has been added to the autoslap list." % sclient.name)
             if sclient.connected:
+                time.sleep(2)
                 thread.start_new_thread(self._slap_client, (sclient,))
         else:
             self.debug("User already in autoslap list")
