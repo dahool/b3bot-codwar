@@ -28,8 +28,10 @@
 # Random team shuffle
 # 02-20-2011 - SGT
 # Extended Clientinfo
+# 05-06-2011 - SGT - 1.1.7
+# Add register user command
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -705,7 +707,38 @@ class ExtraadminPlugin(b3.plugin.Plugin):
                     'timeAdd': self.console.formatTime(sclient.timeAdd),
                     'lastVisit': self.console.formatTime(sclient.timeEdit)}
             cmd.sayLoudOrPM(client, self.getMessage('clientinfo', data))
-                                                                              
+            
+    def cmd_register(self, data, client, cmd=None):
+        """\
+        <client> - register client as a basic user
+        """
+
+        m = self.parseUserCmd(data)
+        if not m:
+            client.message('^7Invalid parameters')
+            return False
+
+        cid = m[0]
+
+        try:
+            group = clients.Group(keyword='user')
+            group = self.console.storage.getGroup(group)
+        except:
+            return False
+
+        sclient = self.findClientPrompt(cid, client)
+        if sclient:
+            if sclient.inGroup(group):
+                client.message(self.getMessage('groups_already_in', sclient.exactName, group.name))
+            elif sclient.maxLevel >= group.level:
+                client.message('^7%s ^7is already in a higher level group' % sclient.exactName)
+            else:
+                sclient.setGroup(group)
+                sclient.save()
+
+                cmd.sayLoudOrPM(client, self.getMessage('groups_put', sclient.exactName, group.name))
+                return True
+                                                                                              
 if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import superadmin, joe
