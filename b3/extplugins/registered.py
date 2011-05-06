@@ -18,7 +18,7 @@
 # 05-05-2011 - 1.0.0 - SGT
 # Initial version
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -29,7 +29,7 @@ import b3.events
 class RegisteredPlugin(b3.plugin.Plugin):
     requiresConfigFile = False
    
-    _warn = 15
+    _warn = 5
 
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
@@ -39,19 +39,18 @@ class RegisteredPlugin(b3.plugin.Plugin):
             self.process_connect_event(event)
             
     def process_connect_event(self, event):
-        self.debug("Client connected")
         if not event.client or event.client.pbid == 'WORLD':
             return
-        
+        self.debug("Client connected")
         client = event.client
-        #self.debug("Client %s level is %s" % (client.name, client.maxLevel))
         if client.maxLevel > 0:
             return
         if client.connections <= 2:
-            t = threading.Timer(30, self._client_connected, (client,))
+            self.console.write('mute %s' % (client.cid))
+            t = threading.Timer(20, self._client_connected, (client,))
             t.start()
         else:
-            client.kick('Not registered')
+            client.kick('Not registered', silent=True)
     
     def _client_connected(self, client):
         if client.connected:
@@ -60,9 +59,9 @@ class RegisteredPlugin(b3.plugin.Plugin):
             self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
             for i in range(0,self._warn):
                 client.message("^5%s ^7tu id es ^2%s^7. Pedi tu registro en www.codwar.com.ar" % (client.name, client.id))
-                time.sleep(1)
+                time.sleep(3)
                 self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
-            client.kick('Not registered')
+            client.kick('Not registered', silent=True)
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
