@@ -27,7 +27,8 @@ import b3.events
 
 #--------------------------------------------------------------------------------------------------
 class RegisteredPlugin(b3.plugin.Plugin):
-
+    requiresConfigFile = False
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         
@@ -59,3 +60,34 @@ class RegisteredPlugin(b3.plugin.Plugin):
                 time.sleep(1)
                 self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
             client.kick('Not registered')
+
+if __name__ == '__main__':
+    from b3.fake import fakeConsole
+    from b3.fake import FakeClient, superadmin
+    import time
+    
+    # first time user
+    user0 = FakeClient(fakeConsole, name="Joe0", exactName="Joe", guid="1234", groupBits=0, team=b3.TEAM_RED)
+    user0.connections = 0
+    
+    # second time user
+    user1 = FakeClient(fakeConsole, name="Joe1", exactName="Joe", guid="12384", groupBits=0, team=b3.TEAM_RED)
+    user1.connections = 1
+    # registered user
+    user2 = FakeClient(fakeConsole, name="Joe2", exactName="Joe", guid="1235", groupBits=1, team=b3.TEAM_RED)
+    # regular user
+    user2 = FakeClient(fakeConsole, name="Joe2", exactName="Joe", guid="1235", groupBits=4, team=b3.TEAM_RED)
+       
+    
+    p = RegisteredPlugin(fakeConsole)
+    p.onStartup()
+    time.sleep(2)
+    
+    superadmin.connects(cid=0)
+    time.sleep(2)
+    user0.connects(cid=1)
+    time.sleep(2)
+    user1.connects(cid=2)
+    time.sleep(2)
+    user2.connects(cid=3)
+    time.sleep(2)
