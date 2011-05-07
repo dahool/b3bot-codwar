@@ -18,7 +18,7 @@
 # 05-05-2011 - 1.0.0 - SGT
 # Initial version
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -45,7 +45,7 @@ class RegisteredPlugin(b3.plugin.Plugin):
         client = event.client
         if client.maxLevel > 0:
             return
-        if client.connections <= 2:
+        if client.connections <= 20:
             self.console.write('mute %s' % (client.cid))
             t = threading.Timer(20, self._client_connected, (client,))
             t.start()
@@ -61,7 +61,10 @@ class RegisteredPlugin(b3.plugin.Plugin):
                 client.message("^5%s ^7tu id es ^2%s^7. Pedi tu registro en www.codwar.com.ar" % (client.name, client.id))
                 time.sleep(3)
                 self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
-            client.kick('Not registered', silent=True)
+            if client.connections < 2:
+                client.kick('Not registered', silent=True)
+            else:
+                client.tempban('Not registered', '', 1, None)
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
