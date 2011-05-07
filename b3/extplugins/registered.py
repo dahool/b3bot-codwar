@@ -61,7 +61,7 @@ class RegisteredPlugin(b3.plugin.Plugin):
                 client.message("^5%s ^7tu id es ^2%s^7. Pedi tu registro en www.codwar.com.ar" % (client.name, client.id))
                 time.sleep(3)
                 self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
-            if client.connections < 2:
+	    if client.connections < 3:
                 client.kick('Not registered', silent=True)
             else:
                 client.tempban('Not registered', '', 1, None)
