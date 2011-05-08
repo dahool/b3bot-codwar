@@ -113,6 +113,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     func = self.getCmd(cmd)
                     if func:
                         self._adminPlugin.registerCommand(self, cmd, level, func, alias)
+            self._adminPlugin.registerCommand(self, 'ipdb', 80, self.cmd_showqueue, None)
 
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
@@ -181,7 +182,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     self.onClientUnban(event.client)
             except:
                 pass
-                
 
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
@@ -376,6 +376,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._updated = p.verifiy()
         if self._updated: self.bot('New version available')
 
+    def cmd_showqueue(self, data, client, cmd=None):
+        if len(self._eventqueue) == 0:
+            cmd.sayLoudOrPM(client, '^7Events queue is empty.')
+        else:
+            cmd.sayLoudOrPM(client, '^7%d events pending in queue.' % len(self._eventqueue))
+            
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
         <player> <text>: Add/Update a notice on ipdb for given player
