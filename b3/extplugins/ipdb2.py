@@ -198,6 +198,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if client not in clients:
                 self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
         
+        if len(clients) == 0:
+            # nobody here, lets send an empty list
+            try:
+                self.debug("Sending empty list")
+                self._rpc_proxy.server.update(self._key, [])
+            except Exception, e:
+                self.error("Error updating empty list. %s" % str(e))
+                
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
