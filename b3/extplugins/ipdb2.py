@@ -16,9 +16,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
+# 2011-04-21 - SGT - 1.1.0
+# Implement new IPDB API
+# 2011-05-08 - SGT - 1.1.1
+# Send time in UTC
+# Use twitter if available
 
 __author__  = 'SGT'
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -115,6 +120,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                         self._adminPlugin.registerCommand(self, cmd, level, func, alias)
             self._adminPlugin.registerCommand(self, 'ipdb', 80, self.cmd_showqueue, None)
 
+        self._twitterPlugin = self.console.getPlugin('twity')
+        if not self._twitterPlugin:
+            self.debug("Twitter plugin not avaiable.")
+
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
         if hasattr(self, cmd):
@@ -189,9 +198,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def _buildEventInfo(self, event, client, timeEdit = None):
         guid = self._hash(client.guid)
         if not timeEdit:
-            timeEdit = datetime.datetime.now()
+            timeEdit = datetime.datetime.utcnow()
+        else:
+            timeEdit = self._gmTime(timeEdit)
         return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
           
+    def _gmTime(self, tm, n = False):
+        if n:
+            return int(time.mktime(time.gmtime(tm)))
+        return datetime.datetime.fromtimestamp(time.gmtime(tm))
+    
     def validateOnlinePlayers(self):
         clients = self.console.clients.getList()
         for client in self._onlinePlayers:
@@ -234,6 +250,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
         if client:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+        else:
+            self.debug('Not found cid %s' % cid)
             
         try:
             if client in self._onlinePlayers:            
@@ -247,8 +265,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def onClientUnban(self, client):
         self.debug('Client unbanned')
-        timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
-        self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, timeEdit))
+        self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
             
     def updateBanQueue(self):
         self.debug('Update ban queue')
@@ -260,9 +277,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     pType = "pb"
                 else:
                     pType = "tb"
-                baninfo = "%s::%s::%s::%s" % (pType, lastBan.timeAdd, lastBan.duration, lastBan.reason)
-                timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
-                status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
+                baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(lastBan.timeAdd, True), lastBan.duration, lastBan.reason)
+                status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
                 status.append(baninfo)
                 self._eventqueue.append(status)
                                             
@@ -302,12 +318,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.debug("Already running")
                     
     def enable(self):
+        self.debug('IPDB enabled')
         self._failureCount = 0
         self._enabled = True
         for ct in self._cronTab:
             self.console.cron + ct
             
     def disable(self):
+        self.debug('IPDB disabled')
         self._enabled = False
         for ct in self._cronTab:
             self.console.cron - ct
@@ -321,6 +339,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             #self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute=0, hour=next)
             self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/30')
             self._failureCount = 0
+            if self._twitterPlugin:
+                self._twitterPlugin.post_update('IPDB too many failures. Disabled.')            
             return False
         return True
         
@@ -348,9 +368,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                         pType = 'pb'
                     else:
                         pType = 'tb'
-                    baninfo = "%s::%s::%s::%s" % (pType, r['time_add'], r['duration'], r['reason'])
-                    timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
-                    status = self._buildEventInfo(self._EVENT_BAN, client, timeEdit)
+                    baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(r['time_add'], True), r['duration'], r['reason'])
+                    status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
                     status.append(baninfo)
                     list.append(status)
             cursor.moveNext()
@@ -373,8 +392,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def checkNewVersion(self):
         p = PluginUpdater(__version__, self)
-        self._updated = p.verifiy()
-        if self._updated: self.bot('New version available')
+        self._updated, ver = p.verifiy()
+        if self._updated:
+            self.bot('New version available')
+            if self._twitterPlugin:
+                self._twitterPlugin.post_update('IPDB has been updated to %s' % ver)
 
     def cmd_showqueue(self, data, client, cmd=None):
         if len(self._eventqueue) == 0:
@@ -400,8 +422,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7Missing data, try !help addnote')
             return False
         
-        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
-        status = self._buildEventInfo(self._EVENT_ADDNOTE, sclient, timeEdit)
+        status = self._buildEventInfo(self._EVENT_ADDNOTE, sclient, sclient.timeEdit)
         status.append(input[1])
         self._eventqueue.append(status)
         client.message('^7Done.')
@@ -420,8 +441,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7Invalid data, try !help delnote')
             return False
         
-        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
-        status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, timeEdit)
+        status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, sclient.timeEdit)
         self._eventqueue.append(status)
         client.message('^7Done.')
 
@@ -439,8 +459,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7Invalid data, try !help delnote')
             return False
         
-        timeEdit = datetime.datetime.fromtimestamp(sclient.timeEdit)
-        status = self._buildEventInfo(self._EVENT_UNBAN, sclient, timeEdit)
+        status = self._buildEventInfo(self._EVENT_UNBAN, sclient, sclient.timeEdit)
         self._eventqueue.append(status)
         client.message('^7Done.')
                                 
@@ -470,6 +489,7 @@ class PluginUpdater(object):
         socket.setdefaulttimeout(self._timeout)
         errorMessage = None
         updated = False
+        latestVersion = None
         try:
             self._parent.debug("Checking new version...")
             f = urllib2.urlopen(self._update_url)
@@ -495,7 +515,7 @@ class PluginUpdater(object):
             socket.setdefaulttimeout(original_timeout)
         if errorMessage:
             self._parent.warning(errorMessage)
-        return updated
+        return (updated, latestVersion)
     
     def _getPath(self, path):
         if path[0:3] == '@b3':
