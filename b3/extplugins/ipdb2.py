@@ -20,11 +20,10 @@
 __author__  = 'SGT'
 __version__ = '1.1.0'
 
-import b3, time, thread, threading, xmlrpclib, re
+import b3, time, threading, xmlrpclib, re
 import b3.events
 import b3.plugin
 import b3.cron
-from b3.functions import minutesStr
 import random, datetime
 
 try:
@@ -59,8 +58,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _autoUpdate = True
     _running = False
     _onlinePlayers = []
-    _skip = 100
     _banqueue = []
+    _updateCrontab = None
     
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
@@ -93,7 +92,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
         except:
-            self.warn('Unban event not available')
+            self.warning('Unban event not available')
         
         self.setupCron()
         self.updateName()
@@ -133,9 +132,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
         if self._banInfoDumpTime >= 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime, '*', '*', '*'))
+        if self._updateCrontab:
+            self.console.cron - self._updateCrontab
         if self._autoUpdate:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12', '*', '*', '*'))
-        
+            self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12', '*', '*', '*')
+            self.console.cron + self._updateCrontab
+
     def onLoadConfig(self):
         self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString())
         try:
@@ -160,10 +162,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             pass
         try:
             self._autoUpdate = self.config.getboolean('settings', 'enableautoupdate')
-        except:
-            pass
-        try:
-            self._skip = self.config.getboolean('settings', 'skip')
         except:
             pass
             
@@ -210,8 +208,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
         self._onlinePlayers.append(client)
         
-        if client.maxLevel < self._skip:
-            self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
+        self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         
         if self._updated:
             if client.maxLevel >= self._notifyUpdateLevel:
@@ -220,12 +217,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     b.start()                
         
     def onClientBanned(self, client):
+        self.debug('Client banned')
         self._banqueue.append(client)
             
     def onClientDisconnect(self, cid):
+        self.debug('Client disconnected')
         client = self.console.clients.getByCID(cid)
 
-        if client and client.maxLevel < self._skip:
+        if client:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
             
         try:
@@ -235,14 +234,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.error(e)
 
     def onClientUpdate(self, client):
-        if client.maxLevel < self._skip:
-            self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
+        self.debug('Client updated')
+        self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
 
     def onClientUnban(self, client):
+        self.debug('Client unbanned')
         timeEdit = datetime.datetime.fromtimestamp(client.timeEdit)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, timeEdit))
             
     def updateBanQueue(self):
+        self.debug('Update ban queue')
         while len(self._banqueue) > 0:
             client = self._banqueue.pop()
             lastBan = client.lastBan
@@ -273,6 +274,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.enable()
             
     def update(self):
+        self.debug('Check update')
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
@@ -282,6 +284,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     self.debug("Updating")
                     self._rpc_proxy.server.update(self._key, status)
                     del self._eventqueue[0:last]
+                    self._failureCount = 0
             except Exception, e:
                 self.error("Error updating ipdb. %s" % str(e))
                 self.increaseFail()
@@ -303,6 +306,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def increaseFail(self):
         self._failureCount += 1
+        self.debug('Update failed %d' % self._failureCount)
         if self._failureCount >= self._failureMax:
             self.disable()
             #next = (datetime.datetime.now() + datetime.timedelta(hours=4)).hour
@@ -362,6 +366,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def checkNewVersion(self):
         p = PluginUpdater(__version__, self)
         self._updated = p.verifiy()
+        if self._updated: self.bot('New version available')
 
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
@@ -442,9 +447,8 @@ class PluginUpdater(object):
     
     def __init__(self, current, plugin):
         self._currentVersion = current
-        #self._path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-        self._path = os.getcwd()
         self._parent = plugin
+        self._path = self._getPath('@b3/extplugins')
         
     def verifiy(self):
         import socket
@@ -460,7 +464,6 @@ class PluginUpdater(object):
             _lver = version.LooseVersion(latestVersion)
             _cver = version.LooseVersion(self._currentVersion)
             if _cver < _lver:
-                self._parent.bot("New version available")
                 self._doUpdate(list(_xml.getroot().find('files')))
                 updated = True
         except IOError, e:
@@ -480,10 +483,21 @@ class PluginUpdater(object):
             self._parent.warning(errorMessage)
         return updated
     
+    def _getPath(self, path):
+        if path[0:3] == '@b3':
+            path = "%s/%s" % (b3.getB3Path(), path[3:])
+        elif path[0:6] == '@conf/' or path[0:6] == '@conf\\':
+            path = "%s/%s" % (b3.getConfPath(), path[5:])
+        return os.path.normpath(os.path.expanduser(path))
+            
     def _doUpdate(self, files):
         for elem in files:
             temp = self._getFile(elem.text, elem.attrib['hash'])
-            fname = os.path.join(self._path,elem.attrib['dst'], elem.attrib['name'])
+            if elem.attrib.has_key('dst'):
+                dst = './%s' % elem.attrib['dst']
+            else:
+                dst = './'
+            fname = os.path.join(self._path, dst, elem.attrib['name'])
             if elem.attrib.has_key('conf') and elem.attrib['conf'] and os.path.exists(fname):
                 self._updateConfigFile(temp, fname)
             else:
