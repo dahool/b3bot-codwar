@@ -17,8 +17,10 @@
 # 
 # 20-10-2010 - 1.0.2
 # Escape texts 
+# 09-05-2011 - 1.0.3
+# Espace backslash
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import b3
@@ -70,5 +72,6 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         except:
             info = ''
         text = text.replace("""'""", """''""")
+        text = text.replace('\\','\\\\')
         cursor = self.console.storage.query(self._INSERT_QUERY % (text, client.id, self.console.time(), target, info))
         cursor.close()
