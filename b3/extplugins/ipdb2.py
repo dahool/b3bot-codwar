@@ -21,9 +21,12 @@
 # 2011-05-08 - SGT - 1.1.1
 # Send time in UTC
 # Use twitter if available
+# 2011-05-08 - SGT - 1.1.2
+# We need to keep a list of the players CID to use on the disconnect event
+# Allow to check for update only if autoudate is not enabled
 
 __author__  = 'SGT'
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -65,6 +68,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _onlinePlayers = []
     _banqueue = []
     _updateCrontab = None
+    
+    _clientCache = {}
     
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
@@ -144,9 +149,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime, '*', '*', '*'))
         if self._updateCrontab:
             self.console.cron - self._updateCrontab
-        if self._autoUpdate:
-            self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12', '*', '*', '*')
-            self.console.cron + self._updateCrontab
+
+        self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12', '*', '*', '*')
+        self.console.cron + self._updateCrontab
 
     def onLoadConfig(self):
         self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString())
@@ -231,6 +236,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             return
     
         self._onlinePlayers.append(client)
+        self._clientCache[client.cid] = client
         
         self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         
@@ -246,18 +252,19 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def onClientDisconnect(self, cid):
         self.debug('Client disconnected')
-        client = self.console.clients.getByCID(cid)
-
-        if client:
+        if self._clientCache.has_key(cid):
+            client = self._clientCache[cid]
+            del self._clientCache[cid]
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+            
+            try:
+                if client in self._onlinePlayers:            
+                    self._onlinePlayers.remove(client)
+            except Exception, e:
+                self.error(e)
+            
         else:
             self.debug('Not found cid %s' % cid)
-            
-        try:
-            if client in self._onlinePlayers:            
-                self._onlinePlayers.remove(client)
-        except Exception, e:
-            self.error(e)
 
     def onClientUpdate(self, client):
         self.debug('Client updated')
@@ -283,8 +290,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self._eventqueue.append(status)
                                             
     def notifyUpdate(self, client):
-        client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
-        client.setvar(self, 'ipdb_warn', True)        
+        if self._autoUpdate:
+            client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
+        else:
+            client.message('^7A new version of ^5IPDB ^7is available.')
+        client.setvar(self, 'ipdb_warn', True)
 
     def updateName(self):
         try:
@@ -392,11 +402,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def checkNewVersion(self):
         p = PluginUpdater(__version__, self)
-        self._updated, ver = p.verifiy()
+        self._updated, ver = p.verifiy(self._autoUpdate)
         if self._updated:
             self.bot('New version available')
             if self._twitterPlugin:
-                self._twitterPlugin.post_update('IPDB has been updated to %s' % ver)
+                self._twitterPlugin.post_update('IPDB %s is available.' % ver)
 
     def cmd_showqueue(self, data, client, cmd=None):
         if len(self._eventqueue) == 0:
@@ -483,7 +493,7 @@ class PluginUpdater(object):
         self._parent = plugin
         self._path = self._getPath('@b3/extplugins')
         
-    def verifiy(self):
+    def verifiy(self, doUpdate = True):
         import socket
         original_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(self._timeout)
@@ -498,7 +508,8 @@ class PluginUpdater(object):
             _lver = version.LooseVersion(latestVersion)
             _cver = version.LooseVersion(self._currentVersion)
             if _cver < _lver:
-                self._doUpdate(list(_xml.getroot().find('files')))
+                if doUpdate:
+                    self._doUpdate(list(_xml.getroot().find('files')))
                 updated = True
         except IOError, e:
             if hasattr(e, 'reason'):
