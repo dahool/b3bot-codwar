@@ -24,9 +24,11 @@
 # 2011-05-08 - SGT - 1.1.2
 # We need to keep a list of the players CID to use on the disconnect event
 # Allow to check for update only if autoudate is not enabled
+# 2011-05-10 - SGT - 1.1.4
+# Use alternative method if client is not found on disconnect
 
 __author__  = 'SGT'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -216,12 +218,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def validateOnlinePlayers(self):
         clients = self.console.clients.getList()
-        for client in self._onlinePlayers:
+        for client in self._onlinePlayers[:]:
             if client not in clients:
                 self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+                self._onlinePlayers.remove(client)
         
         if len(clients) == 0:
             # nobody here, lets send an empty list
+            # send first any item in the queue
+            if not self.update():
+                time.sleep(5)
             try:
                 self.debug("Sending empty list")
                 self._rpc_proxy.server.update(self._key, [])
@@ -265,7 +271,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self.error(e)
             
         else:
-            self.debug('Not found cid %s' % cid)
+            self.debug('Not found cid %s. Try alternative method' % cid)
+            self.validateOnlinePlayers()
 
     def onClientUpdate(self, client):
         self.debug('Client updated')
@@ -310,6 +317,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def update(self):
         self.debug('Check update')
+        resp = False
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
@@ -323,11 +331,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except Exception, e:
                 self.error("Error updating ipdb. %s" % str(e))
                 self.increaseFail()
+            else:
+                resp = True
             finally:
                 self._running = False
         else:
             self.debug("Already running")
-                    
+        return resp
+
     def enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
