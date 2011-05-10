@@ -92,6 +92,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._eventqueue = []
         self._banqueue = []
         self._onlinePlayers = []
+        self._clientCache = {}
         
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
@@ -401,6 +402,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.updateBanInfo(True)
 
     def checkNewVersion(self):
+        if self._updated:
+            return
         p = PluginUpdater(__version__, self)
         self._updated, ver = p.verifiy(self._autoUpdate)
         if self._updated:

@@ -400,7 +400,7 @@ class Parser(object):
         self.loadArbPlugins()
 
         self.game = b3.game.Game(self, self.gameName)
-        self.queue = Queue.Queue(15)    # event queue
+        self.queue = Queue.Queue(30)    # event queue
 
         # try to update the databasetables
         try:
@@ -895,7 +895,7 @@ class Parser(object):
             self._handlers[eventName] = []
         self._handlers[eventName].append(eventHandler)
 
-    def queueEvent(self, event, expire=10):
+    def queueEvent(self, event, expire=15):
         """Queue an event for processing"""
         if not hasattr(event, 'type'):
             return False

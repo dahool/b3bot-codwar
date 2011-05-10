@@ -57,7 +57,7 @@ class Rcon:
     socket = None
     queue = None
     console = None
-    socket_timeout = 0.30
+    socket_timeout = 0.80
     rconsendstring = '\377\377\377\377rcon "%s" %s\n'
     rconreplystring = '\377\377\377\377print\n'
     qserversendstring = '\377\377\377\377%s\n'
