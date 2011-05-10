@@ -26,7 +26,7 @@
 # Allow to check for update only if autoudate is not enabled
 
 __author__  = 'SGT'
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -331,9 +331,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
+        current_st = self._enabled
         self._enabled = True
         for ct in self._cronTab:
             self.console.cron + ct
+        if self._twitterPlugin and not current_st: # if it was disabled
+            self._twitterPlugin.post_update('IPDB back on business.')        
             
     def disable(self):
         self.debug('IPDB disabled')
