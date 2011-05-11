@@ -35,6 +35,8 @@
 # Remove unused methods
 # 03/20/2011 - SGT - 1.0.11
 # BAN event is raised every time the banned user connect. Workaround this.
+# 05/04/2011 - SGT - 1.0.12
+# Fix issue in ban event handling
 
 __version__ = '1.0.12'
 __author__  = 'SGT'
@@ -206,7 +208,7 @@ class TwityPlugin(b3.plugin.Plugin):
         self.debug("Processing ban event")
         c = event.client
         lastBan = c.lastBan
-        if lastBan and lastBan.adminId and lastBan.timeAdd >= client.timeEdit:
+        if lastBan and lastBan.adminId and lastBan.timeAdd >= c.timeEdit:
             self.debug("Banned by admin %s" % lastBan.adminId)
             admin = self._adminPlugin.findClientPrompt('@%s' % str(lastBan.adminId), None)
             s = '[%d] %s was banned by %s for %s because %s' % (c.id,
