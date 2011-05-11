@@ -46,6 +46,10 @@ except ImportError:
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
     _url = 'https://ipdburt.appspot.com/xmlrpc2'
+
+    _twitterPlugin = None
+    _adminPlugin = None
+    
     _cronTab    = []
     _banCronTab = None
     _rpc_proxy  = None
@@ -147,13 +151,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/30'))
         if self._banInfoInterval > 0:
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval, '*', '*', '*'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval))
         if self._banInfoDumpTime >= 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime, '*', '*', '*'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime))
         if self._updateCrontab:
             self.console.cron - self._updateCrontab
 
-        self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12', '*', '*', '*')
+        self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12')
         self.console.cron + self._updateCrontab
 
     def onLoadConfig(self):
@@ -333,8 +337,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self.increaseFail()
             else:
                 resp = True
-            finally:
-                self._running = False
+            self._running = False
         else:
             self.debug("Already running")
         return resp
@@ -360,8 +363,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug('Update failed %d' % self._failureCount)
         if self._failureCount >= self._failureMax:
             self.disable()
-            #next = (datetime.datetime.now() + datetime.timedelta(hours=4)).hour
-            #self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute=0, hour=next)
             self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/30')
             self._failureCount = 0
             if self._twitterPlugin:
@@ -539,8 +540,7 @@ class PluginUpdater(object):
             errorMessage = "%s" % e 
         except Exception, e:
             errorMessage = "%s" % e
-        finally:
-            socket.setdefaulttimeout(original_timeout)
+        socket.setdefaulttimeout(original_timeout)
         if errorMessage:
             self._parent.warning(errorMessage)
         return (updated, latestVersion)
