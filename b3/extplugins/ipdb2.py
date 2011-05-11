@@ -28,7 +28,7 @@
 # Use alternative method if client is not found on disconnect
 
 __author__  = 'SGT'
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -342,6 +342,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.debug("Already running")
         return resp
 
+    def doInitialUpdate(self):
+        clients = self.console.clients.getList()
+        for client in clients:
+            self._onlinePlayers.append(client)
+            self._clientCache[client.cid] = client
+            self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
+        self.update()
+
     def enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
@@ -351,7 +359,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.console.cron + ct
         if self._twitterPlugin and not current_st: # if it was disabled
             self._twitterPlugin.post_update('IPDB back on business.')        
-            
+        self.doInitialUpdate()
+        
     def disable(self):
         self.debug('IPDB disabled')
         self._enabled = False
