@@ -3,4 +3,18 @@
         <set name="rate">2</set>
         <set name="ads">/local/codwar/q3a/q3ut4/ads1.txt</set>
     </settings>
+	<settings name="newsfeed">
+		<!--
+			you can include newsitems in your adds by setting the section below
+			you can add feeditems in the adds like this:
+			@feed   (will pick the next newsitem each time it is included in the rotation,
+               rotating until 'items' is reached and then start over.)
+			@feed 0 (will pick the latest newsitem available from the feed and add it in the rotation)
+			@feed 1 (will pick the second latest item in line)
+			etc.
+		-->
+		<set name="url"></set>
+		<set name="items">5</set>
+		<set name="pretext">News: </set>
+	</settings>
 </configuration>

@@ -14,15 +14,19 @@
         <set name="ut4_uptown">8</set>
         <set name="ut4_prague">6</set>
         <set name="ut4_abbey">12</set>
-        <set name="ut4_austria">12</set>
+        <set name="ut4_austria">10</set>
         <set name="ut4_boxstore_rc2">10</set>
-        <set name="ut4_bar313">8</set>
+        <set name="ut4_bar313">6</set>
         <set name="ut4_algiers">20</set>
         <set name="ut4_aeropuerto">3</set>
         <set name="ut4_elgin">5</set>
         <set name="ut4_kingdom">8</set>
-        <set name="ut4_sanc">4</set>
+        <set name="ut4_sanc">3</set>
         <set name="ut4_imd2_b1">7</set>
+        <set name="ut4_subway">4</set>
+		<set name="ut4_harbortown">4</set>
+		<set name="ut4_orbital">7</set>
+		<set name="ut4_riyadh">5</set>
 	</settings>
 	
     <settings name="messages">

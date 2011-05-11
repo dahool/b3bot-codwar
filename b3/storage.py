@@ -52,7 +52,7 @@
 #   Added data column to penalties table
 
 __author__  = 'ThorN'
-__version__ = '1.8a'
+__version__ = '1.10.0a'
 
 import re, time, traceback, sys, thread, os
 
@@ -167,7 +167,14 @@ class DatabaseStorage(Storage):
         if protocol == 'mysql':
             try:
                 import MySQLdb
-                return MySQLdb.connect(host=self.dsnDict['host'], port=self.dsnDict['port'], user=self.dsnDict['user'], passwd=self.dsnDict['password'], db=self.dsnDict['path'][1:]) 
+                return MySQLdb.connect(
+                                       host=self.dsnDict['host'], 
+                                       port=self.dsnDict['port'], 
+                                       user=self.dsnDict['user'], 
+                                       passwd=self.dsnDict['password'], 
+                                       db=self.dsnDict['path'][1:], 
+                                       charset = "utf8", 
+                                       use_unicode = True) 
             except ImportError, err:
                 self.console.critical("%s. You need to install python-mysqldb. Look for 'dependencies' in B3 documentation.",err)
         elif protocol == 'sqlite':
@@ -235,11 +242,11 @@ class DatabaseStorage(Storage):
         else:
             return False
 
-    def _query(self, query):
+    def _query(self, query, bindata=None):
         self._lock.acquire()
         try:
             cursor = self.db.cursor()
-            cursor.execute(query)
+            cursor.execute(query, bindata)
             c = DatabaseStorage.Cursor(cursor, self.db)
         finally:
             self._lock.release()
@@ -259,7 +266,7 @@ class DatabaseStorage(Storage):
                 sql_statements = sql_text.split(';')
                 for s in sql_statements:
                     try:
-                        self.query(s, silent=True)
+                        self.query(s)
                     except:
                         pass
             else:
@@ -268,11 +275,11 @@ class DatabaseStorage(Storage):
         return None
 
 
-    def query(self, query, silent=False):
+    def query(self, query, bindata=None):
         # use existing connection or create a new one
         if self.db or self.connect():
             try:
-                return self._query(query)
+                return self._query(query, bindata)
             except Exception, e:
                 # (2013, 'Lost connection to MySQL server during query')
                 # (2006, 'MySQL server has gone away')
@@ -284,15 +291,13 @@ class DatabaseStorage(Storage):
                     if self.connect():
                         try:
                             # retry query
-                            return self._query(query)
+                            return self._query(query, bindata)
                         except Exception, e:
                             # fall through to log error message
                             pass
 
-                if silent:
-                    raise Exception(e[0], e[1])
                 else:
-                    self.console.error('Query failed - %s: %s' % (type(e), e))
+                    raise e
 
         return None
         

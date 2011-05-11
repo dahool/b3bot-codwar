@@ -47,7 +47,7 @@
 # Converted to use new event handlers
 
 __author__    = 'ThorN'
-__version__ = '1.4.4-SGT'
+__version__ = '1.4.8a'
 
 import b3, time, os, StringIO
 import b3.plugin
@@ -73,7 +73,7 @@ class StatusPlugin(b3.plugin.Plugin):
                 self._ftpinfo = functions.splitDSN(self.config.get('settings','output_file'))
                 self._ftpstatus = True
         else:        
-                self._outputFile = os.path.expanduser(self.config.get('settings', 'output_file'))
+                self._outputFile = self.config.getpath('settings', 'output_file')
                 
         self._tkPlugin = self.console.getPlugin('tk')
         self._interval = self.config.getint('settings', 'interval')
@@ -176,8 +176,12 @@ class StatusPlugin(b3.plugin.Plugin):
             rounds = c.rounds
         if c.roundTime:
             roundTime = c.roundTime()
-        if c.mapTime:
-            mapTime = c.mapTime()
+        try:
+            # something maptime is None
+            if c.mapTime:
+                mapTime = c.mapTime()
+        except:
+            mapTime = ''
         game = xml.createElement("Game")
         game.setAttribute("Name", str(gamename))
         game.setAttribute("Type", str(gametype))
@@ -209,11 +213,10 @@ class StatusPlugin(b3.plugin.Plugin):
                 self.error('Error: inserting svars. sqlqry=%s' % (sql))
 
         # SGT - Scores
+        scores = None
         if len(clients)>0:
             if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
                 scores = self.console.getCvar( 'g_teamScores' )
-        else:
-            scores = None
         if scores:
             scores = scores.getString()
         else:
@@ -260,11 +263,11 @@ class StatusPlugin(b3.plugin.Plugin):
 
             try:
                 client = xml.createElement("Client")
-                client.setAttribute("Name", str(sanitizeMe(c.name)))
-                client.setAttribute("ColorName", str(sanitizeMe(c.exactName)))
+                client.setAttribute("Name", sanitizeMe(c.name))
+                client.setAttribute("ColorName", sanitizeMe(c.exactName))
                 client.setAttribute("DBID", str(c.id))
                 client.setAttribute("Connections", str(c.connections))
-                client.setAttribute("CID", str(c.cid))
+                client.setAttribute("CID", c.cid)
                 client.setAttribute("Level", str(_level))
                 if c.guid:
                     client.setAttribute("GUID", c.guid)
@@ -306,8 +309,8 @@ class StatusPlugin(b3.plugin.Plugin):
 
                 for k,v in c.data.iteritems():
                     data = xml.createElement("Data")
-                    data.setAttribute("Name", str(k))
-                    data.setAttribute("Value", str(sanitizeMe(v)))
+                    data.setAttribute("Name", "%s" % k)
+                    data.setAttribute("Value", sanitizeMe(v))
                     client.appendChild(data)
                         
                 if self._tkPlugin:
@@ -332,7 +335,7 @@ class StatusPlugin(b3.plugin.Plugin):
 
         # --- End Clients section
 
-        self.writeXML(xml.toprettyxml(indent="        "))
+        self.writeXML(xml.toprettyxml(encoding="UTF-8", indent="        "))
 
     def writeXML(self, xml):
         if self._ftpstatus == True:

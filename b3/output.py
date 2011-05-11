@@ -25,7 +25,7 @@
 
 
 __author__  = 'ThorN'
-__version__ = '1.5.0'
+__version__ = '1.6.1a'
 
 import sys
 import logging
@@ -95,14 +95,14 @@ class stdoutLogger:
         self.logger = logger
 
     def write(self, msg):
-        self.logger.info('STDOUT %s' % msg)
+        self.logger.info('STDOUT %r' % msg)
         
 class stderrLogger:
     def __init__(self, logger):
         self.logger = logger
 
     def write(self, msg):
-        self.logger.error('STDERR %s' % msg)
+        self.logger.error('STDERR %r' % msg)
 
 #--------------------------------------------------------------------------------------------------
 logging.setLoggerClass(OutputHandler)
@@ -118,28 +118,30 @@ logging.setLoggerClass(OutputHandler)
 
 __output = None
 
-def getInstance(logfile='b3.log', loglevel=21, log2console=False, log2both=False):
+def getInstance(logfile='b3.log', loglevel=21, log2console=False):
     """NOTE: log2console is mostly useful for developers. This will make the bot
-    log everything to stderr instead of into the usual logfile.
-    log2both will write to both the logfile and also stderr."""
+    log everything to stderr additionally of into the usual logfile.
+    """
     global __output
 
     if __output == None:
         __output = logging.getLogger('output')
 
-        if log2console:
-            handler = logging.StreamHandler()
-        else:
-            if log2both:
-                handler2 = logging.StreamHandler()
-            handler = logging.FileHandler(logfile)
+        handler = logging.FileHandler(logfile, encoding="UTF-8")
         handler.setFormatter(logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s', '%y%m%d %H:%M:%S'))
-        
         __output.addHandler(handler)
-        if log2both:
+        
+        if log2console:
+            consoleFormatter = logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)r', '%M:%S')
+            handler2 = logging.StreamHandler(sys.stdout)
+            handler2.setFormatter(consoleFormatter)
             __output.addHandler(handler2)
+            handlerError = logging.StreamHandler(sys.stderr)
+            handlerError.setFormatter(consoleFormatter)
+            handlerError.setLevel(logging.ERROR)
+            __output.addHandler(handlerError)
+           
         __output.setLevel(loglevel)
-    
     return __output
 
 if __name__ == '__main__':

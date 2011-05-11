@@ -18,6 +18,11 @@
 #
 #
 # CHANGELOG
+#   2011/04/20 - 1.24.1 - Courgette
+#   * fix auto detection of locale timezone offset
+#   2011/03/30 - 1.24 - Courgette
+#   * remove output option log2both and changed the behavior of log2console so
+#     that the console log steam is not replacing the stream going to the log file
 #   2011/02/03 - 1.23 - Bravo17
 #   * allow local log to be appended to instead of overwritten for games with remote logs
 #   2010/11/25 - 1.22 - Courgette
@@ -105,7 +110,7 @@
 #    Added warning, info, exception, and critical log handlers
 
 __author__  = 'ThorN, Courgette, xlr8or, Bakes'
-__version__ = '1.22'
+__version__ = '1.24.1'
 
 # system modules
 import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket
@@ -120,7 +125,7 @@ import b3.cron
 import b3.parsers.q3a.rcon
 import b3.clients
 import b3.functions
-from b3.functions import main_is_frozen, getModule
+from b3.functions import main_is_frozen, getModule, executeSql
 
 
 class Parser(object):
@@ -238,8 +243,7 @@ class Parser(object):
         # set up logging
         logfile = self.config.getpath('b3', 'logfile')
         log2console = self.config.has_option('devmode', 'log2console') and self.config.getboolean('devmode', 'log2console')
-        log2both = self.config.has_option('devmode', 'log2both') and self.config.getboolean('devmode', 'log2both')
-        self.log = b3.output.getInstance(logfile, self.config.getint('b3', 'log_level'), log2console, log2both)
+        self.log = b3.output.getInstance(logfile, self.config.getint('b3', 'log_level'), log2console)
 
         # save screen output to self.screen
         self.screen = sys.stdout
@@ -277,6 +281,7 @@ class Parser(object):
 
         self.bot('%s', b3.getB3versionString())
         self.bot('Python: %s', sys.version)
+        self.bot('Default encoding: %s', sys.getdefaultencoding())
         self.bot('Starting %s v%s for server %s:%s', self.__class__.__name__, getattr(getModule(self.__module__), '__version__', ' Unknown'), self._rconIp, self._port)
 
         # get events
@@ -395,7 +400,22 @@ class Parser(object):
         self.loadArbPlugins()
 
         self.game = b3.game.Game(self, self.gameName)
-        self.queue = Queue.Queue(15)    # event queue
+        self.queue = Queue.Queue(30)    # event queue
+
+        # try to update the databasetables
+        try:
+            _sqlfiles = ['@b3/sql/b3-update.sql', 'b3/sql/b3-update.sql', 'sql/b3-update.sql']
+            _sqlc = 0
+            _sqlresult = 'notfound'
+            while _sqlresult == 'notfound' and _sqlc < len(_sqlfiles):
+                self.debug('Checking: %s' % _sqlfiles[_sqlc] )
+                _sqlresult = executeSql(self.storage.db, _sqlfiles[_sqlc])
+                _sqlc += 1
+            self.debug('Updating database tables finished')
+        except Exception:
+            # if we fail, do nothing
+            self.error('Updating database tables failed')
+            pass
 
         atexit.register(self.shutdown)
 
@@ -408,7 +428,7 @@ class Parser(object):
     def start(self):
         """Start B3"""
 
-        self.onStartup()
+        self.startup()
         self.startPlugins()
         thread.start_new_thread(self.handleEvents, ())
 
@@ -452,18 +472,10 @@ class Parser(object):
 
     def startup(self):
         """\
-        Depreciated. Use onStartup().
+        Called after the parser is created before run(). Overwrite this
+        for anything you need to initialize you parser with.
         """
         pass
-
-    def onStartup(self):
-        """\
-        Called after the plugin is created before it is started. Overwrite this
-        for anything you need to initialize you plugin with.
-        """
-
-        # support backwards compatability
-        self.startup()
 
     def pause(self):
         """Pause B3 log parsing"""
@@ -724,7 +736,7 @@ class Parser(object):
         for obj in args:
             if obj is None:
                 continue
-            if type(obj).__name__ == 'str':
+            if type(obj).__name__ in ('str','unicode'):
                 if variables.has_key(obj) is False:
                     variables[obj] = obj
             else:
@@ -736,7 +748,7 @@ class Parser(object):
             #self.debug('Type of kwarg %s: %s' % (key, type(obj).__name__))
             if obj is None:
                 continue
-            if type(obj).__name__ == 'str':
+            if type(obj).__name__ in ('str','unicode'):
                 if variables.has_key(key) is False:
                     variables[key] = obj
             #elif type(obj).__name__ == 'instance':
@@ -764,47 +776,35 @@ class Parser(object):
 
         return cmd % kwargs
         
+    def getTzOffsetFromName(self, tzName):
+        try:
+            tzOffset = b3.timezones.timezones[tzName] * 3600
+        except KeyError:
+            try:
+                self.warning("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
+                tzOffset = time.timezone
+                if tzOffset < 0:
+                    tzName = 'UTC%s' % (tzOffset/3600)
+                else:
+                    tzName = 'UTC+%s' % (tzOffset/3600)
+                self.info("using system offset [%s]", tzOffset)
+            except KeyError:
+                self.error("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
+                tzName = 'UTC'
+                tzOffset = 0
+        return (tzOffset, tzName)
+
     def formatTime(self, gmttime, tzName=None):
         """Return a time string formated to local time in the b3 config time_format"""
-
         if tzName:
             tzName = str(tzName).strip().upper()
-
             try:
                 tzOffset = float(tzName) * 3600
             except ValueError:
-                try:
-                    tzOffset = b3.timezones.timezones[tzName] * 3600
-                except KeyError:
-                    try:
-                        if time.daylight == 0:
-                            tzName = time.tzname[0]
-                        else:
-                            tzName = time.tzname[1]
-                        self.warning("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
-                        self.info("falling back on system default timezone [%s]", tzName)
-                        tzOffset = b3.timezones.timezones[tzName] * 3600
-                    except KeyError:
-                        self.error("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
-                        tzName = 'UTC'
-                        tzOffset = 0
+                tzOffset, tzName = self.getTzOffsetFromName(tzName)
         else:
             tzName = self.config.get('b3', 'time_zone').upper()
-            try:
-                tzOffset = b3.timezones.timezones[tzName] * 3600
-            except KeyError:
-                try:
-                    if time.daylight == 0:
-                        tzName = time.tzname[0]
-                    else:
-                        tzName = time.tzname[1]
-                    self.warning("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
-                    self.info("falling back on system default timezone [%s]", tzName)
-                    tzOffset = b3.timezones.timezones[tzName] * 3600
-                except KeyError:
-                    self.error("Unknown timezone name [%s]. Valid timezone codes can be found on http://wiki.bigbrotherbot.net/doku.php/usage:available_timezones" % tzName)
-                    tzName = 'UTC'
-                    tzOffset = 0
+            tzOffset, tzName = self.getTzOffsetFromName(tzName)
 
         timeFormat = self.config.get('b3', 'time_format').replace('%Z', tzName).replace('%z', tzName)
         self.debug('formatting time with timezone [%s], tzOffset : %s' % (tzName, tzOffset))
@@ -895,7 +895,7 @@ class Parser(object):
             self._handlers[eventName] = []
         self._handlers[eventName].append(eventHandler)
 
-    def queueEvent(self, event, expire=10):
+    def queueEvent(self, event, expire=15):
         """Queue an event for processing"""
         if not hasattr(event, 'type'):
             return False
@@ -1081,10 +1081,8 @@ class Parser(object):
     def time(self):
         """Return the current time in GMT/UTC"""
         if self.replay:
-            try:
-                return int(self.logTime)
-            except:
-                pass
+            return self.logTime
+
         return int(time.time())
 
     def _get_cron(self):

@@ -22,11 +22,18 @@
 # 08/11/2010 - 1.3.1 - GrosBedo - vars2printf is now more robust against empty strings
 # 01/12/2010 - 1.3.2 - Courgette - checkUpdate now uses a custom short timeout to
 #   prevent blocking the bot when the B3 server is hanging
+# 17/04/2011 - 1.3.3 - Courgette - make sanitizeMe unicode compliant
 
 __author__    = 'ThorN, xlr8or'
-__version__   = '1.3.2'
+__version__   = '1.3.3'
 
-import re, sys, imp, string, urllib2
+import b3
+import re
+import os
+import sys
+import imp
+import string
+import urllib2
 from lib.elementtree import ElementTree
 from distutils import version
 
@@ -148,10 +155,17 @@ def splitDSN(url):
 def confirm(client):
     msg = 'No confirmation...'
     try:
-        f = urllib2.urlopen('http://www.bigbrotherbot.net/confirm.php?ip=%s' %client.ip)
+        #first test again known guids
+        f = urllib2.urlopen('http://www.bigbrotherbot.net/confirm.php?uid=%s' %client.guid)
         response = f.read()
         if not response == 'Error' and not response == 'False':
             msg = '%s is confirmed to be %s!' %(client.name, response)
+        else:
+            #if it fails, try ip (must be static)
+            f = urllib2.urlopen('http://www.bigbrotherbot.net/confirm.php?ip=%s' %client.ip)
+            response = f.read()
+            if not response == 'Error' and not response == 'False':
+                msg = '%s is confirmed to be %s!' %(client.name, response)
     except:
         pass
     return msg
@@ -289,9 +303,34 @@ def fuzzyGuidMatch(a, b):
 
 #--------------------------------------------------------------------------------------------------
 def sanitizeMe(s):
-    sanitized = re.sub(r'[\x00-\x1F]|[\x7F-\xff]', '?', str(s))
+    sanitized = re.sub(r'[\x00-\x1F]|[\x7F-\xff]', '?', s)
     return sanitized
 
+#--------------------------------------------------------------------------------------------------
+## @todo see if functions.executeSQL() and storage.DatabaseStorage.queryFromFile() can be combined.
+def executeSql(db, file):
+    """This method executes an external sql file on the current database
+    A similar function can be found in storage.DatabaseStorage.queryFromFile()
+    This one returns if a file is not found.
+    """
+    sqlFile = b3.getAbsolutePath(file)
+    if os.path.exists(sqlFile):
+        try:
+            f = open(sqlFile, 'r')
+        except Exception:
+            return 'couldnotopen'
+        sql_text = f.read()
+        f.close()
+        sql_statements = sql_text.split(';')
+        for s in sql_statements:
+            try:
+                db.query(s)
+            except Exception:
+                pass
+    else:
+        return 'notfound'
+    return 'success'
+#--------------------------------------------------------------------------------------------------
 
 
 if __name__ == '__main__':

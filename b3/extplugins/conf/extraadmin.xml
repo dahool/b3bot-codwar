@@ -25,6 +25,7 @@
       <set name="who">1</set>
       <set name="clientinfo-cinfo">40</set>
       <set name="aliases-alias">20</set>
+      <set name="register-reg">40</set>
     </settings>
 
     <settings name="maprotation">

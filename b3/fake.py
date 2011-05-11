@@ -206,9 +206,9 @@ class FakeConsole(b3.parser.Parser):
             self.write(self.getCommand('kick', cid=client, reason=reason))
             return
         elif admin:
-            reason = self.getMessage('kicked_by', client.exactName, admin.exactName, reason)
+            reason = self.getMessage('kicked_by', self.getMessageVariables(client=client, reason=reason, admin=admin))
         else:
-            reason = self.getMessage('kicked', client.exactName, reason)
+            reason = self.getMessage('kicked', self.getMessageVariables(client=client, reason=reason))
 
         if self.PunkBuster:
             self.PunkBuster.kick(client, 0.5, reason)
@@ -373,14 +373,14 @@ class FakeStorage(object):
         G = b3.clients.Group()
         G.id = 2
         G.name = 'Regular'
-        G.keyword = 'regular'
+        G.keyword = 'reg'
         G.level = 2
         self._groups.append(G)
         
         G = b3.clients.Group()
         G.id = 8
         G.name = 'Moderator'
-        G.keyword = 'moderator'
+        G.keyword = 'mod'
         G.level = 20
         self._groups.append(G)
         
@@ -389,6 +389,20 @@ class FakeStorage(object):
         G.name = 'Admin'
         G.keyword = 'admin'
         G.level = 40
+        self._groups.append(G)
+        
+        G = b3.clients.Group()
+        G.id = 32
+        G.name = 'Full admin'
+        G.keyword = 'fulladmin'
+        G.level = 60
+        self._groups.append(G)
+        
+        G = b3.clients.Group()
+        G.id = 64
+        G.name = 'Senior Admin'
+        G.keyword = 'senioradmin'
+        G.level = 80
         self._groups.append(G)
         
         G = b3.clients.Group()
@@ -413,6 +427,11 @@ class FakeStorage(object):
         return self._client_id_autoincrement
     def getGroups(self):
         return self._groups
+    def getGroup(self, group):
+        for g in self._groups:
+            if group.keyword == g.keyword:
+                return g
+        raise KeyError, 'No group matching keyword %s' % group.keyword
     def shutdown(self):
         pass
     def status(self):
@@ -425,7 +444,7 @@ class FakeStorage(object):
     def numPenalties(self, client, type='Ban'):
         match = [k for k, v in self._penalties.iteritems() if v.clientId == client.id and v.type == type]
         return len(match)
-    def query(self, sql):
+    def query(self, sql, data=None):
         return self.Cursor()
     
 class FakeClient(b3.clients.Client):

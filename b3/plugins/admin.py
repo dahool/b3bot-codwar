@@ -80,7 +80,7 @@
 #    Added data field to warnClient(), warnKick(), and checkWarnKick()
 #
 
-__version__ = '1.9.1'
+__version__ = '1.10.2a'
 __author__  = 'ThorN, xlr8or, Courgette'
 
 import b3, string, re, time, threading, sys, traceback, thread, random
@@ -1799,7 +1799,7 @@ class AdminPlugin(b3.plugin.Plugin):
 
     def cmd_spam(self, data, client=None, cmd=None):
         """\
-        <name> <message> - spam a predefined message
+        <message> - spam a predefined message
         """
         m = re.match('^([^ ]{2,})$', data)
         if not m:

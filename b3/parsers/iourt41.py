@@ -118,11 +118,14 @@
 #    * fix CNCT ping error in getPlayersPings
 #    * fix incorrect game type for ffa
 #    * move getMapList after game initialization
+# v1.7.16b - 04/05/2010 - SGT
+#    * try to fix issue with OnSay when something like this come and the match could find the name group
+#    say: 7 -crespino-:
 #
 
 
 __author__  = 'xlr8or'
-__version__ = '1.7.15'
+__version__ = '1.7.16b'
 
 
 from b3.parsers.q3a.abstractParser import AbstractParser
@@ -194,7 +197,7 @@ class Iourt41Parser(AbstractParser):
         #15:37 say: 9 .:MS-T:.BstPL: this name is quite a challenge
         #2:28 sayteam: 12 New_UrT_Player_v4.1: woekele
         #16:33 Flag: 2 0: team_CTF_redflag
-        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s+(?P<text>.*))$', re.IGNORECASE),
+        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s*(?P<text>.*))$', re.IGNORECASE),
 
         #15:42 Flag Return: RED
         #15:42 Flag Return: BLUE
@@ -287,10 +290,9 @@ class Iourt41Parser(AbstractParser):
         self.Events.createEvent('EVT_GAME_FLAG_RETURNED', 'Flag returned')
         self.Events.createEvent('EVT_CLIENT_GEAR_CHANGE', 'Client gear change')
         self.Events.createEvent('EVT_SURVIVOR_WIN', 'Survivor Winner')
-        self.Events.createEvent('EVT_CLIENT_UNBAN', 'Client Unbanned')
 
         # add the world client
-        self.clients.newClient(-1, guid='WORLD', name='World', hide=True, pbid='WORLD')
+        self.clients.newClient('-1', guid='WORLD', name='World', hide=True, pbid='WORLD')
 
         # PunkBuster for iourt is not supported!
         #if not self.config.has_option('server', 'punkbuster') or self.config.getboolean('server', 'punkbuster'):
@@ -977,6 +979,8 @@ class Iourt41Parser(AbstractParser):
         self.game.mapEnd()
         # self.clients.sync()
         # self.debug('Synchronizing client info')
+        # set data to true to differentiaty from the EXIT event sent by abstract
+        data = True
         self._maplist = None # when UrT server reloads, newly uploaded maps get available: force refresh
         return b3.events.Event(b3.events.EVT_GAME_EXIT, data)
 

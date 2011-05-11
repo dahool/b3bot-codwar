@@ -135,6 +135,11 @@
     <plugin>spamcontrol</plugin>
     <plugin>follow</plugin>
     <plugin>flagstats</plugin>
+    <plugin>objective</plugin>
+    <plugin>autoslap</plugin>
+    <plugin>balancer</plugin>
+    <plugin>knifer</plugin>
+    <plugin>nader</plugin>
   </pamatch_plugins_disable>
 
   <!-- BOTSUPPORT IS VERY UNSTABLE! IT MAY CRASH YOUR SERVER PLENTY! -->
