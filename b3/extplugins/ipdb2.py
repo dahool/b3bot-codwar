@@ -208,6 +208,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return hash('%s%s' % (text, self._key)).hexdigest()
         
     def _buildEventInfo(self, event, client, timeEdit = None):
+        self.verbose('Queued event %s for %s' % (event, client.name))
         guid = self._hash(client.guid)
         if not timeEdit:
             timeEdit = datetime.datetime.utcnow()
@@ -221,6 +222,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return datetime.datetime.fromtimestamp(time.gmtime(tm))
     
     def validateOnlinePlayers(self):
+        self.debug('Check online players')
         clients = self.console.clients.getList()
         for client in self._onlinePlayers[:]:
             if client not in clients:
@@ -246,6 +248,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             not client.connected:
             return
     
+        self.debug('Client connected: %s' % client.name)    
         self._onlinePlayers.append(client)
         self._clientCache[client.cid] = client
         
@@ -258,11 +261,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     b.start()                
         
     def onClientBanned(self, client):
-        self.debug('Client banned')
+        self.debug('Client banned: %s' % client.name)
         self._banqueue.append(client)
             
     def onClientDisconnect(self, cid):
-        self.debug('Client disconnected')
+        self.debug('Client disconnected: %s' % cid)
         if self._clientCache.has_key(cid):
             client = self._clientCache[cid]
             del self._clientCache[cid]
@@ -279,11 +282,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.validateOnlinePlayers()
 
     def onClientUpdate(self, client):
-        self.debug('Client updated')
+        self.debug('Client updated %s' % client.name)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
 
     def onClientUnban(self, client):
-        self.debug('Client unbanned')
+        self.debug('Client unbanned %s' % client.name)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
             
     def updateBanQueue(self):
@@ -302,6 +305,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self._eventqueue.append(status)
                                             
     def notifyUpdate(self, client):
+        self.verbose('Notify update')
         if self._autoUpdate:
             client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
         else:
@@ -320,7 +324,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.enable()
             
     def update(self):
-        self.debug('Check update')
+        self.debug('Update')
         resp = False
         if not self._running:
             self._running = True
@@ -343,6 +347,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return resp
 
     def doInitialUpdate(self):
+        self.debug('Do initial update')
         clients = self.console.clients.getList()
         for client in clients:
             self._onlinePlayers.append(client)
