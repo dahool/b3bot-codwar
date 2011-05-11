@@ -17,6 +17,14 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA    02110-1301    USA
 #
 # CHANGELOG
+# 25/04/2011 - 1.4.8 - Courgette
+# * in config file, settings/output_file can now use shortcuts such as @b3 and @conf
+# 17/04/2011 - 1.4.7 - Courgette
+# * XML file generated is now using UTF-8 encoding
+# 17/04/2011 - 1.4.6 - Courgette
+# * unicode compliant
+# 30/03/2011 - 1.4.5 - SGT
+# * bugfix camelCasing timeLimit and fragLimit
 # 06/01/2011 - 1.4.4 - Gammelbob
 # * additionally stores current svars and clients in database
 # 13/08/2010 - 1.4.3 - xlr8or

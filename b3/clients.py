@@ -17,6 +17,14 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    08/04/2011 - 1.3.5 - Courgette
+#    * make sure Clients.empty() does not delete hidden clients
+#    08/04/2011 - 1.3.4 - Courgette
+#    * changes to allow cid to be a unicode string
+#    30/03/2011 - 1.3.3 - Courgette
+#    * newClient() now returns the created client object
+#    26/03/2011 - 1.3.2 - Courgette
+#    * fix bug on Client.__init__()
 #    12/11/2010 - 1.3.1 - Courgette
 #    * harden _set_name for cases where console is not set
 #    01/11/2010 - 1.3.0 - Courgette

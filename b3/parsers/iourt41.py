@@ -118,14 +118,17 @@
 #    * fix CNCT ping error in getPlayersPings
 #    * fix incorrect game type for ffa
 #    * move getMapList after game initialization
+# v1.7.16 - 09/04/2011 - Courgette
+#    * reflect that cid are not converted to int anymore in the clients module
+# v1.7.17 - 03/05/2011 - Courgette
+#     * reflect changes in inflictCustomPenalty method signature
 # v1.7.16b - 04/05/2010 - SGT
 #    * try to fix issue with OnSay when something like this come and the match could find the name group
 #    say: 7 -crespino-:
 #
 
-
 __author__  = 'xlr8or'
-__version__ = '1.7.16b'
+__version__ = '1.7.17b'
 
 
 from b3.parsers.q3a.abstractParser import AbstractParser
@@ -464,30 +467,7 @@ class Iourt41Parser(AbstractParser):
         if len(lines):
             self.writelines(lines)
 
-    def inflictCustomPenalty(self, type, **kwargs):
-
-        client = None
-        if kwargs.has_key('client'):
-            client = kwargs['client']
-
-        reason = None
-        if kwargs.has_key('reason'):
-            reason = kwargs['reason']
-
-        duration = None
-        if kwargs.has_key('duration'):
-            duration = kwargs['duration']
-
-#        admin = None
-#        if kwargs.has_key('admin'):
-#            admin = kwargs['admin']
-#
-#        data = None
-#        if kwargs.has_key('data'):
-#            data = kwargs['data']
-
-
-
+    def inflictCustomPenalty(self, type, client, reason=None, duration=None, admin=None, data=None):
         if type == 'slap' and client:
             cmd = self.getCommand('slap', cid=client.cid)
             self.write(cmd)
