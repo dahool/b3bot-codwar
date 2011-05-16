@@ -29,9 +29,11 @@
 # 2011-05-12 - SGT - 1.1.6
 # Send all dates as timestamp
 # Fix issue in baninfo dump
+# 2011-05-16 - SGT - 1.1.7
+# Fix error no autoenabling when disabled
 
 __author__  = 'SGT'
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -64,7 +66,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _banInfoInterval = 2
     _delta = None
     _failureCount = 0
-    _failureMax = 20
+    _failureMax = 50
     _eventqueue = []
     _banInfoDumpTime = 7
     #_clientInfoDumpTime = 7
@@ -264,17 +266,28 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.verbose('Queued event %s for %s' % (event, client.name))
         guid = self._hash(client.guid)
         if not timeEdit:
-            timeEdit = int(time.mktime(time.gmtime()))
+            timeEdit = int(time.time())
         else:
             try:
-                timeEdit = self._gmTime(timeEdit)
+                timeEdit = self._formatTime(timeEdit)
             except:
-                timeEdit = int(time.mktime(time.gmtime()))
+                timeEdit = int(time.time())
         #timeEdit = "%dT%d" % (timeEdit,-time.timezone)
         return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
           
-    def _gmTime(self, tm):
-        return int(time.mktime(time.gmtime(tm)))
+    def _formatTime(self, tm):
+        return int(time.mktime(time.localtime(tm)))
+    
+    def cleanEvents(self):
+        '''clean connect events in case of disabled.
+        '''
+        tempList = self._eventqueue[:]
+        tempClients = []
+        self._eventqueue = []
+        for event in tempList:
+            if event[0] in (self._EVENT_CONNECT, self._EVENT_UPDATE):
+                if not event[2] in tempClients:
+                    self._eventqueue.append(event)
     
     def validateOnlinePlayers(self):
         self.debug('Check online players')
@@ -305,7 +318,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     pType = "pb"
                 else:
                     pType = "tb"
-                baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(lastBan.timeAdd), lastBan.duration, lastBan.reason)
+                baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(lastBan.timeAdd), lastBan.duration, lastBan.reason)
                 status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
                 status.append(baninfo)
                 self._eventqueue.append(status)
@@ -327,7 +340,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if self.increaseFail():
                 self.console.cron + b3.cron.OneTimeCronTab(self.updateName, '*/30')
         else:
-            self.enable()
+            self.do_enable()
             
     def update(self):
         self.bot('Update')
@@ -335,6 +348,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
+            if last > 20: last = 20
             status = self._eventqueue[0:last]
             try:
                 if len(status) > 0:
@@ -361,20 +375,20 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         self.update()
 
-    def enable(self):
+    def do_enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
-        current_st = self._enabled
-        self._enabled = True
+        current_st = self._pluginEnabled
+        self._pluginEnabled = True
         for ct in self._cronTab:
             self.console.cron + ct
         if self._twitterPlugin and not current_st: # if it was disabled
             self._twitterPlugin.post_update('IPDB back on business.')
         self.doInitialUpdate()
         
-    def disable(self):
+    def do_disable(self):
         self.debug('IPDB disabled')
-        self._enabled = False
+        self._pluginEnabled = False
         for ct in self._cronTab:
             self.console.cron - ct
         
@@ -382,7 +396,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._failureCount += 1
         self.debug('Update failed %d' % self._failureCount)
         if self._failureCount >= self._failureMax:
-            self.disable()
+            self.do_disable()
+            self.cleanEvents()
             self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/30')
             self._failureCount = 0
             if self._twitterPlugin:
@@ -415,7 +430,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                         pType = 'pb'
                     else:
                         pType = 'tb'
-                    baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(r['time_add']), r['duration'], r['reason'])
+                    baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(r['time_add']), r['duration'], r['reason'])
                     status = self._buildEventInfo(self._EVENT_BAN, client, client[0].timeEdit)
                     status.append(baninfo)
                     list.append(status)
@@ -449,7 +464,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def cmd_showqueue(self, data, client, cmd=None):
         if client.maxLevel >= 80:
-            if self._enabled:
+            if self._pluginEnabled:
                 cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
                 if len(self._eventqueue) == 0:
                     cmd.sayLoudOrPM(client, '^7Events queue is empty.')
@@ -458,7 +473,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             else:
                 cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
         else:
-            if self._enabled:
+            if self._pluginEnabled:
                 cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
             else:
                 cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
