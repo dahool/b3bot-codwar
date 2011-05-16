@@ -28,6 +28,7 @@
 # Use alternative method if client is not found on disconnect
 # 2011-05-12 - SGT - 1.1.6
 # Send all dates as timestamp
+# Fix issue in baninfo dump
 
 __author__  = 'SGT'
 __version__ = '1.1.6'
@@ -265,8 +266,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if not timeEdit:
             timeEdit = int(time.mktime(time.gmtime()))
         else:
-            timeEdit = self._gmTime(timeEdit)
-        timeEdit = "%dT%d" % (timeEdit,-time.timezone)
+            try:
+                timeEdit = self._gmTime(timeEdit)
+            except:
+                timeEdit = int(time.mktime(time.gmtime()))
+        #timeEdit = "%dT%d" % (timeEdit,-time.timezone)
         return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
           
     def _gmTime(self, tm):
@@ -404,7 +408,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         while not cursor.EOF:
             r = cursor.getRow()
             client = self.console.clients.getByDB("@%s" % r['client_id'])
-            if client:
+            if len(client) > 0:
                 if r['duration'] < 1 or r['duration'] > 30:
                     keys.append(str(r['id']))
                     if r['duration'] == -1 or r['duration'] == 0:
@@ -412,7 +416,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     else:
                         pType = 'tb'
                     baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(r['time_add']), r['duration'], r['reason'])
-                    status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
+                    status = self._buildEventInfo(self._EVENT_BAN, client, client[0].timeEdit)
                     status.append(baninfo)
                     list.append(status)
             cursor.moveNext()
