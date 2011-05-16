@@ -66,7 +66,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _banInfoInterval = 2
     _delta = None
     _failureCount = 0
-    _failureMax = 50
+    _failureMax = 20
     _eventqueue = []
     _banInfoDumpTime = 7
     #_clientInfoDumpTime = 7
