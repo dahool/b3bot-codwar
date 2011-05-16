@@ -55,6 +55,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _twitterPlugin = None
     _adminPlugin = None
     
+    _pluginEnabled = True
     _cronTab    = []
     _banCronTab = None
     _rpc_proxy  = None
