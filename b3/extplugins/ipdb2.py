@@ -26,9 +26,14 @@
 # Allow to check for update only if autoudate is not enabled
 # 2011-05-10 - SGT - 1.1.4
 # Use alternative method if client is not found on disconnect
+# 2011-05-12 - SGT - 1.1.6
+# Send all dates as timestamp
+# Fix issue in baninfo dump
+# 2011-05-16 - SGT - 1.1.7
+# Fix error no autoenabling when disabled
 
 __author__  = 'SGT'
-__version__ = '1.1.5'
+__version__ = '1.1.7'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -50,6 +55,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _twitterPlugin = None
     _adminPlugin = None
     
+    _pluginEnabled = True
     _cronTab    = []
     _banCronTab = None
     _rpc_proxy  = None
@@ -130,7 +136,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     func = self.getCmd(cmd)
                     if func:
                         self._adminPlugin.registerCommand(self, cmd, level, func, alias)
-            self._adminPlugin.registerCommand(self, 'ipdb', 80, self.cmd_showqueue, None)
+            self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
 
         self._twitterPlugin = self.console.getPlugin('twity')
         if not self._twitterPlugin:
@@ -204,40 +210,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except:
                 pass
 
-    def _hash(self, text):
-        return hash('%s%s' % (text, self._key)).hexdigest()
-        
-    def _buildEventInfo(self, event, client, timeEdit = None):
-        guid = self._hash(client.guid)
-        if not timeEdit:
-            timeEdit = datetime.datetime.utcnow()
-        else:
-            timeEdit = self._gmTime(timeEdit)
-        return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
-          
-    def _gmTime(self, tm, n = False):
-        if n:
-            return int(time.mktime(time.gmtime(tm)))
-        return datetime.datetime.fromtimestamp(time.gmtime(tm))
-    
-    def validateOnlinePlayers(self):
-        clients = self.console.clients.getList()
-        for client in self._onlinePlayers[:]:
-            if client not in clients:
-                self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
-                self._onlinePlayers.remove(client)
-        
-        if len(clients) == 0:
-            # nobody here, lets send an empty list
-            # send first any item in the queue
-            if not self.update():
-                time.sleep(5)
-            try:
-                self.debug("Sending empty list")
-                self._rpc_proxy.server.update(self._key, [])
-            except Exception, e:
-                self.error("Error updating empty list. %s" % str(e))
-                
+    # --------- events ----------
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
@@ -246,6 +219,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             not client.connected:
             return
     
+        self.debug('Client connected: %s' % client.name)    
         self._onlinePlayers.append(client)
         self._clientCache[client.cid] = client
         
@@ -258,11 +232,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     b.start()                
         
     def onClientBanned(self, client):
-        self.debug('Client banned')
+        self.debug('Client banned: %s' % client.name)
         self._banqueue.append(client)
             
     def onClientDisconnect(self, cid):
-        self.debug('Client disconnected')
+        self.debug('Client disconnected: %s' % cid)
         if self._clientCache.has_key(cid):
             client = self._clientCache[cid]
             del self._clientCache[cid]
@@ -279,12 +253,63 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.validateOnlinePlayers()
 
     def onClientUpdate(self, client):
-        self.debug('Client updated')
+        self.debug('Client updated %s' % client.name)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UPDATE, client))
 
     def onClientUnban(self, client):
-        self.debug('Client unbanned')
+        self.debug('Client unbanned %s' % client.name)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
+            
+    def _hash(self, text):
+        return hash('%s%s' % (text, self._key)).hexdigest()
+        
+    def _buildEventInfo(self, event, client, timeEdit = None):
+        self.verbose('Queued event %s for %s' % (event, client.name))
+        guid = self._hash(client.guid)
+        if not timeEdit:
+            timeEdit = int(time.time())
+        else:
+            try:
+                timeEdit = self._formatTime(timeEdit)
+            except:
+                timeEdit = int(time.time())
+        #timeEdit = "%dT%d" % (timeEdit,-time.timezone)
+        return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+          
+    def _formatTime(self, tm):
+        return int(time.mktime(time.localtime(tm)))
+    
+    def cleanEvents(self):
+        '''clean connect events in case of disabled.
+        '''
+        tempList = self._eventqueue[:]
+        tempClients = []
+        self._eventqueue = []
+        for event in tempList:
+            if event[0] in (self._EVENT_CONNECT, self._EVENT_UPDATE):
+                if not event[2] in tempClients:
+                    self._eventqueue.append(event)
+        if len(self._eventqueue) > 50:
+            self._eventqueue = self._eventqueue[:50:-1]
+            
+    def validateOnlinePlayers(self):
+        self.debug('Check online players')
+        clients = self.console.clients.getList()
+        for client in self._onlinePlayers[:]:
+            if client not in clients:
+                self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
+                self._onlinePlayers.remove(client)
+        
+        if len(clients) == 0:
+            # nobody here, lets send an empty list
+            # send first any item in the queue
+            if not self.update():
+                time.sleep(5)
+            try:
+                self.debug("Sending empty list")
+                self._rpc_proxy.server.update(self._key, [])
+            except Exception, e:
+                self.error("Error updating empty list. %s" % str(e))
             
     def updateBanQueue(self):
         self.debug('Update ban queue')
@@ -296,12 +321,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     pType = "pb"
                 else:
                     pType = "tb"
-                baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(lastBan.timeAdd, True), lastBan.duration, lastBan.reason)
+                baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(lastBan.timeAdd), lastBan.duration, lastBan.reason)
                 status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
                 status.append(baninfo)
                 self._eventqueue.append(status)
                                             
     def notifyUpdate(self, client):
+        self.verbose('Notify update')
         if self._autoUpdate:
             client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
         else:
@@ -317,14 +343,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if self.increaseFail():
                 self.console.cron + b3.cron.OneTimeCronTab(self.updateName, '*/30')
         else:
-            self.enable()
+            self.do_enable()
             
     def update(self):
-        self.debug('Check update')
+        self.bot('Update')
         resp = False
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
+            if last > 20: last = 20
             status = self._eventqueue[0:last]
             try:
                 if len(status) > 0:
@@ -343,6 +370,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return resp
 
     def doInitialUpdate(self):
+        self.debug('Do initial update')
         clients = self.console.clients.getList()
         for client in clients:
             self._onlinePlayers.append(client)
@@ -350,20 +378,20 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         self.update()
 
-    def enable(self):
+    def do_enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
-        current_st = self._enabled
-        self._enabled = True
+        current_st = self._pluginEnabled
+        self._pluginEnabled = True
         for ct in self._cronTab:
             self.console.cron + ct
         if self._twitterPlugin and not current_st: # if it was disabled
-            self._twitterPlugin.post_update('IPDB back on business.')        
+            self._twitterPlugin.post_update('IPDB back on business.')
         self.doInitialUpdate()
         
-    def disable(self):
+    def do_disable(self):
         self.debug('IPDB disabled')
-        self._enabled = False
+        self._pluginEnabled = False
         for ct in self._cronTab:
             self.console.cron - ct
         
@@ -371,11 +399,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._failureCount += 1
         self.debug('Update failed %d' % self._failureCount)
         if self._failureCount >= self._failureMax:
-            self.disable()
+            self.do_disable()
+            self.cleanEvents()
             self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/30')
             self._failureCount = 0
             if self._twitterPlugin:
-                self._twitterPlugin.post_update('IPDB too many failures. Disabled.')            
+                self._twitterPlugin.post_update('IPDB too many failures. Disabled.')
+            self.bot('Too many failures. Disabled')
             return False
         return True
         
@@ -396,15 +426,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         while not cursor.EOF:
             r = cursor.getRow()
             client = self.console.clients.getByDB("@%s" % r['client_id'])
-            if client:
+            if len(client) > 0:
                 if r['duration'] < 1 or r['duration'] > 30:
                     keys.append(str(r['id']))
                     if r['duration'] == -1 or r['duration'] == 0:
                         pType = 'pb'
                     else:
                         pType = 'tb'
-                    baninfo = "%s::%s::%s::%s" % (pType, self._gmTime(r['time_add'], True), r['duration'], r['reason'])
-                    status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
+                    baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(r['time_add']), r['duration'], r['reason'])
+                    status = self._buildEventInfo(self._EVENT_BAN, client, client[0].timeEdit)
                     status.append(baninfo)
                     list.append(status)
             cursor.moveNext()
@@ -436,11 +466,21 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self._twitterPlugin.post_update('IPDB %s is available.' % ver)
 
     def cmd_showqueue(self, data, client, cmd=None):
-        if len(self._eventqueue) == 0:
-            cmd.sayLoudOrPM(client, '^7Events queue is empty.')
+        if client.maxLevel >= 80:
+            if self._pluginEnabled:
+                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
+                if len(self._eventqueue) == 0:
+                    cmd.sayLoudOrPM(client, '^7Events queue is empty.')
+                else:
+                    cmd.sayLoudOrPM(client, '^7%d events pending in queue.' % len(self._eventqueue))
+            else:
+                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
         else:
-            cmd.sayLoudOrPM(client, '^7%d events pending in queue.' % len(self._eventqueue))
-            
+            if self._pluginEnabled:
+                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
+            else:
+                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
+                
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
         <player> <text>: Add/Update a notice on ipdb for given player
