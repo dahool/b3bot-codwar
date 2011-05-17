@@ -289,7 +289,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if event[0] in (self._EVENT_CONNECT, self._EVENT_UPDATE):
                 if not event[2] in tempClients:
                     self._eventqueue.append(event)
-    
+        if len(self._eventqueue) > 50:
+            self._eventqueue = self._eventqueue[:50:-1]
+            
     def validateOnlinePlayers(self):
         self.debug('Check online players')
         clients = self.console.clients.getList()
