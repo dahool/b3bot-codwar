@@ -3,7 +3,7 @@
 
 ;#define Debug
 #define B3_VERSION_NUMBER "1.6.0"
-#define B3_VERSION_SUFFIX "b3"
+#define B3_VERSION_SUFFIX "-setup"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -18,7 +18,7 @@ AppPublisherURL=http://www.bigbrotherbot.net/
 AppSupportURL=http://www.bigbrotherbot.net/
 AppUpdatesURL=http://www.bigbrotherbot.net/
 AppCopyright=Copyright (C) 2005-2011 BigBrotherBot.net
-DefaultDirName={sd}\BigBrotherBot_{#B3_VERSION_NUMBER}{#B3_VERSION_SUFFIX}
+DefaultDirName={sd}\BigBrotherBot
 DefaultGroupName=BigBrotherBot
 LicenseFile=gpl-2.0.txt
 OutputBaseFilename=BigBrotherBot-{#B3_VERSION_NUMBER}{#B3_VERSION_SUFFIX}
@@ -42,13 +42,15 @@ BackColor=clBlack
 BackColor2=clGray
 WizardSmallImageFile=WizB3SmallImage.bmp
 WizardImageFile=WizB3Image.bmp
-UsePreviousAppDir=false
+UsePreviousAppDir=true
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 VersionInfoCompany=BigBrotherBot.net
 WindowShowCaption=false
 WindowResizable=false
 SetupIconFile=b3.ico
+EnableDirDoesntExistWarning=true
+DirExistsWarning=yes
 
 [Languages]
 Name: english; MessagesFile: compiler:Default.isl
@@ -132,6 +134,6 @@ sql=sql folder
 docs=docs folder
 
 [Run]
-Filename: notepad.exe; Parameters: {app}\readme.txt; WorkingDir: {app};
+Filename: {app}\readme.txt; Flags: ShellExec SkipIfDoesntExist; 
 ;Filename: {app}\b3_run.exe; Parameters: "--config ""{commonappdata}\conf\b3.xml"" --setup"; WorkingDir: {app}; Flags: ShellExec PostInstall; Description: "Run Setup?"; 
 Filename: {app}\b3_run.exe; Parameters: "--config ""{app}\conf\b3.xml"" --setup"; WorkingDir: {app}; Flags: ShellExec PostInstall; Description: "Run Setup?"; 

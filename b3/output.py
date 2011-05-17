@@ -22,7 +22,11 @@
 #      stderr instead
 # 22/10/2010 - 1.5.0 - xlr8or
 #    * add an option to write to both logfile and stderr 
-
+# 08/04/2011 - 1.6.0 - Courgette
+#    * make the console logger write to stdout and repeat errors on 
+#      stderr
+# 20/04/2011 - 1.6.1 - Courgette
+#    * should get rid of UnicodeDecodeError
 
 __author__  = 'ThorN'
 __version__ = '1.6.1a'

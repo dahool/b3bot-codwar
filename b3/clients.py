@@ -1,3 +1,4 @@
+# coding: latin-1
 #
 # BigBrotherBot(B3) (www.bigbrotherbot.net)
 # Copyright (C) 2005 Michael "ThorN" Thornton
@@ -140,6 +141,7 @@ class Client(object):
         # make sure to set console before anything else
         if 'console' in kwargs:
             self.console = kwargs['console']
+            
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
@@ -706,6 +708,7 @@ class Client(object):
             return self.authed
         else:
             return False
+
     def __str__(self):
         return "Client<%s>" % self.cid
 
