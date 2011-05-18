@@ -31,9 +31,11 @@
 # Fix issue in baninfo dump
 # 2011-05-16 - SGT - 1.1.7
 # Fix error no autoenabling when disabled
+# 2011-05-18 - SGT - 1.1.8
+# Fix error in dump baninfo
 
 __author__  = 'SGT'
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -434,7 +436,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     else:
                         pType = 'tb'
                     baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(r['time_add']), r['duration'], r['reason'])
-                    status = self._buildEventInfo(self._EVENT_BAN, client, client[0].timeEdit)
+                    status = self._buildEventInfo(self._EVENT_BAN, client[0], client[0].timeEdit)
                     status.append(baninfo)
                     list.append(status)
             cursor.moveNext()
