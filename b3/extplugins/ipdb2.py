@@ -33,9 +33,12 @@
 # Fix error no autoenabling when disabled
 # 2011-05-18 - SGT - 1.1.8
 # Fix error in dump baninfo
+# 2011-05-19 - SGT - 1-1-9
+# Fix error in string format in !ipdb
+# Add force update command
 
 __author__  = 'SGT'
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -139,7 +142,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     if func:
                         self._adminPlugin.registerCommand(self, cmd, level, func, alias)
             self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
-
+            self._adminPlugin.registerCommand(self, 'ipdbup', 80, self.cmd_update, None)
+            
         self._twitterPlugin = self.console.getPlugin('twity')
         if not self._twitterPlugin:
             self.debug("Twitter plugin not avaiable.")
@@ -416,7 +420,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         now = int(time.time())
         if sendAll:
             since = 1262314800
-            q = self._BAN_QUERY + " LIMIT 30"
+            q = self._BAN_QUERY + " LIMIT 20"
         else:
             since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
             q = self._BAN_QUERY
@@ -457,8 +461,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug('Collect all ban info')
         self.updateBanInfo(True)
 
-    def checkNewVersion(self):
-        if self._updated:
+    def checkNewVersion(self, force = False):
+        if self._updated and not force:
             return
         p = PluginUpdater(__version__, self)
         self._updated, ver = p.verifiy(self._autoUpdate)
@@ -470,18 +474,18 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def cmd_showqueue(self, data, client, cmd=None):
         if client.maxLevel >= 80:
             if self._pluginEnabled:
-                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
+                cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is online.' % __version__)
                 if len(self._eventqueue) == 0:
                     cmd.sayLoudOrPM(client, '^7Events queue is empty.')
                 else:
                     cmd.sayLoudOrPM(client, '^7%d events pending in queue.' % len(self._eventqueue))
             else:
-                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
+                cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is offline.' % __version__)
         else:
             if self._pluginEnabled:
-                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is online.' % __version__)
+                cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is online.' % __version__)
             else:
-                cmd.sayLoudOrPM(client, '^7%Hello. IPDB v%s is offline.' % __version__)
+                cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is offline.' % __version__)
                 
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
@@ -541,7 +545,17 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         status = self._buildEventInfo(self._EVENT_UNBAN, sclient, sclient.timeEdit)
         self._eventqueue.append(status)
         client.message('^7Done.')
-                                
+
+    def cmd_update(self ,data , client, cmd=None):
+        """\
+        Force a check for new ipdb version
+        """
+        self.checkNewVersion(True)
+        if self._updated:
+            self.notifyUpdate()
+        else:
+            client.message('^7IPDB is up to date.')
+            
 import urllib2, urllib
 try:
     from b3.lib.elementtree import ElementTree
