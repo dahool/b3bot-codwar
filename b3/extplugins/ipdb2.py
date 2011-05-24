@@ -38,7 +38,7 @@
 # Add force update command
 
 __author__  = 'SGT'
-__version__ = '1.1.9'
+__version__ = '1.1.9a'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -279,8 +279,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 timeEdit = self._formatTime(timeEdit)
             except:
                 timeEdit = int(time.time())
-        #timeEdit = "%dT%d" % (timeEdit,-time.timezone)
-        return [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+        info = [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+        self.verbose(info)
+        return info
           
     def _formatTime(self, tm):
         return int(time.mktime(time.localtime(tm)))
@@ -329,6 +330,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     pType = "tb"
                 baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(lastBan.timeAdd), lastBan.duration, lastBan.reason)
                 status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
+                self.verbose(baninfo)
                 status.append(baninfo)
                 self._eventqueue.append(status)
                                             
@@ -443,6 +445,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     status = self._buildEventInfo(self._EVENT_BAN, client[0], client[0].timeEdit)
                     status.append(baninfo)
                     list.append(status)
+                    self.verbose(baninfo)
             cursor.moveNext()
         
         if len(list) > 0:
