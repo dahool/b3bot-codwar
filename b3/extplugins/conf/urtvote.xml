@@ -1,0 +1,62 @@
+<configuration plugin="voting2g">
+
+    <settings name="settings">
+        <set name="vote_interval">600</set>
+        <set name="vote_level">2</set>
+    </settings>
+    
+    <settings name="votes">
+        <set name="votekick-vk">KickVote</set>
+        <set name="votemap-vm">MapVote</set>
+        <set name="votenextmap-vx">NextMapVote</set>
+        <set name="voteshuffle-vs">ShuffleVote</set>
+        <set name="votecycle-vc">CycleMapVote</set>
+        <set name="votemute-vmu">MuteVote</set>
+    </settings>
+        
+    <settings name="messages">
+        <set name="vote_in_progress">^7Ya hay un voto en progreso, espera a que finalice</set>
+        <set name="wait_vote">^7Debes esperar entre votos fallidos!</set>
+        <set name="call_vote">^7Votando %s</set>
+        <set name="vote_notice">^7Escribe ^1!vy ^7para ^1SI^7, ^2!vn ^7para ^2NO</set>
+        <set name="vote_veto">^1Vetado!</set>
+        <set name="vote_cancel">^1Cancelado!</set>
+        <set name="voting">^7[%s/%s] Votando %s</set>
+        <set name="vote_status">^1Si: %s^7, ^2No: %s</set>
+        <set name="vote_end">^7Votacion finalizada</set>
+        <set name="vote_yes">^7Voto ^1SI</set>
+        <set name="vote_no">^7Voto ^2NO</set>
+        <set name="already_vote">^7Ya votaste!</set>
+        <set name="no_vote">^7No hay votacion en progreso</set>
+        <set name="param_invalid">^7Datos no validos</set>
+        <set name="param_invalid_reason">^7Datos no validos, indica un motivo!</set>
+        <set name="param_invalid_reason2">^7Escribe un mejor motivo</set>
+        <set name="cant_kick">^7No podes echar a este usuario!</set>
+        <set name="cant_kick_spec">^7No podes echar a un spec en este momento</set>
+        <set name="cant_mute">^7No podes silenciar a este usuario!</set>
+        <set name="reason_kick">^7para echar a ^3%s por ^3%s</set>
+        <set name="reason_mute">^7para silenciar a ^3%s</set>
+        <set name="novotes">^7Los votos positivos no son suficientes</set>
+        <set name="no_kick">^7El jugador esta ^2seguro!</set>
+        <set name="failed_vote">^7Voto finalizado negativo</set>
+        <set name="cant_vote">^7No puedes participar en esta votacion</set>
+        <set name="param_invalid_map">^7Datos no validos, indica el nombre del mapa!</set>
+        <set name="reason_map">^7para cambiar el mapa a ^3%s</set>
+        <set name="change_map">^1Cambiando mapa a ^3%s</set>
+        <set name="no_map">^7El mapa ^2se queda!</set>
+        <set name="nx_map_done">^7Ya se voto un proximo mapa. No se puede cambiar ahora</set>
+        <set name="reason_nx_map">^7para cambiar ^6EL MAPA SIGUIENTE ^7a ^3%s</set>
+        <set name="next_map">^1El proximo mapa es ^3%s</set>
+        <set name="next_map_stay">^7El proximo mapa queda en ^2%s</set>
+        <set name="reason_shuffle">^7para ^6mezclar los equipos ^3en el SIGUIENTE ENCUENTRO</set>
+        <set name="reason_shuffle_now">^7para ^6mezclar los equipos ^3AHORA</set>
+        <set name="cant_shuffle">^7Al menos %s jugadores deben votar para mezclar</set>
+        <set name="cant_shuffle2">^7Necesita al menos %s%% de votos positivos para mezclar</set>
+        <set name="shuffle">^7Se mezclaran los equipos en el siguiente encuentro</set>
+        <set name="no_shuffle">^7Los equipos quedaran como estan</set>
+        <set name="reason_cycle">^7para ^6rotar al siguiente mapa</set>
+        <set name="cycle">^1Rotando al siguiente mapa</set>
+        <set name="map_played">^7El mapa %s ya se jugo en la ultima hora</set>
+    </settings>
+    
+</configuration>
