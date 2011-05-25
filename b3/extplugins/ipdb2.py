@@ -36,15 +36,19 @@
 # 2011-05-19 - SGT - 1-1-9
 # Fix error in string format in !ipdb
 # Add force update command
+# 2011-05-25 - SGT - 1.1.10
+# Better exception handling
+# Set timeout
 
 __author__  = 'SGT'
-__version__ = '1.1.9a'
+__version__ = '1.1.10'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
 import b3.plugin
 import b3.cron
 import random, datetime
+import socket
 
 try:
     import hashlib
@@ -57,6 +61,8 @@ except ImportError:
 class Ipdb2Plugin(b3.plugin.Plugin):
     _url = 'https://ipdburt.appspot.com/xmlrpc2'
 
+    _timeout = 15
+    
     _twitterPlugin = None
     _adminPlugin = None
     
@@ -216,7 +222,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except:
                 pass
 
-    # --------- events ----------
+    # =============================== EVENT HANDLING ===============================
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
@@ -266,6 +272,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug('Client unbanned %s' % client.name)
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
             
+    # =============================== Processing ===============================
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
         
@@ -298,7 +305,33 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     self._eventqueue.append(event)
         if len(self._eventqueue) > 50:
             self._eventqueue = self._eventqueue[:50:-1]
-            
+           
+    # =============================== UPDATE ===============================
+    def send_update(self, list):
+        try:
+            socket.setdefaulttimeout(self._timeout)
+            self._rpc_proxy.server.update(self._key, list)
+            self._failureCount = 0
+        except xmlrpclib.ProtocolError, protocolError:
+            self.error(str(protocolError))
+            self.increaseFail()
+            raise Exception()
+        except xmlrpclib.Fault, applicationError:
+            self.error(str(applicationError))
+            self.increaseFail()
+            raise Exception()
+        except socket.timeout, timeoutError:
+            self.warning("Connection timed out")
+            raise Exception()
+        except socket.error, socketError:
+            self.error(str(socketError))
+            self.increaseFail()
+            raise Exception()
+        except Exception, e:
+            self.error("General error. %s" % str(e))
+        finally:
+            socket.setdefaulttimeout(None)
+        
     def validateOnlinePlayers(self):
         self.debug('Check online players')
         clients = self.console.clients.getList()
@@ -310,13 +343,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if len(clients) == 0:
             # nobody here, lets send an empty list
             # send first any item in the queue
-            if not self.update():
-                time.sleep(5)
+            if not self._running:
+                self.update()
+            else:
+                time.sleep(self._timeout)
+            self.debug("Sending empty list")
             try:
-                self.debug("Sending empty list")
-                self._rpc_proxy.server.update(self._key, [])
-            except Exception, e:
-                self.error("Error updating empty list. %s" % str(e))
+                self.send_update([])
+            except:
+                pass
             
     def updateBanQueue(self):
         self.debug('Update ban queue')
@@ -345,6 +380,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def updateName(self):
         try:
             self.debug('Update server name')
+            socket.setdefaulttimeout(self._timeout)
             self._rpc_proxy.server.updateName(self._key, self._hostname, __version__)
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
@@ -352,30 +388,26 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 self.console.cron + b3.cron.OneTimeCronTab(self.updateName, '*/30')
         else:
             self.do_enable()
-            
+        socket.setdefaulttimeout(None)
+        
     def update(self):
         self.bot('Update')
-        resp = False
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
             if last > 20: last = 20
             status = self._eventqueue[0:last]
-            try:
-                if len(status) > 0:
-                    self.debug("Updating")
-                    self._rpc_proxy.server.update(self._key, status)
+            if len(status) > 0:
+                self.debug("Updating")
+                try:
+                    self.send_update(status)
+                except:
+                    pass
+                else:
                     del self._eventqueue[0:last]
-                    self._failureCount = 0
-            except Exception, e:
-                self.error("Error updating ipdb. %s" % str(e))
-                self.increaseFail()
-            else:
-                resp = True
             self._running = False
         else:
             self.debug("Already running")
-        return resp
 
     def doInitialUpdate(self):
         self.debug('Do initial update')
@@ -450,13 +482,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
         if len(list) > 0:
             self.debug('Update ban info')
+            if self._running:
+                time.sleep(self._timeout)
             try:
-                self._rpc_proxy.server.update(self._key, list)
-            except Exception, e:
-                self.error("Error updating ipdb. %s" % str(e))
-                self.increaseFail()
+                self._running = True
+                self.send_update(list)
+            except:
+                pass
             else:
                 cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb' WHERE id IN (%s)" % ",".join(keys))
+            self._running = False
         else:
             self.debug('No ban info to send')
                 
@@ -569,7 +604,7 @@ import shutil, os
 
 class PluginUpdater(object):
     _update_url = 'http://update.ipdburt.com.ar/update.xml'
-    _timeout = 5
+    _timeout = 10
     _currentVersion = None
     _path = None
     _parent = None
