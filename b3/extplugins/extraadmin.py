@@ -30,8 +30,10 @@
 # Extended Clientinfo
 # 05-06-2011 - SGT - 1.1.7
 # Add register user command
+# 05-26-2011 - SGT - 1.1.8
+# Fix issue in reg command
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -712,8 +714,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         """\
         <client> - register client as a basic user
         """
-
-        m = self.parseUserCmd(data)
+        m = self._adminPlugin.parseUserCmd(data)
         if not m:
             client.message('^7Invalid parameters')
             return False
@@ -726,7 +727,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         except:
             return False
 
-        sclient = self.findClientPrompt(cid, client)
+        sclient = self._adminPlugin.findClientPrompt(cid, client)
         if sclient:
             if sclient.inGroup(group):
                 client.message(self.getMessage('groups_already_in', sclient.exactName, group.name))
