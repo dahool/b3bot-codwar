@@ -39,9 +39,11 @@
 # 2011-05-25 - SGT - 1.1.10
 # Better exception handling
 # Set timeout
+# 2011-05-26 - SGT - 1.1.11
+# Check if we missed and event
 
 __author__  = 'SGT'
-__version__ = '1.1.10'
+__version__ = '1.1.11'
 
 import b3, time, threading, xmlrpclib, re
 import b3.events
@@ -166,7 +168,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         rmin = random.randint(5,59)
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
-        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/30'))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10'))
         if self._banInfoInterval > 0:
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval))
@@ -223,6 +225,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 pass
 
     # =============================== EVENT HANDLING ===============================
+    
+    def _cache_connect(self, client):
+        self._onlinePlayers.append(client)
+        self._clientCache[client.cid] = client
+
     def onClientConnect(self, client):
         if not client or \
             not client.id or \
@@ -232,8 +239,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             return
     
         self.debug('Client connected: %s' % client.name)    
-        self._onlinePlayers.append(client)
-        self._clientCache[client.cid] = client
+        self._cache_connect(client)
         
         self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
         
@@ -334,11 +340,19 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def validateOnlinePlayers(self):
         self.debug('Check online players')
+        
         clients = self.console.clients.getList()
+        for client in clients:
+            if client not in self._onlinePlayers:
+                self._cache_connect(client)
+                self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
+                self.verbose('Missed connect')
+        
         for client in self._onlinePlayers[:]:
             if client not in clients:
                 self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
                 self._onlinePlayers.remove(client)
+                self.verbose('Missed disconnect')
         
         if len(clients) == 0:
             # nobody here, lets send an empty list
@@ -457,7 +471,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             q = self._BAN_QUERY + " LIMIT 20"
         else:
             since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
-            q = self._BAN_QUERY
+            q = self._BAN_QUERY + " LIMIT 25"
         cursor = self.console.storage.query(q % {'now': now,
                                                 'since': since})
                                                                   
