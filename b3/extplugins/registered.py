@@ -64,9 +64,11 @@ class RegisteredPlugin(b3.plugin.Plugin):
             client.kick('Not registered', silent=True)
 
     def process_connected(self):
+	self.verbose('Process connected players')
         clients = self.console.clients.getList()
         for client in clients:
             if not client.isvar(self, 'regctrl'):
+	        self.debug('Missed player found')
                 self.process_connect_event(client)
                     
     def _client_connected(self, client):
