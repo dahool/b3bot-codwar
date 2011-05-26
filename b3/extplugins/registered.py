@@ -17,32 +17,43 @@
 #
 # 05-05-2011 - 1.0.0 - SGT
 # Initial version
+# 26-05-2011 - 1.0.3 - SGT
+# Check connected players in case we missed the event
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import b3, threading, time
 import b3.plugin
 import b3.events
+import b3.cron
 
 #--------------------------------------------------------------------------------------------------
 class RegisteredPlugin(b3.plugin.Plugin):
     requiresConfigFile = False
    
     _warn = 5
-
+    _cronTab = None
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
+        if self._cronTab:
+            self.console.cron - self._cronTab
+        self._cronTab = b3.cron.PluginCronTab(self, self.process_connected, minute='*/1')
+        self.console.cron + self._cronTab
         
     def onEvent(self,  event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
-            self.process_connect_event(event)
-            
-    def process_connect_event(self, event):
+            self.onConnect(event)
+    
+    def onConnect(self, event):
         if not event.client or event.client.pbid == 'WORLD':
             return
+        self.process_connect_event(event.client)
+        
+    def process_connect_event(self, client):
         self.debug("Client connected")
-        client = event.client
+        client.setvar(self, 'regctrl', True)
         if client.maxLevel > 0:
             return
         if client.connections <= 20:
@@ -51,7 +62,13 @@ class RegisteredPlugin(b3.plugin.Plugin):
             t.start()
         else:
             client.kick('Not registered', silent=True)
-    
+
+    def process_connected(self):
+        clients = self.console.clients.getList()
+        for client in clients:
+            if not client.isvar(self, 'regctrl'):
+                self.process_connect_event(client)
+                    
     def _client_connected(self, client):
         if client.connected:
             # this requires poweradmin to keep forced
@@ -64,7 +81,7 @@ class RegisteredPlugin(b3.plugin.Plugin):
 	    if client.connections < 3:
                 client.kick('Not registered', silent=True)
             else:
-                client.tempban('Not registered', '', 1, None)
+                client.tempban('Not registered', '', 5, None)
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
