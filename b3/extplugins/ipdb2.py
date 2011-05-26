@@ -41,6 +41,7 @@
 # Set timeout
 # 2011-05-26 - SGT - 1.1.11
 # Check if we missed and event
+# Clean initial update
 
 __author__  = 'SGT'
 __version__ = '1.1.11'
@@ -425,11 +426,17 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def doInitialUpdate(self):
         self.debug('Do initial update')
+        self._onlinePlayers = []
+        self._clientCache = {}
         clients = self.console.clients.getList()
         for client in clients:
-            self._onlinePlayers.append(client)
-            self._clientCache[client.cid] = client
+            self._cache_connect(client)
             self._eventqueue.append(self._buildEventInfo(self._EVENT_CONNECT, client))
+        try:
+            self.send_update([])
+        except:
+            pass
+        time.sleep(self._timeout)
         self.update()
 
     def do_enable(self):
@@ -441,7 +448,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.console.cron + ct
         if self._twitterPlugin and not current_st: # if it was disabled
             self._twitterPlugin.post_update('IPDB back on business.')
-        self.doInitialUpdate()
+            
+        b = threading.Thread(target=self.doInitialUpdate)
+        b.start()
         
     def do_disable(self):
         self.debug('IPDB disabled')
