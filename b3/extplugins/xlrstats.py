@@ -47,6 +47,10 @@
 #   Ability to disable plugin when not enough players are online
 # 07-01-2011 - 2.3.2 - Mark Weirath
 #   Update weapon tables for cod7.
+# 16-04-2011 - 2.3.3 - Mark Weirath
+#   Make sure we hide WORLD and Server in the webfront
+# 16-05-2011 - 2.4.0 - Mark Weirath
+#   Make use of sql files for updating table, no more methods in the plugin
 
 # This section is DoxuGen information. More information on how to comment your code
 # is available at http://wiki.bigbrotherbot.net/doku.php/customize:doxygen_rules
@@ -54,7 +58,7 @@
 # XLRstats Real Time playerstats plugin
 
 __author__  = 'Tim ter Laak / Mark Weirath'
-__version__ = '2.3.2'
+__version__ = '2.4.0'
 
 # Version = major.minor.patches
 
@@ -197,13 +201,19 @@ class XlrstatsPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_ACTION) #for game-events/actions
         self.registerEvent(b3.events.EVT_CLIENT_DAMAGE) #for assist recognition
         
-        # get the Client.id for the bot itself (guid: WORLD or Server(bfbc2))
+        # get the Client.id for the bot itself (guid: WORLD or Server(bfbc2/moh/hf))
         sclient = self.console.clients.getByGUID("WORLD")
         if sclient is None:
             sclient = self.console.clients.getByGUID("Server")
         if (sclient is not None):
             self._world_clientid = sclient.id
-        self.debug('Got client id for B3: %s; %s' %(self._world_clientid, sclient.name))
+            self.debug('Got client id for B3: %s; %s' %(self._world_clientid, sclient.name))
+            #make sure its hidden in the webfront
+            player = self.get_PlayerStats(sclient)
+            if (player):
+                player.hide = 1
+                self.save_Stat(player)
+
 
         #determine the ability to work with damage based assists
         if ( self.console.gameName[:3] in self._damage_able_games ):
@@ -231,11 +241,10 @@ class XlrstatsPlugin(b3.plugin.Plugin):
                 self._xlrstatstables = [self.playerstats_table, self.weaponstats_table, self.weaponusage_table, self.bodyparts_table, self.playerbody_table, self.opponents_table, self.mapstats_table, self.playermaps_table, self.actionstats_table, self.playeractions_table]
                 self.error('History Tables are NOT present! Please run b3/docs/xlrstats.sql on your database to install missing tables!')
 
-        #check and update columns in existing tables
-        self.updateTableColumns()
-
+        #check and update columns in existing tables // This is not working with MySQL server 5.5!
+        #self.updateTableColumns()
         #optimize xlrstats tables
-        self.optimizeTables(self._xlrstatstables)
+        #self.optimizeTables(self._xlrstatstables)
 
         #let's try and get some variables from our webfront installation
         if self.webfrontUrl and self.webfrontUrl != '':
@@ -1478,9 +1487,9 @@ class XlrstatsPlugin(b3.plugin.Plugin):
         except Exception, msg:
             self.error('Creating history snapshot failed: %s' %msg)
 
+    ## @todo: add mysql condition
     def updateTableColumns(self):
         self.verbose('Checking if we need to update tables for version 2.0.0')
-        #todo: add mysql condition
         #v2.0.0 additions to the playerstats table:
         self._addTableColumn('assists', PlayerStats._table, 'MEDIUMINT( 8 ) NOT NULL DEFAULT "0" AFTER `skill`')
         self._addTableColumn('assistskill', PlayerStats._table, 'FLOAT NOT NULL DEFAULT "0" AFTER `assists`')
