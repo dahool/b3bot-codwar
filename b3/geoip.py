@@ -25,31 +25,41 @@ MEMCACHE_HOST = None
 GEOIP_LOOKUP_URL = 'http://api.ipinfodb.com/v2/ip_query.php?key=%(key)s&ip=%(ip)s&timezone=false&output=json'
 #GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query.php?ip=%s&output=json'
 #GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query_country.php?ip=%s&output=json'
+DEBUG = False
+
+def debug(msg):
+    if DEBUG:
+        print msg
 
 def geo_ip_lookup(ip_address):
     """
     Look up the geo information based on the IP address passed in
     """
+    
+    json_response = None
+
     if cache and MEMCACHE_HOST:
+	debug('Try cache')
         # try to locate the data in the cache first
         mc = memcache.Client([MEMCACHE_HOST], debug=0)
         key = "IP_%s" % ip_address
         obj = mc.get(key)
         if obj:
             json_response = pickle.loads(obj)
-    else:
-        json_response = None
+	    debug('Found in cache')
         
-    lookup_url = GEOIP_LOOKUP_URL % {'key': API_KEY, 'ip': ip_address}
+    if not json_response:
+        lookup_url = GEOIP_LOOKUP_URL % {'key': API_KEY, 'ip': ip_address}
 
-    try:
-      json_response = json.loads(urlopen(lookup_url).read())
-    except:
-      return None
+        try:
+	    debug('Try Service')
+            json_response = json.loads(urlopen(lookup_url).read())
+        except:
+            return None
       
-    if cache and MEMCACHE_HOST:
-        key = "IP_%s" % ip_address
-        mc.set(key, pickle.dumps(json_response))
+        if cache and MEMCACHE_HOST:
+            key = "IP_%s" % ip_address
+            mc.set(key, pickle.dumps(json_response))
         
     return {
       'country_code': json_response['CountryCode'],
@@ -59,3 +69,10 @@ def geo_ip_lookup(ip_address):
       'longitude': json_response['Longitude'],
       'latitude': json_response['Latitude']
     }
+
+
+if __name__ == '__main__':
+    DEBUG=True
+    print geo_ip_lookup('74.125.67.103')
+    # this time it should take it from cache
+    print geo_ip_lookup('74.125.67.103')
