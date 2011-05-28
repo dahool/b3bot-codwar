@@ -19,13 +19,16 @@
 # Escape texts 
 # 09-05-2011 - 1.0.3
 # Espace backslash
+# 28-05-2011 - 1.0.4
+# Sanitize string
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 __author__  = 'SGT'
 
 import b3
 import b3.plugin
 import b3, time, thread, threading
+import re
 
 class ChatloggerPlugin(b3.plugin.Plugin):
     '''
@@ -49,7 +52,9 @@ class ChatloggerPlugin(b3.plugin.Plugin):
                  1: 'SPEC',
                  2: 'RED',
                  3: 'BLUE'}
-                 
+    
+    _ALLOW_CHARS = re.compile('[^\w\?\+\*\.,:;=_\(\)\$\#!><-]')
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_SAY)
@@ -65,13 +70,40 @@ class ChatloggerPlugin(b3.plugin.Plugin):
             target = "CLIENT: [%s] - %s" % (event.target.id,event.target.name)
         if target:
             thread.start_new_thread(self.log, (event.data, event.client, target))
-            
+    
+    def _sanitize(self, text):
+        return self._ALLOW_CHARS.sub(' ', text).strip()
+        
     def log(self, text, client, target=None):
         try:
             info = self.console.game.mapName
         except:
             info = ''
-        text = text.replace("""'""", """''""")
-        text = text.replace('\\','\\\\')
-        cursor = self.console.storage.query(self._INSERT_QUERY % (text, client.id, self.console.time(), target, info))
-        cursor.close()
+        text = self._sanitize(text)
+        sql = self._INSERT_QUERY % (text, client.id, self.console.time(), target, info)
+        self.debug(sql)
+        cursor = self.console.storage.query(sql)
+        try:
+            cursor.close()
+        except:
+            pass
+
+if __name__ == '__main__':
+    from b3.fake import fakeConsole
+    from b3.fake import joe
+    import time
+    
+    p = ChatloggerPlugin(fakeConsole)
+    p.onStartup()
+    
+    time.sleep(2)
+    
+    joe.connects(cid=1)
+    
+    joe.says('hola')
+    joe.says('se van por >>>>>')
+    joe.says('ayuda!!!')
+    joe.says('que haces???')
+    joe.says('hola hola \\')
+    joe.says('a donde vas. epa?')
+    joe.says('==> ->><=+??!')
