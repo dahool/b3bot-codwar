@@ -17,6 +17,9 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 # CHANGELOG
+# 01/06/11 - SGT
+# Handle event in new thread
+# Improve code
 # 03/03/11 - SGT
 # Case insensitive filter
 # 26/10/09  - SGT
@@ -28,24 +31,24 @@
 # 25/07/09
 # Initial version
 
-__version__ = '1.2'
+__version__ = '1.3'
 __author__  = 'Ismael'
 
 import b3
 import b3.plugin
 from b3 import clients
 import b3.cron
+import thread
 
 class NickregPlugin(b3.plugin.Plugin):
     _adminPlugin = None
 
     _watched = []
 
-    def startup(self):
+    def onStartup(self):
         """\
         Initialize plugin settings
         """
-
         # get the plugin so we can register commands
         self._adminPlugin = self.console.getPlugin('admin')
         if not self._adminPlugin:
@@ -53,26 +56,34 @@ class NickregPlugin(b3.plugin.Plugin):
             self.error('Could not find admin plugin')
             return False
         
-        minlevel = self.config.getint('settings', 'min_level_reg')
-        self.maxnicks = self.config.getint('settings', 'max_nicks')
+        self._adminPlugin.registerCommand(self, 'registernick', self.level, self.cmd_regnick,  'regnick')
+        self._adminPlugin.registerCommand(self, 'deletenick', self.level, self.cmd_delnick,  'delnick')
+        self._adminPlugin.registerCommand(self, 'listnick', self.level, self.cmd_listnick)
         
-        self._adminPlugin.registerCommand(self, 'registernick', minlevel, self.cmd_regnick,  'regnick')
-        self._adminPlugin.registerCommand(self, 'deletenick', minlevel, self.cmd_delnick,  'delnick')
-        self._adminPlugin.registerCommand(self, 'listnick', minlevel, self.cmd_listnick)
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
 
+    def onLoadConfig(self):
+        self.level = self.config.getint('settings', 'min_level_reg')
+        self.maxnicks = self.config.getint('settings', 'max_nicks')
+        
     def onEvent(self,  event):
-        if not event.client:
-            return #No client
-        if not event.client.authed:
-            return #Not authed, don't know its real ID
-        client = event.client
+        if event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
+            thread.start_new_thread(self.onNameChange, (event.client,))
+        
+    def onNameChange(self, client):
+        if not client or \
+            not client.id or \
+            client.cid == None or \
+            client.pbid == 'WORLD':
+            return
+
         if client.id not in self._watched:
             cursor = self.console.storage.query("""
             SELECT n.clientid
             FROM nicks n 
             WHERE n.name like '%s'
             """ % (self._process_name(client.name))) #Have to escape quotes (')
+            
             if cursor.rowcount > 0: #This nick is registered
                 r = cursor.getRow()
 
@@ -81,23 +92,23 @@ class NickregPlugin(b3.plugin.Plugin):
                     #This nick isn't yours!
                     name = client.name
                     id = client.id
-                    client.message("^2First warn: ^7Please change your ^7nickname, ^7this nick belongs to someone else")
+                    client.message("^2Primer aviso: ^7El nombre ^7%s pertenece a otro usuario." % name)
                     
                     #Messy logic ahead! Each defined function adds a cron for the next one, defined inside of them.
                     def warn():
-                        client.message("^2Second warn: ^7Please change your ^7nickname, ^7this nick belongs to someone else")
+                        client.message("^2Segundo aviso: ^7Cambia tu nombre, pertenece a otro usuario.")
                         def warn2():
                             if  name == client.name:
-                                client.message("^1LAST warn: ^7Please change your ^7nickname, ^7this nick belongs to someone else. ^7You will be ^1KICKED!")
+                                client.message("^1ULTIMO Aviso: ^7Cambia tu nombre. ^7Seras ^1expulsado!")
                                 def kick():
                                     if  name == client.name:
-                                        client.kick("This nickname isn't yours!",  None)
+                                        client.kick("This nickname isn't yours!",  data=name)
                                     self._watched.remove(client.id)
-                                self.console.cron + b3.cron.OneTimeCronTab(kick,  "*/4")
-                        self.console.cron + b3.cron.OneTimeCronTab(warn2,  "*/3")
-                    self.console.cron + b3.cron.OneTimeCronTab(warn,  "*/4")
+                                self.console.cron + b3.cron.OneTimeCronTab(kick,  "*/5")
+                        self.console.cron + b3.cron.OneTimeCronTab(warn2,  "*/5")
+                    self.console.cron + b3.cron.OneTimeCronTab(warn,  "*/5")
             cursor.close()
-
+                            
     def cmd_listnick(self, data, client, cmd=None):
         """\
         <name> - list registered nicknames
