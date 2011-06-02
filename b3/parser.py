@@ -18,6 +18,8 @@
 #
 #
 # CHANGELOG
+#   2011/06/01 - SGT
+#   Handle each event in separated thread
 #   2011/05/03 - 1.24.5 - Courgette
 #   * fix bug regarding rcon_ip introduced in 1.24.4
 #   2011/04/31 - 1.24.4 - Courgette
@@ -122,7 +124,7 @@
 #    Added warning, info, exception, and critical log handlers
 
 __author__  = 'ThorN, Courgette, xlr8or, Bakes'
-__version__ = '1.24.5'
+__version__ = '1.24.5a'
 
 # system modules
 import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket
@@ -938,31 +940,34 @@ class Parser(object):
             if self.time() >= expire:    # events can only sit in the queue until expire time
                 self.error('**** Event sat in queue too long: %s %s', self.Events.getName(event.type), self.time() - expire)
             else:
-                nomore = False
-                for hfunc in self._handlers[event.type]:
-                    if not hfunc.isEnabled():
-                        continue
-                    elif nomore:
-                        break
-
-                    self.verbose('Parsing Event: %s: %s', self.Events.getName(event.type), hfunc.__class__.__name__)
-                    try:
-                        hfunc.parseEvent(event)
-                        time.sleep(0.001)
-                    except b3.events.VetoEvent:
-                        # plugin called for event hault, do not continue processing
-                        self.bot('Event %s vetoed by %s', self.Events.getName(event.type), str(hfunc))
-                        nomore = True
-                    except SystemExit, e:
-                        self.exitcode = e.code
-                    except Exception, msg:
-                        self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, self.Events.getName(event.type), msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))
+                thread.start_new_thread(self.handleEvent, (event,))
 
         self.bot('Shutting down event handler')
 
         if self.exiting.locked():
             self.exiting.release()
 
+    def handleEvent(self, event):
+        nomore = False
+        for hfunc in self._handlers[event.type]:
+            if not hfunc.isEnabled():
+                continue
+            elif nomore:
+                break
+
+            self.verbose('Parsing Event: %s: %s', self.Events.getName(event.type), hfunc.__class__.__name__)
+            try:
+                hfunc.parseEvent(event)
+                time.sleep(0.001)
+            except b3.events.VetoEvent:
+                # plugin called for event hault, do not continue processing
+                self.bot('Event %s vetoed by %s', self.Events.getName(event.type), str(hfunc))
+                nomore = True
+            except SystemExit, e:
+                self.exitcode = e.code
+            except Exception, msg:
+                self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, self.Events.getName(event.type), msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))        
+        
     def write(self, msg, maxRetries=None):
         """Write a message to Rcon/Console"""
         if self.replay:
