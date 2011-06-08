@@ -33,7 +33,7 @@
 # Fix error no autoenabling when disabled
 # 2011-05-18 - SGT - 1.1.8
 # Fix error in dump baninfo
-# 2011-05-19 - SGT - 1-1-9
+# 2011-05-19 - SGT - 1.1.9
 # Fix error in string format in !ipdb
 # Add force update command
 # 2011-05-25 - SGT - 1.1.10
@@ -42,11 +42,18 @@
 # 2011-05-26 - SGT - 1.1.11
 # Check if we missed and event
 # Clean initial update
+# 2011-05-28 - SGT - 1.1.12
+# Fix issue with force update command
+# 2011-05-28 - SGT - 1.1.13
+# Handle disconnection in thread
+# 2011-06-08 - SGT - 1.1.14
+# Send admin name in baninfo
+# Update service url
 
 __author__  = 'SGT'
-__version__ = '1.1.11'
+__version__ = '1.1.14'
 
-import b3, time, threading, xmlrpclib, re
+import b3, time, threading, xmlrpclib, re, thread
 import b3.events
 import b3.plugin
 import b3.cron
@@ -62,7 +69,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'https://ipdburt.appspot.com/xmlrpc2'
+    _url = 'https://www.ipdburt.com.ar/xmlrpc2'
 
     _timeout = 15
     
@@ -94,6 +101,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _onlinePlayers = []
     _banqueue = []
     _updateCrontab = None
+    _showBanAdmin = True
     
     _clientCache = {}
     
@@ -105,10 +113,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _EVENT_DELNOTE = "delnote"
     _EVENT_UNBAN = "unbanned"
     
-    _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add "\
+    _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add, p.admin_id as admin_id "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
-    "AND p.time_edit >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb'"
+    "AND p.time_edit >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb2'"
         
     _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate)d LIMIT 30"
     
@@ -207,15 +215,18 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._autoUpdate = self.config.getboolean('settings', 'enableautoupdate')
         except:
             pass
+        try:
+            self._showBanAdmin = self.config.getboolean('settings', 'showbanadmin')
+        except:
+            pass            
             
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
-            b = threading.Timer(5, self.onClientConnect, (event.client,))
-            b.start()
+            self.onClientConnect(event.client)
         elif event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
             self.onClientUpdate(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.onClientDisconnect(event.data)
+            thread.start_new_thread(self.onClientDisconnect,(event.data,))
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             self.onClientBanned(event.client)
         else:
@@ -352,7 +363,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         for client in self._onlinePlayers[:]:
             if client not in clients:
                 self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
-                self._onlinePlayers.remove(client)
+                try:
+                    self._onlinePlayers.remove(client)
+                    if self._clientCache[client.cid].id == client.id:
+                        del self._clientCache[client.cid]
+                except:
+                    pass
                 self.verbose('Missed disconnect')
         
         if len(clients) == 0:
@@ -368,20 +384,38 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except:
                 pass
             
+    def _buildBanInfo(self, penalty, client):
+        status = None
+        if penalty and penalty.duration < 1 or penalty.duration > 30): # no tempban less than 30 minutes
+            if penalty.duration == -1 or penalty.duration == 0:
+                pType = "pb"
+            else:
+                pType = "tb"
+
+            if self._showBanAdmin:
+                if penalty.adminId and penalty.adminId > 0:
+                    admin = self._adminPlugin.findClientPrompt('@%s' % str(penalty.adminId), None)
+                    if admin:
+                        banreason = "%s (by %s)" % (penalty.reason, admin.name)
+                    else:
+                        banreason = "%s [-B3]" % (penalty.reason)
+                else:
+                    banreason = "%s [-B3]" % (penalty.reason)
+            else:
+                banreason = penalty.reason
+                
+            baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(penalty.timeAdd), penalty.duration, banreason)
+            status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
+            self.verbose(baninfo)
+            status.append(baninfo)
+        return status
+        
     def updateBanQueue(self):
         self.debug('Update ban queue')
         while len(self._banqueue) > 0:
             client = self._banqueue.pop()
-            lastBan = client.lastBan
-            if lastBan and (lastBan.duration < 1 or lastBan.duration > 30): # no tempban less than 30 minutes
-                if lastBan.duration == -1 or lastBan.duration == 0:
-                    pType = "pb"
-                else:
-                    pType = "tb"
-                baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(lastBan.timeAdd), lastBan.duration, lastBan.reason)
-                status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
-                self.verbose(baninfo)
-                status.append(baninfo)
+            status = self._buildBanInfo(client.lastBan, client)
+            if status:
                 self._eventqueue.append(status)
                                             
     def notifyUpdate(self, client):
@@ -488,19 +522,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         keys = []
         while not cursor.EOF:
             r = cursor.getRow()
-            client = self.console.clients.getByDB("@%s" % r['client_id'])
-            if len(client) > 0:
-                if r['duration'] < 1 or r['duration'] > 30:
-                    keys.append(str(r['id']))
-                    if r['duration'] == -1 or r['duration'] == 0:
-                        pType = 'pb'
-                    else:
-                        pType = 'tb'
-                    baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(r['time_add']), r['duration'], r['reason'])
-                    status = self._buildEventInfo(self._EVENT_BAN, client[0], client[0].timeEdit)
-                    status.append(baninfo)
-                    list.append(status)
-                    self.verbose(baninfo)
+            client = self._adminPlugin.findClientPrompt("@%s" % r['client_id'], None)
+            if client:
+                penalty = ClientBan()
+                penalty.duration = r['duration']
+                penalty.clientId = client.id
+                penalty.adminId = r['admin_id']
+                penalty.reason = r['reason']
+                penalty.timeAdd = r['time_add']
+                status = self._buildBanInfo(penalty, client)
+                list.append(status)
             cursor.moveNext()
         
         if len(list) > 0:
@@ -513,7 +544,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             except:
                 pass
             else:
-                cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb' WHERE id IN (%s)" % ",".join(keys))
+                cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb2' WHERE id IN (%s)" % ",".join(keys))
             self._running = False
         else:
             self.debug('No ban info to send')
@@ -613,7 +644,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         """
         self.checkNewVersion(True)
         if self._updated:
-            self.notifyUpdate()
+            self.notifyUpdate(client)
         else:
             client.message('^7IPDB is up to date.')
             
