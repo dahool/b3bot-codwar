@@ -69,7 +69,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'https://www.ipdburt.com.ar/xmlrpc2'
+    _url = 'http://www.ipdburt.com.ar/xmlrpc2'
 
     _timeout = 15
     
