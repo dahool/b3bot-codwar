@@ -386,7 +386,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def _buildBanInfo(self, penalty, client):
         status = None
-        if penalty and penalty.duration < 1 or penalty.duration > 30): # no tempban less than 30 minutes
+        if penalty and penalty.duration < 1 or penalty.duration > 30: # no tempban less than 30 minutes
             if penalty.duration == -1 or penalty.duration == 0:
                 pType = "pb"
             else:
