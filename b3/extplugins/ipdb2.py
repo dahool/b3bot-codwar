@@ -49,9 +49,12 @@
 # 2011-06-08 - SGT - 1.1.14
 # Send admin name in baninfo
 # Update service url
+# 2011-06-10 - SGT - 1.1.15
+# Change baninfo format
+# Handle notice and unban command
 
 __author__  = 'SGT'
-__version__ = '1.1.14'
+__version__ = '1.1.15'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -118,8 +121,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_edit >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb2'"
         
-    _ALL_C_QUERY = "SELECT id, guid, name, ip, time_edit FROM clients WHERE auto_login = 1 and time_edit BETWEEN %(fromdate)d AND %(todate)d LIMIT 30"
-    
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
@@ -133,7 +134,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_NAME_CHANGE)
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
-        
+        self.registerEvent(b3.events.EVT_ADMIN_COMMAND)
+         
         try:
             self.registerEvent(b3.events.EVT_CLIENT_UNBAN)
         except:
@@ -229,6 +231,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             thread.start_new_thread(self.onClientDisconnect,(event.data,))
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             self.onClientBanned(event.client)
+        elif event.type == b3.events.EVT_ADMIN_COMMAND:
+            thread.start_new_thread(self.handleAdminCommand,(event.data,event.client))
         else:
             try:
                 if event.type == b3.events.EVT_CLIENT_UNBAN:
@@ -237,7 +241,46 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 pass
 
     # =============================== EVENT HANDLING ===============================
-    
+
+    def handleAdminCommand(self, data, client = None):
+        command, data, result = data
+        # old b3 send function instead of command
+        if hasattr(command,'__call__'):
+            command_name = command.func_name
+        else:
+            command_name = command.func.func_name
+        
+        if command_name == 'cmd_notice':
+            self.handleAddNoticeCommand(data, client)
+        elif command_name == 'cmd_unban':
+            self.handleUnbanCommand(data, client)
+
+    def handleUnbanCommand(self, data, client):
+        # if we are handling the event, discard
+        try:
+            ev = b3.events.EVT_CLIENT_UNBAN
+        except:
+            try:
+                cid, reason = self._adminPlugin.parseUserCmd(data)
+                sclient = self._adminPlugin.findClientPrompt(cid, None)
+                if sclient and sclient.numBans == 0:
+                    self.onClientUnban(sclient)
+            except:
+                pass
+            
+    def handleAddNoticeCommand(self, data, client):
+        # we have no way to know if the notice was actually added
+        # get the last notice from the database
+        try:
+            cid, notice = self._adminPlugin.parseUserCmd(data)
+            sclient = self._adminPlugin.findClientPrompt(cid, None)
+            if sclient:
+                penalty = self.console.storage.getClientLastPenalty(sclient, 'Notice')
+                if penalty and penalty.adminId == client.id: # check if is the same admin :)
+                    self.add_notice(penalty.reason, sclient, client)
+        except:
+            pass
+        
     def _cache_connect(self, client):
         self._onlinePlayers.append(client)
         self._clientCache[client.cid] = client
@@ -392,19 +435,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             else:
                 pType = "tb"
 
+            admin_id = 0
             if self._showBanAdmin:
                 if penalty.adminId and penalty.adminId > 0:
                     admin = self._adminPlugin.findClientPrompt('@%s' % str(penalty.adminId), None)
                     if admin:
-                        banreason = "%s (by %s)" % (penalty.reason, admin.name)
-                    else:
-                        banreason = "%s [-B3]" % (penalty.reason)
-                else:
-                    banreason = "%s [-B3]" % (penalty.reason)
-            else:
-                banreason = penalty.reason
+                        admin_id = self._hash(admin.guid)
                 
-            baninfo = "%s::%s::%s::%s" % (pType, self._formatTime(penalty.timeAdd), penalty.duration, banreason)
+            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, penalty.reason, admin_id]
             status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
             self.verbose(baninfo)
             status.append(baninfo)
@@ -578,7 +616,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is online.' % __version__)
             else:
                 cmd.sayLoudOrPM(client, '^7Hello. IPDB v%s is offline.' % __version__)
-                
+    
+    def add_notice(self, data, client, admin):
+        status = self._buildEventInfo(self._EVENT_ADDNOTE, client, client.timeEdit)
+        status.append([data, self._hash(admin.guid)])
+        self._eventqueue.append(status)
+                    
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
         <player> <text>: Add/Update a notice on ipdb for given player
@@ -597,9 +640,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7Missing data, try !help addnote')
             return False
         
-        status = self._buildEventInfo(self._EVENT_ADDNOTE, sclient, sclient.timeEdit)
-        status.append(input[1])
-        self._eventqueue.append(status)
+        self.add_notice(input[1], sclient, client)
         client.message('^7Done.')
             
     def cmd_dbdelnote(self ,data , client, cmd=None):
