@@ -52,9 +52,11 @@
 # 2011-06-10 - SGT - 1.1.15
 # Change baninfo format
 # Handle notice and unban command
+# 2011-06-13 - SGT - 1.2.0
+# Add remote queue handling
 
 __author__  = 'SGT'
-__version__ = '1.1.15'
+__version__ = '1.2.0'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -62,6 +64,7 @@ import b3.plugin
 import b3.cron
 import random, datetime
 import socket
+from b3.clients import ClientNotice
 
 try:
     import hashlib
@@ -108,13 +111,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     _clientCache = {}
     
+    _remotePermission = 15 # all
+    
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
     _EVENT_UPDATE = "update"
-    _EVENT_BAN = "banned"
-    _EVENT_ADDNOTE = "addnote"
-    _EVENT_DELNOTE = "delnote"
-    _EVENT_UNBAN = "unbanned"
+    _EVENT_BAN = "banned" # 1
+    _EVENT_ADDNOTE = "addnote" # 4
+    _EVENT_DELNOTE = "delnote" # 8
+    _EVENT_UNBAN = "unbanned" # 2
     
     _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add, p.admin_id as admin_id "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
@@ -187,7 +192,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime))
         if self._updateCrontab:
             self.console.cron - self._updateCrontab
-
+        if self._remotePermission > 0:
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
+            
         self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12')
         self.console.cron + self._updateCrontab
 
@@ -221,7 +228,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._showBanAdmin = self.config.getboolean('settings', 'showbanadmin')
         except:
             pass            
-            
+        try:
+            self._remotePermission = self.config.getint('settings', 'remotepermission')
+        except:
+            pass
+                        
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
             self.onClientConnect(event.client)
@@ -468,7 +479,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.debug('Update server name')
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.updateName(self._key, self._hostname, __version__)
+            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission])
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
             if self.increaseFail():
@@ -591,6 +602,113 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug('Collect all ban info')
         self.updateBanInfo(True)
 
+    # --- REMOTE EVENT HANDLING --- #
+    def processRemoteQueue(self):
+        try:
+            list = self.getEventQueue()
+        except:
+            pass
+        if len(list) > 0:
+            self.debug('Received %d events. Processing' % len(list))
+            for event in list:
+                if event[0] == self._EVENT_BAN:
+                    self.processRemoteBan(self, event)
+                elif event[0] == self._EVENT_UNBAN:
+                    self.processRemoteUnBan(self, event)
+                elif event[0] == self._EVENT_ADDNOTE:
+                    self.processRemoteNotice(self, event)
+                elif event[0] == self._EVENT_DELNOTE:
+                    self.processRemoteUnNotice(self, event)
+        else:
+            self.debug('No events received')
+            
+    def processRemoteBan(self, event):
+        if self._remotePermission & 1:
+            m, client_id, duration, reason, admin_id = event
+            sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
+            if sclient:
+                if admin_id = 0:
+                    admin = None
+                else:
+                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
+                if duration > 0:
+                    sclient.tempban(duration=duration, reason=reason, admin=admin, silent=True, data='Banned from IPDB')
+                else:
+                    sclient.ban(reason=reason, admin=admin, silent=True, data='Banned from IPDB')
+            else:
+                self.warning("Remote ban: client %s not found" % client_id)
+        else:
+            self.warning("Not enough permission for remote ban")
+
+    def processRemoteUnBan(self, event):
+        if self._remotePermission & 2:
+            m, client_id, reason, admin_id = event
+            sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
+            if sclient:
+                if admin_id = 0:
+                    admin = None
+                else:
+                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)                
+                sclient.unban(reason=reason, admin=admin, silent=True)
+            else:
+                self.warning("Remote unban: client %s not found" % client_id)
+        else:
+            self.warning("Not enough permission for remote unban")
+                        
+    def processRemoteNotice(self, event):
+        if self._remotePermission & 4:
+            m, client_id, reason, admin_id, key = event
+            sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
+            if sclient:
+                if admin_id = 0:
+                    admin = None
+                else:
+                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
+                p = ClientNotice()
+                p.timeAdd = self.console.time()
+                p.clientId = sclient.id
+                if admin:
+                    p.adminId = admin.id
+                else:
+                    p.adminId = 0
+                p.reason = reason
+                p.data = key
+                p.save(self.console)
+            else:
+                self.warning("Remote ban: client %s not found" % client_id)
+        else:
+            self.warning("Not enough permission for remote notice")
+          
+    def processRemoteUnNotice(self, event):
+        self.debug("Not implemented yet")
+                                    
+    def getRemoteQueue(self):
+        list = []
+        try:
+            socket.setdefaulttimeout(self._timeout)
+            list = self._rpc_proxy.server.eventQueue(self._key)
+            self._failureCount = 0
+        except xmlrpclib.ProtocolError, protocolError:
+            self.error(str(protocolError))
+            self.increaseFail()
+            raise Exception()
+        except xmlrpclib.Fault, applicationError:
+            self.error(str(applicationError))
+            self.increaseFail()
+            raise Exception()
+        except socket.timeout, timeoutError:
+            self.warning("Connection timed out")
+            raise Exception()
+        except socket.error, socketError:
+            self.error(str(socketError))
+            self.increaseFail()
+            raise Exception()
+        except Exception, e:
+            self.error("General error. %s" % str(e))
+        finally:
+            socket.setdefaulttimeout(None)
+        return list
+        
     def checkNewVersion(self, force = False):
         if self._updated and not force:
             return
