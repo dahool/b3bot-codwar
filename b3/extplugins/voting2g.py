@@ -52,8 +52,10 @@
 # Use shuffe now when scheduller plugin is not available
 # 2011-03-21 - 1.1.1
 # Fix imports
+# 2011-06-14 - 1.1.3
+# Remove scheduller dependency
 
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 __author__  = 'SGT'
 
 import sys
@@ -63,7 +65,7 @@ import b3.cron
 import b3.events
 from b3 import clients
 from b3.functions import soundex, levenshteinDistance
-import time
+import time, threading
 import string
 
 class Voting2GPlugin(b3.plugin.Plugin):
@@ -92,11 +94,18 @@ class Voting2GPlugin(b3.plugin.Plugin):
     _cancel_level = 40
     _rate = "*/15"
     
+    _eventQueue = []
+    
     def onStartup(self):
+        self._eventQueue = []
+        
         self.registerEvent(b3.events.EVT_GAME_WARMUP)
         self.registerEvent(b3.events.EVT_GAME_EXIT)
         self.createEvent('EVT_VOTEMAP_COMMAND', 'Vote Map Command')
-
+    
+    def addEvent(self, func):
+        self._eventQueue.append(func)
+        
     def loadPluginConfig(self):
         try:
             self._vote_times = self.config.getint('settings', 'vote_times')
@@ -171,6 +180,9 @@ class Voting2GPlugin(b3.plugin.Plugin):
     def onEvent(self, event):
         if event.type == b3.events.EVT_GAME_WARMUP:
             self._cleanup(True)
+            while len(self._eventQueue) > 0:
+                func = self._eventQueue.pop()
+                func()
         elif event.type == b3.events.EVT_GAME_EXIT:
             if len(self._lastmaps) == self._lastmap_max:
                 self._lastmaps.pop(0)
@@ -588,15 +600,10 @@ class ShuffleVote(Vote):
         super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config, cmd)
         
         try:
-            shuffle_now = self.config.getboolean('voteshuffle', 'shuffle_now')
+            self.shuffle_now = self.config.getboolean('voteshuffle', 'shuffle_now')
         except:
-            shuffle_now = False
+            self.shuffle_now = False
 
-        if not shuffle_now:
-            self._schedullerPlugin = self.console.getPlugin('eventscheduller')
-            if not self._schedullerPlugin:
-                self.console.debug('Could not find scheduller plugin')
-        
         self._extraAdminPlugin = self.console.getPlugin('extraadmin')
         if not self._extraAdminPlugin:
             self.console.debug('Extra admin not available')
@@ -612,8 +619,9 @@ class ShuffleVote(Vote):
             self.console.write('shuffleteams')
         
     def _shuffle(self):
-        self.console.cron + b3.cron.OneTimeCronTab(self._doShuffle,  "*/10")
         self.console.say("Shuffle is about to perfom. Waiting for players.")
+        b = threading.Timer(30, self._doShuffle, None)
+        b.start()
                      
     def run_vote(self, data, client, cmd=None):
         """\
@@ -637,13 +645,13 @@ class ShuffleVote(Vote):
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
             self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
-            if not self._schedullerPlugin:
+            if not self.shuffle_now:
                 self._parent.bot("Will try shuffle now")
                 self._doShuffle()
             else:
                 self._parent.bot("Will try shuffle in next round")
                 self.console.say(self._parent.getMessage('shuffle'))
-                self._schedullerPlugin.add_event(b3.events.EVT_GAME_WARMUP,self._shuffle)
+                self._parent.addEvent(self._shuffle)
 
     def end_vote_no(self,  yes,  no):
         self.console.say(self._parent.getMessage('no_shuffle'))
