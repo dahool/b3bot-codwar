@@ -32,8 +32,10 @@
 # Add register user command
 # 05-26-2011 - SGT - 1.1.8
 # Fix issue in reg command
+# 06-16-2011 - SGT - 1.1.9
+# Fix issue in reg command
 
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -730,14 +732,14 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         sclient = self._adminPlugin.findClientPrompt(cid, client)
         if sclient:
             if sclient.inGroup(group):
-                client.message(self.getMessage('groups_already_in', sclient.exactName, group.name))
+                client.message(self._adminPlugin.getMessage('groups_already_in', sclient.exactName, group.name))
             elif sclient.maxLevel >= group.level:
                 client.message('^7%s ^7is already in a higher level group' % sclient.exactName)
             else:
                 sclient.setGroup(group)
                 sclient.save()
 
-                cmd.sayLoudOrPM(client, self.getMessage('groups_put', sclient.exactName, group.name))
+                cmd.sayLoudOrPM(client, self._adminPlugin.getMessage('groups_put', sclient.exactName, group.name))
                 return True
                                                                                               
 if __name__ == '__main__':

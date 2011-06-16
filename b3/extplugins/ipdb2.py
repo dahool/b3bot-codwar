@@ -631,7 +631,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def add_notice(self, data, client, admin):
         status = self._buildEventInfo(self._EVENT_ADDNOTE, client, client.timeEdit)
-        status.append([data, self._hash(admin.guid)])
+        status.append([int(time.time()), data, self._hash(admin.guid)])
         self._eventqueue.append(status)
                     
     def cmd_dbaddnote(self ,data , client, cmd=None):
