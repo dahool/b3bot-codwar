@@ -54,9 +54,11 @@
 # Handle notice and unban command
 # 2011-06-13 - SGT - 1.2.0
 # Add remote queue handling
+# 2011-06-16 - SGT - 1.2.1
+# Link user command
 
 __author__  = 'SGT'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -76,7 +78,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://www.ipdburt.com.ar/xmlrpc2'
+    _url = 'http://www.ipdburt.com.ar/api/v3/xmlrpc'
 
     _timeout = 15
     
@@ -166,6 +168,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     func = self.getCmd(cmd)
                     if func:
                         self._adminPlugin.registerCommand(self, cmd, level, func, alias)
+
             self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
             self._adminPlugin.registerCommand(self, 'ipdbup', 80, self.cmd_update, None)
             
@@ -349,8 +352,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
         
-    def _buildEventInfo(self, event, client, timeEdit = None):
-        self.verbose('Queued event %s for %s' % (event, client.name))
+    def _buildClientInfo(self, client, timeEdit = None):
         guid = self._hash(client.guid)
         if not timeEdit:
             timeEdit = int(time.time())
@@ -359,7 +361,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 timeEdit = self._formatTime(timeEdit)
             except:
                 timeEdit = int(time.time())
-        info = [event, client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+        info = [client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+        return info
+        
+    def _buildEventInfo(self, event, client, timeEdit = None):
+        self.verbose('Queued event %s for %s' % (event, client.name))
+        info = [event]
+        info.extend(self._buildClientInfo(client, timeEdit))
         self.verbose(info)
         return info
           
@@ -638,6 +646,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         """\
         <player> <text>: Add/Update a notice on ipdb for given player
         """
+        if not self._pluginEnabled or not self.isEnabled():
+            client.message('^Sorry, IPDB is disabled right now')
+            return False
+                    
         input = self._adminPlugin.parseUserCmd(data)
         if input:
             # input[0] is the player id
@@ -645,11 +657,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if not sclient:
                 return False
         else:
-            client.message('^7Invalid data, try !help addnote')
+            client.message('^7Invalid data, try !help dbaddnote')
             return False
 
         if not len(input)==2:
-            client.message('^7Missing data, try !help addnote')
+            client.message('^7Missing data, try !help dbaddnote')
             return False
         
         self.add_notice(input[1], sclient, client)
@@ -659,6 +671,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         """\
         <player>: Remove a notice on ipdb for given player
         """
+        if not self._pluginEnabled or not self.isEnabled():
+            client.message('^Sorry, IPDB is disabled right now')
+            return False
+                    
         input = self._adminPlugin.parseUserCmd(data)
         if input:
             # input[0] is the player id
@@ -666,7 +682,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if not sclient:
                 return False
         else:
-            client.message('^7Invalid data, try !help delnote')
+            client.message('^7Invalid data, try !help dbdelnote')
             return False
         
         status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, sclient.timeEdit)
@@ -677,6 +693,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         """\
         <player>: Remove baninfo on ipdb for given player
         """
+        if not self._pluginEnabled or not self.isEnabled():
+            client.message('^Sorry, IPDB is disabled right now')
+            return False
+                    
         input = self._adminPlugin.parseUserCmd(data)
         if input:
             # input[0] is the player id
@@ -684,7 +704,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if not sclient:
                 return False
         else:
-            client.message('^7Invalid data, try !help delnote')
+            client.message('^7Invalid data, try !help dbclearban')
             return False
         
         status = self._buildEventInfo(self._EVENT_UNBAN, sclient, sclient.timeEdit)
@@ -701,6 +721,48 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         else:
             client.message('^7IPDB is up to date.')
 
+    def cmd_userlink(self, data, client, cmd=None):
+        """\
+        Register yourself in ipdb
+        <username>: you ipdb username
+        """
+        if not self._pluginEnabled or not self.isEnabled():
+            client.message('^Sorry, IPDB is disabled right now')
+            return False
+            
+        input = self._adminPlugin.parseUserCmd(data)
+        if not input or not input[0]:
+            client.message('^7Invalid data, try !help userlink')
+            return False
+            
+        username = input[0]
+        data = self._buildClientInfo(client)
+        client.message('^7Linking ... please wait.')
+        try:
+            socket.setdefaulttimeout(self._timeout)
+            r = self._rpc_proxy.server.register(self._key, username, data)
+            if r:
+                client.message('^7Your user has been linked.')
+            else:
+                client.message('^7Username %s is not registered in ipdb.' % username)
+        except xmlrpclib.ProtocolError, protocolError:
+            self.error(str(protocolError))
+            client.message('^7An error occured while linking your user. Please try again later.')
+        except xmlrpclib.Fault, applicationError:
+            client.message('^7An error occured while linking your user. Please try again later.')
+            client.message('^7%s' % str(applicationError))
+        except socket.timeout, timeoutError:
+            self.warning("Connection timed out")
+            client.message('^7An error occured while linking your user. Please try again later.')
+        except socket.error, socketError:
+            self.error(str(socketError))
+            client.message('^7An error occured while linking your user. Please try again later.')
+        except Exception, e:
+            self.error("General error. %s" % str(e))
+            client.message('^7An error occured while linking your user. Please try again later.')
+        finally:
+            socket.setdefaulttimeout(None)
+        
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
         try:
