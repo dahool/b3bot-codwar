@@ -54,8 +54,10 @@
 # Fix imports
 # 2011-06-14 - 1.1.3
 # Remove scheduller dependency
+# 2011-06-25 - 1.1.4
+# Fix issue with shuffle now
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 __author__  = 'SGT'
 
 import sys
@@ -595,6 +597,7 @@ class ShuffleVote(Vote):
 
     _schedullerPlugin = None
     _extraAdminPlugin = None
+    shuffle_now = False
     
     def startup(self, parent, adminPlugin,  console,  config, cmd):
         super(ShuffleVote, self).startup(parent, adminPlugin,  console,  config, cmd)
@@ -645,7 +648,7 @@ class ShuffleVote(Vote):
         elif yes < int(round(((yes + no) * self._shuffle_diff_percent / 100.0))):
             self.console.say(self._parent.getMessage('cant_shuffle2', str(self._shuffle_diff_percent)))
         else:
-            if not self.shuffle_now:
+            if self.shuffle_now:
                 self._parent.bot("Will try shuffle now")
                 self._doShuffle()
             else:
