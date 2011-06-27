@@ -358,6 +358,7 @@ class TkPlugin(b3.plugin.Plugin):
             victim.message('^7type ^3!fp ^7 to forgive ^3%s' % (attacker.exactName))
 
         if attacker.maxLevel >= self._autoforgive_level:
+            self.verbose("Start autoforgive timer")
             t = threading.Timer(self._forgive_delay, self.auto_forgive, (attacker,victim))
             t.start()
         
@@ -619,14 +620,19 @@ class TkPlugin(b3.plugin.Plugin):
             return True
 
     def auto_forgive(self, attacker, victim):
+        self.debug("Running autoforgive for %s" % attacker.name)
         v = self.getClientTkInfo(victim)
         if v.isGrudged(attacker.cid):
+            self.debug("Attacker is grudged")
             return
 
         try:
-            points = v.attackers(attacker.cid)
-        except:
+            points = v.attackers[attacker.cid]
+        except Exception, e:
+            self.error(e)
             points = -1
+
+        self.verbose("Current points %d" % points)
 
         if points > 0:
             points = int(points * self._autoforgive_points)
@@ -639,6 +645,7 @@ class TkPlugin(b3.plugin.Plugin):
             except: pass
 
         if points >= 0:
+            self.verbose("Points cutted %d" % points)
             if self._private_messages:
                 attacker.message(self.getMessage('forgive_auto', { 'aname': attacker.exactName, 'vname' : victim.exactName }))
             else:
@@ -647,34 +654,36 @@ class TkPlugin(b3.plugin.Plugin):
 if __name__ == '__main__':
     import time
     from b3.fake import fakeConsole
-    from b3.fake import joe
     from b3.fake import simon
     from b3.fake import moderator
+    from b3.fake import reg as joe
     
     p = TkPlugin(fakeConsole, "@b3/conf/plugin_tk.xml")
     p.onStartup() # register events, etc
     p._forgive_delay = 5
-    
+    p._autoforgive_level = 0
+
     joe.team = b3.TEAM_BLUE
     simon.team = b3.TEAM_BLUE
-    
+   
     joe.connects(cid=1)
     simon.connects(cid=2)
-        
+    moderator.connects(cid=3)
+ 
     time.sleep(5)
     joe.kills(simon)
     time.sleep(6)
     simon.kills(joe)
     time.sleep(2)
-    joe.says('!f 2')
     time.sleep(2)
     joe.damages(simon)
-    moderator.says('!forgiveinfo joe')
+    moderator.says('!forgiveinfo reg')
     time.sleep(2)
     joe.damages(simon)
     joe.damages(simon)
-    moderator.says('!forgiveinfo joe')
+    moderator.says('!forgiveinfo reg')
+    simon.kills(joe)
     time.sleep(2)
     joe.kills(simon)
-    time.sleep(2)
-    
+    joe.says('!grudge simon')
+    time.sleep(2)    
