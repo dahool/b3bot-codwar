@@ -203,7 +203,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.console.cron + self._updateCrontab
 
     def onLoadConfig(self):
-        self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString())
+        self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString()).replace('<','\<').replace('>','\>')
         try:
             self._key = self.config.get('settings', 'key')
         except:

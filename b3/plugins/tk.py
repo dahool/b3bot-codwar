@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    06/27/2011 - 1.2.6 - SGT
+#    * Auto forgive
 #    03/30/2011 - 1.2.5 - SGT
 #    * Introduction of grudge level
 #    11/22/2009 - 1.2.4 - Courgette
@@ -40,7 +42,7 @@
 #    7/23/2005 - 1.0.2 - ThorN
 #    * Changed temp ban duration to be based on ban_length times the number of victims
 
-__version__ = '1.2.5'
+__version__ = '1.2.6'
 __author__  = 'ThorN'
 
 import b3, string, re, threading
@@ -217,8 +219,20 @@ class TkPlugin(b3.plugin.Plugin):
         except:
             self._private_messages = True
         self.debug('Send messages privately ? %s' % self._private_messages)
-        
-
+                    
+        try:
+            self._autoforgive_points = self.config.getfloat('settings','autoforgive_points')
+        except:
+            self._autoforgive_points = 0.5
+        try:
+            self._forgive_delay = self.config.getint('settings','forgive_delay')
+        except:
+            self._forgive_delay = 60
+        try:
+            self._autoforgive_level = self.config.getint('settings','autoforgive_level')
+        except:
+            self._autoforgive_level = 2
+                        
     def onEvent(self, event):
         if self.console.game.gameType in self._ffa: 
             # game type is deathmatch, ignore
@@ -343,6 +357,10 @@ class TkPlugin(b3.plugin.Plugin):
             a.warn(v.cid, warning)
             victim.message('^7type ^3!fp ^7 to forgive ^3%s' % (attacker.exactName))
 
+        if attacker.maxLevel >= self._autoforgive_level:
+            t = threading.Timer(self._forgive_delay, self.auto_forgive, (attacker,victim))
+            t.start()
+        
     def getClientTkInfo(self, client):
         if not client.isvar(self, 'tkinfo'):
             client.setvar(self, 'tkinfo', TkInfo(self, client.cid))
@@ -600,8 +618,32 @@ class TkPlugin(b3.plugin.Plugin):
 
             return True
 
+    def auto_forgive(self, attacker, victim):
+        v = self.getClientTkInfo(victim)
+        if v.isGrudged(attacker.cid):
+            return
 
+        try:
+            points = v.attackers(attacker.cid)
+        except:
+            points = -1
 
+        if points > 0:
+            points = int(points * self._autoforgive_points)
+
+        if points == 0:
+            v.forgive(attacker.cid)
+        elif points > 0:
+            try:
+                v.attackers[attacker.cid] = points
+            except: pass
+
+        if points >= 0:
+            if self._private_messages:
+                attacker.message(self.getMessage('forgive_auto', { 'aname', attacker.exactName, 'vname' : victim.exactName }))
+            else:
+                self.console.say(self.getMessage('forgive_auto', { 'aname', attacker.exactName, 'vname' : victim.exactName }))
+            
 if __name__ == '__main__':
     import time
     from b3.fake import fakeConsole
@@ -611,6 +653,7 @@ if __name__ == '__main__':
     
     p = TkPlugin(fakeConsole, "@b3/conf/plugin_tk.xml")
     p.onStartup() # register events, etc
+    p._forgive_delay = 5
     
     joe.team = b3.TEAM_BLUE
     simon.team = b3.TEAM_BLUE

@@ -7,6 +7,9 @@
 		<set name="grudge_enable">True</set>
 		<set name="grudge_level">2</set>
 		<set name="private_messages">True</set>
+        <set name="autoforgive_level">2</set>
+        <set name="autoforgive_points">0.5</set>
+        <set name="forgive_delay">60</set>
 	</settings>
 	<settings name="messages">
 		<set name="ban">^7demasiados team kill</set>
@@ -19,6 +22,7 @@
 		<set name="forgive_info">^7$name^7 tiene ^3$points^7 puntos por TK</set>
 		<set name="grudge_info">^7$name^7 tiene ^3$points^7 por TK por ^1rencor</set>
 		<set name="forgive_clear">^7$name^7 ^3$points^7 puntos por TK limpiados</set>
+        <set name="forgive_auto">^7$aname autoperdonado por matar a $vname</set>
 	</settings>
 	<settings name="level_0">
 		<set name="kill_multiplier">2</set>
