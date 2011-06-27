@@ -640,9 +640,9 @@ class TkPlugin(b3.plugin.Plugin):
 
         if points >= 0:
             if self._private_messages:
-                attacker.message(self.getMessage('forgive_auto', { 'aname', attacker.exactName, 'vname' : victim.exactName }))
+                attacker.message(self.getMessage('forgive_auto', { 'aname': attacker.exactName, 'vname' : victim.exactName }))
             else:
-                self.console.say(self.getMessage('forgive_auto', { 'aname', attacker.exactName, 'vname' : victim.exactName }))
+                self.console.say(self.getMessage('forgive_auto', { 'aname': attacker.exactName, 'vname' : victim.exactName }))
             
 if __name__ == '__main__':
     import time
@@ -658,6 +658,9 @@ if __name__ == '__main__':
     joe.team = b3.TEAM_BLUE
     simon.team = b3.TEAM_BLUE
     
+    joe.connects(cid=1)
+    simon.connects(cid=2)
+        
     time.sleep(5)
     joe.kills(simon)
     time.sleep(6)
