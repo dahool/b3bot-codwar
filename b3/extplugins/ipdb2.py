@@ -768,7 +768,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return self.encodeEntities(self._color_re.sub('',data))
         
     def encodeEntities(self, data):
-        return data.replace("<", "&lt;").replace(">","&gt;").replace("&","&amp;").replace("&","&amp;").replace('"',"&quot;").replace("'","&apos;")
+        return data.replace("&","&amp;").replace("<", "&lt;").replace(">","&gt;").replace('"',"&quot;").replace("'","&apos;")
         
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
