@@ -52,6 +52,7 @@
 # 2011-06-10 - SGT - 1.1.15
 # Change baninfo format
 # Handle notice and unban command
+# Encode xml entities
 # 2011-06-13 - SGT - 1.2.0
 # Add remote queue handling
 # 2011-06-16 - SGT - 1.2.1
@@ -361,7 +362,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 timeEdit = self._formatTime(timeEdit)
             except:
                 timeEdit = int(time.time())
-        info = [client.name, guid, client.id, client.ip, client.maxLevel, timeEdit]
+        info = [self.sanitize(client.name), guid, client.id, client.ip, client.maxLevel, timeEdit]
         return info
         
     def _buildEventInfo(self, event, client, timeEdit = None):
@@ -462,7 +463,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     if admin:
                         admin_id = self._hash(admin.guid)
                 
-            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, penalty.reason, admin_id]
+            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, self.sanitize(penalty.reason), admin_id]
             status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
             self.verbose(baninfo)
             status.append(baninfo)
@@ -762,6 +763,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7An error occured while linking your user. Please try again later.')
         finally:
             socket.setdefaulttimeout(None)
+        
+    def sanitize(self, data):
+        return self.encodeEntities(self._color_re.sub('',data))
+        
+    def encodeEntities(self, data):
+        return data.replace("<", "&lt;").replace(">","&gt;").replace("&","&amp;").replace("&","&amp;").replace('"',"&quot;").replace("'","&apos;")
         
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
