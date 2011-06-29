@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 ;#define Debug
-#define B3_VERSION_NUMBER "1.6.0"
+#define B3_VERSION_NUMBER "1.6.1"
 #define B3_VERSION_SUFFIX ""
 
 [Setup]
@@ -42,7 +42,7 @@ BackColor=clBlack
 BackColor2=clGray
 WizardSmallImageFile=WizB3SmallImage.bmp
 WizardImageFile=WizB3Image.bmp
-UsePreviousAppDir=true
+UsePreviousAppDir=false
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 VersionInfoCompany=BigBrotherBot.net
