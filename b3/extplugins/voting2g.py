@@ -56,8 +56,10 @@
 # Remove scheduller dependency
 # 2011-06-25 - 1.1.4
 # Fix issue with shuffle now
+# 2011-06-29 - 1.1.5
+# Fix shuffle message
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 __author__  = 'SGT'
 
 import sys
@@ -617,12 +619,15 @@ class ShuffleVote(Vote):
     def _doShuffle(self):
         self._parent.bot("Performing shuffle")
         if self._extraAdminPlugin:
+            self._parent.debug("Using extraadmin shuffle")
             self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
         else:
+            self._parent.debug("Using standard shuffle")
             self.console.write('shuffleteams')
         
     def _shuffle(self):
         self.console.say("Shuffle is about to perfom. Waiting for players.")
+        self._parent.debug("Shuffle init timer")
         b = threading.Timer(30, self._doShuffle, None)
         b.start()
                      
@@ -633,7 +638,7 @@ class ShuffleVote(Vote):
         super(ShuffleVote, self).run_vote(data, client, cmd)
 
     def vote_reason(self):
-        if not self._schedullerPlugin:
+        if self.shuffle_now:
             return self._parent.getMessage('reason_shuffle_now')
         return self._parent.getMessage('reason_shuffle')
 
