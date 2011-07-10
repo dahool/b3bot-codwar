@@ -57,9 +57,11 @@
 # Add remote queue handling
 # 2011-06-16 - SGT - 1.2.1
 # Link user command
+# 2011-07-10 - SGT - 1.2.2
+# Add alive cron
 
 __author__  = 'SGT'
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -186,6 +188,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return None
             
     def setupCron(self):
+        rhour = random.randint(0,23)
         rmin = random.randint(5,59)
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
@@ -199,12 +202,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.console.cron - self._updateCrontab
         if self._remotePermission > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
-            
+
+        self.debug("will send heartbeat at %02d:%02d every day" % (rhour,rmin))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.updateName, 0, rmin, rhour, '*', '*', '*'))
+        
         self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12')
         self.console.cron + self._updateCrontab
 
     def onLoadConfig(self):
-        self._hostname = self._color_re.sub('',self.console.getCvar('sv_hostname').getString()).replace('<','\<').replace('>','\>')
+        self._hostname = self.sanitize(self.console.getCvar('sv_hostname').getString())
         try:
             self._key = self.config.get('settings', 'key')
         except:
@@ -768,7 +774,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return self.encodeEntities(self._color_re.sub('',data))
         
     def encodeEntities(self, data):
-        return data.replace("&","&amp;").replace("<", "&lt;").replace(">","&gt;").replace('"',"&quot;").replace("'","&apos;")
+        return data.replace("<", "\<").replace(">","\>")
         
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
