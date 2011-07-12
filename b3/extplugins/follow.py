@@ -1,6 +1,6 @@
 # BigBrotherBot(B3) (www.bigbrotherbot.com)
 # Plugin for following suspicious users
-# Copyright (C) 2010 Sergio Gabriel Teves
+# Copyright (C) 2010-2011 Sergio Gabriel Teves
 # 
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,26 +16,36 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
-# 01-16-2010 - 1.0.0
+# 01-16-2010 - 1.0.0 - SGT
 # Initial version
-# 03-09-2010 - 1.1.0
+# 03-09-2010 - 1.1.0 - SGT
 # Add followinfo command
 # Add optional reason field
 # Removed name change event. Now the full client object is stored
-# 04-22-2010 - 1.1.1
+# 04-22-2010 - 1.1.1 - SGT
 # Changed notification message and show admin name
 # message can be changed through conf file
-# 07-26-2010 - 1.1.2
+# 07-26-2010 - 1.1.2 - SGT
 # Do sync on a thread
-# 07-31-2010 - 1.1.3
+# 07-31-2010 - 1.1.3 - SGT
 # Add option to disable remove record when banned
-# 01-25-2011 - 1.1.4
+# 01-25-2011 - 1.1.4 - SGT
 # Add option to use twitter
 # Fix minor error in followinfo
-# 05-04-2011 - 1.1.5
+# 05-04-2011 - 1.1.5 - SGT
 # Fix error in show message when no admin is set (added through web interface)
+# 07-11-2011 - 1.1.6 - Freelander
+# Slightly refactored the code
+# Added more debug lines
+# Fixed false notification messages sent to followed players
+# Suspected players properly added into/removed from '_following' list when connected/disconnected.
+# Banned players properly removed from plugin's database table
+# Better integration with aimbotdetector plugin when used together
+# Fixed some bugs
+# 07-12-2011 - 1.1.7 - SGT
+# Do not remove user when ban is done by B3
 
-__version__ = '1.1.5'
+__version__ = '1.1.7'
 __author__  = 'SGT'
 
 import b3, threading
@@ -61,7 +71,13 @@ class FollowPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_BAN)
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
+        
+        self.createEvent('EVT_FOLLOW_CONNECTED', 'Suspicious User Connected.')
 
+        self._twitter = self.console.getPlugin('twity')
+        if not self._twitter:
+            self.warning("Twitter plugin not avaiable.")
+            
     def onLoadConfig(self):
         """\
         Initialize plugin settings
@@ -71,44 +87,72 @@ class FollowPlugin(b3.plugin.Plugin):
         if not self._adminPlugin:
             # something is wrong, can't start without admin plugin
             self.error('Could not find admin plugin')
+            self.disable()
             return False
-
-        self._twitter = self.console.getPlugin('twity')
-        if not self._twitter:
-            self.warning("Twitter plugin not avaiable.")
             
-        self._mod_level = self.config.getint('settings', 'mod_level')
-        self._admin_level = self.config.getint('settings', 'admin_level')
         try:
             self._twit_event = self.config.getboolen('settings','twit_connect')
         except:
             self._twit_event = False
             
-        self.createEvent('EVT_FOLLOW_CONNECTED', 'Suspicious User Connected.')
-        
-        self._adminPlugin.registerCommand(self, 'follow', self._admin_level, self.cmd_addfollow,'ff')
-        self._adminPlugin.registerCommand(self, 'unfollow', self._admin_level, self.cmd_delfollow,'uf')
-        self._adminPlugin.registerCommand(self, 'listfollow', self._mod_level, self.cmd_listfollow,'lif')
-        self._adminPlugin.registerCommand(self, 'checkfollow', self._mod_level, self.cmd_checkfollow,'ckf')
-        self._adminPlugin.registerCommand(self, 'syncfollow', self._admin_level, self.cmd_sync, None)
-        self._adminPlugin.registerCommand(self, 'followinfo', self._mod_level, self.cmd_followinfo, 'fi')
+        # register our commands
+        self._registerCommands()
 
+        try:
+            self._NOTIFY_LEVEL = self.config.getint('settings', 'notify_level')
+        except:
+            self._NOTIFY_LEVEL = 20
         try:
             self._NOTIFY_MSG = self.config.get('settings','message')
         except:
             self.debug("Using default message")
         try:
-            self._remove_ban = self.config.getboolean('settings', 'remove_banned')
+            self._REMOVE_BAN = self.config.getboolean('settings', 'remove_banned')
         except:
-            self._remove_ban = True
+            self._REMOVE_BAN = True
+        try:
+            self._SKIP_B3_BAN = self.config.getboolean('settings', 'remove_on_b3ban')
+        except:
+            self._SKIP_B3_BAN = True
+        try:
+            self._MIN_PENALTY_DURATION = self.config.getint('settings', 'remove_ban_minduration')
+        except:
+            self._MIN_PENALTY_DURATION = 30
+            
+    def getCmd(self, cmd):
+        cmd = 'cmd_%s' % cmd
+        if hasattr(self, cmd):
+            func = getattr(self, cmd)
+            return func
+        return None
+
+    def _registerCommands(self):
+        # register our commands
+        if 'commands' in self.config.sections():
+            for cmd in self.config.options('commands'):
+                level = self.config.get('commands', cmd)
+                sp = cmd.split('-')
+                alias = None
+                if len(sp) == 2:
+                    cmd, alias = sp
+                func = self.getCmd(cmd)
+                if func:
+                    self._adminPlugin.registerCommand(self, cmd, level, func, alias)
             
     def onEvent(self,  event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
-            self.process_connect_event(event)
+            if  not event.client or \
+                not event.client.id or \
+                event.client.cid == None or \
+                not event.client.connected or \
+                event.client.pbid == 'WORLD' or \
+                event.client.hide:
+                return
+            self.process_connect_event(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.process_disconnect_event(event)
+            self.process_disconnect_event(event.data)
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
-            if self._remove_ban:
+            if self._REMOVE_BAN:
                 self.process_ban(event)
         elif event.type == b3.events.EVT_GAME_ROUND_START:
             b = threading.Timer(10, self.sync_list, (event,))
@@ -121,88 +165,115 @@ class FollowPlugin(b3.plugin.Plugin):
         for c in clients:
             self._add_list(c)
         
-    def process_connect_event(self, event):
-        self.debug("Client connected")
-        if not event.client or event.client.pbid == 'WORLD':
-            return            
-        
-        self.debug("Put on connected queue")
-        t = threading.Timer(30, self._client_connected, (event.client,))
+    def process_connect_event(self, client):
+        self.debug("Client connected, processing connect event")
+        self.debug("Client %s put on connected queue" % client.name)
+        t = threading.Timer(30, self._client_connected, (client,))
         t.start()
     
     def _client_connected(self, client):
         if client.connected:
-            if client.maxLevel < self._mod_level:
+            if client.maxLevel < self._NOTIFY_LEVEL:
                 if self._add_list(client):
                     self.console.queueEvent(self.console.getEvent('EVT_FOLLOW_CONNECTED', (client.var(self, 'follow_data').value,), client))
-                    self.notify_admins(client)
+                    self.debug("Notifying online admins")
+                    self.notify_online_admins(client)
                     self._event_notify(client)
             else:
-                self.warn_user(client)
+                if len(self._following) > 0:
+                    self.debug('Notifying connecting admin (admin: %s cid: %s)' % (client.name, client.cid))
+                    self.notify_connecting_admin(client)
+                else:
+                    self.debug('No suspicious players online')
 
     def _event_notify(self, client):
         if self._twit_event and self._twitter:
             message = "WARNING: Suspicious user is playing."
             self._twitter.post_update(message)
         
-    def notify_admins(self, client):
-        self.debug("Notify connected admins")
+    def notify_online_admins(self, suspect):
         clients = self.console.clients.getList()
-        for c in clients:
-            if c.maxLevel >= self._mod_level:
-                self._show_message(client, c)
-                time.sleep(0.5)
+        for player in clients:
+            if player.maxLevel >= self._NOTIFY_LEVEL:
+                self._show_message(player, suspect)
+                time.sleep(1)
+
+    def _show_message(self, admin, suspect):
+        #prevent faulty messages to non-admin just in case
+        if admin.maxLevel < self._NOTIFY_LEVEL:
+            self.warning('WARNING: Oooops! Something wrong? %s shouldn\'t receive a message!' % admin.name)
+            return False
+
+        data = {'client_name': suspect.name,
+                'client_id': suspect.id,
+                'admin_name': suspect.var(self, 'follow_admin').value,
+                'admin_id': suspect.var(self, 'follow_admin_id').value,
+                'reason': suspect.var(self, 'follow_reason').value}
+
+        admin.message(self._NOTIFY_MSG % data)
     
-    def _show_message(self, client, player):
-        admin = player.var(self, 'follow_admin').value
-        if admin:
-            admin_name = admin.name
-            admin_id = admin.id
-        else:
-            admin_name = 'B3'
-            admin_id = '0'
-        data = {'client_name': player.name,
-                'client_id': player.id,
-                'admin_name': admin_name,
-                'admin_id': admin_id,
-                'reason': player.var(self, 'follow_reason').value}
-        client.message(self._NOTIFY_MSG % data)
-        
     def process_ban(self, event):
-        if event.data.find("banned by") <> -1:
-            self.debug("Cleaning follow database")
-            cursor = self.console.storage.query(self._DEL_QUERY % event.client.id)
-            cursor.close()
-            
-    def process_disconnect_event(self, event):
-        self.debug("Process disconnect event")
-        cid = event.data
-        if self._following.has_key(cid):
-            self.debug("Client %s disconnected" % (self._following[cid]))
-            del self._following[cid]
-            
-    def warn_user(self, client):
-        self.debug("Notify watched users")
-        for c in self._following.values():
-            self._show_message(client, c)
-            time.sleep(0.5)
+        client = event.client
+        #check if banned client is in follow list
+        self.debug('Client ban detected. Checking follow list DB table for %s' % client.name)
+        cursor = self.console.storage.query(self._SELECT_QUERY % client.id)
+        if cursor.rowcount > 0:
+            # check if the ban is from an admin and is greater than 30 minutes (if not, it should be removed)
+            penalty = client.lastBan
+            if (penalty
+                and (self._SKIP_B3_BAN and penalty.adminId is not None)
+                and penalty.duration > self._MIN_PENALTY_DURATION):
+                self.debug('Banned client (%s) found in follow list DB table. Removing...' % client.name)
+                cursor2 = self.console.storage.query(self._DEL_QUERY % client.id)
+                cursor2.close()
+            else:
+                self.debug('Client (%s) was banned by B3 or ban duration is too short' % client.name)
+        cursor.close()
+
+    def process_disconnect_event(self, client_cid):
+        self.debug("Processing disconnect event")
+        self.debug('Disconnected client\'s cid = %s, followlist = %s' % (client_cid, self._following))
+        if self._following.has_key(client_cid):
+            self.debug("Client %s disconnected, removing from online suspect list" % (self._following[client_cid]))
+            del self._following[client_cid]
+            if len(self._following) > 0:
+                self.verbose('Online suspects: %s' % self._following)
+            else:
+                self.verbose('All suspected players disconnected')
+
+    def notify_connecting_admin(self, client):
+        for suspect in self._following.values():
+            self._show_message(client, suspect)
+            time.sleep(1)
         
     def _add_list(self, client):
         if not self._following.has_key(client.id):
-            self.debug("Lookup for %s" % client.name)
+            self.verbose('online follow list: %s' % self._following)
+            self.debug("Checking database for %s [@%s]" % (client.name, client.id))
             cursor = self.console.storage.query(self._SELECT_QUERY % client.id)
             if cursor.rowcount > 0:
                 r = cursor.getRow()
-                self.debug("Client %s found in list." % client.name)
-                if r['reason'] and r['reason'] <> '':
+                self.debug("Client %s [@%s] found in follow list." % (client.name, client.id))
+                if r['reason'] and r['reason'] != '' and r['reason'] != 'None':
                     reason = r['reason']
                 else:
                     reason = self._DEFAULT_REASON
-                admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
+                admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'])
+                if admin:
+                    admin_name = admin.name
+                    admin_id = admin.id
+                else:
+                    admin_name = 'B3'
+                    admin_id = '0'
                 client.setvar(self, 'follow_reason', reason)
-                client.setvar(self, 'follow_admin', admin)
-                client.setvar(self, 'follow_data', {'reason': reason, 'admin': admin})
-                self._following[client.id] = client
+                self.verbose('follow_reason: %s' % reason)
+                client.setvar(self, 'follow_admin', admin_name)
+                self.verbose('follow_admin: %s' % admin_name)
+                client.setvar(self, 'follow_admin_id', admin_id)
+                self.verbose('follow_admin_id: %s' % admin_id)
+                client.setvar(self, 'follow_data', {'reason': reason, 'admin': admin_name, 'admin_id': admin_id})
+                self._following[client.cid] = client
+                self.verbose('online follow list: %s' % self._following)
                 return True
             cursor.close()
         return False
@@ -211,11 +282,14 @@ class FollowPlugin(b3.plugin.Plugin):
         """\
         list connected users being followed
         """        
-        client.message("^7Checking...")
-        self.warn_user(client)
-        client.message("^7Check complete.")
+        if len(self._following) > 0:
+            client.message("^7Checking...")
+            self.notify_connecting_admin(client)
+            client.message("^7Check complete.")
+        else:
+            client.message('Currently there are no players online in follow list')
 
-    def cmd_sync(self, data, client, cmd=None):
+    def cmd_syncfollow(self, data, client, cmd=None):
         """\
         sync connected players
         """        
@@ -245,7 +319,7 @@ class FollowPlugin(b3.plugin.Plugin):
         cursor.close()
         client.message(', '.join(names))
 
-    def cmd_addfollow(self, data, client, cmd=None):
+    def cmd_follow(self, data, client, cmd=None):
         """\
         <name> - add user to the follow list
         <reason> - optional
@@ -272,15 +346,15 @@ class FollowPlugin(b3.plugin.Plugin):
         if cursor.rowcount == 0:
             cursor2 = self.console.storage.query(self._ADD_QUERY % (sclient.id, client.id, self.console.time(), reason))
             cursor2.close()
-            self.debug("User added to watch list")
-            client.message("^7The user has been added to the watch list.")
+            self.debug("%s added to watch list" % sclient.name)
+            client.message("^7%s has been added to the watch list." % sclient.name)
         else:
-            self.debug("User already in watch list")
-            client.message("^7User already exists in watch list.")
+            self.debug("%s already in watch list" % sclient.name)
+            client.message("^7%s already exists in watch list." % sclient.name)
         cursor.close()
         self.sync_list(None)
         
-    def cmd_delfollow(self, data, client, cmd=None):
+    def cmd_unfollow(self, data, client, cmd=None):
         """\
         <name> - remove user from the follow list
         """        
@@ -292,8 +366,13 @@ class FollowPlugin(b3.plugin.Plugin):
         sclient = self._adminPlugin.findClientPrompt(m[0], client)
         cursor = self.console.storage.query(self._DEL_QUERY % sclient.id)
         cursor.close()
-        self.debug("User removed from watch list")
-        client.message("^7User removed from the watch list.")
+        if cursor.rowcount == 0:
+            self.debug('%s is not in watchlist, giving up...' % sclient.name)
+            client.message('%s is not in watchlist, giving up...' % sclient.name)
+            return False
+
+        self.debug("%s removed from watch list" % sclient.name)
+        client.message("^7%s removed from the watch list." % sclient.name)
         self.sync_list(None)
 
     def cmd_followinfo(self, data, client, cmd=None):
@@ -311,10 +390,10 @@ class FollowPlugin(b3.plugin.Plugin):
         if cursor.rowcount > 0:
             r = cursor.getRow()
             admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
-            if r['reason'] and r['reason'] <> '':
+            if r['reason'] and r['reason'] != '' and r['reason'] != 'None':
                 reason = r['reason']
             else:
-                reason = self._DEFAULT_REASON            
+                reason = self._DEFAULT_REASON
             client.message('%s was added by %s for %s' % (sclient.name, admin.name, reason))
         else:
             client.message('No follow info for %s' % sclient.name)
