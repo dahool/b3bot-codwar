@@ -15,7 +15,7 @@
         <!-- Remove when banned by b3 (ie, no admin intervention) -->
 		<set name="remove_on_b3ban">false</set>
         <!-- Ban with duration less than this value won't be raise a remove -->
-		<set name="remove_ban_minduration">30</set>
+		<set name="remove_ban_minduration">43829</set> <!-- 1 month -->
 		<!-- Do you want to enable twitter integration? -->
 		<set name="twit_connect">true</set>
 		<!-- Message to be sent -->

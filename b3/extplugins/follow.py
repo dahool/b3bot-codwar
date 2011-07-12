@@ -111,13 +111,13 @@ class FollowPlugin(b3.plugin.Plugin):
         except:
             self._REMOVE_BAN = True
         try:
-            self._SKIP_B3_BAN = self.config.getboolean('settings', 'remove_on_b3ban')
+            self._REMOVE_B3_BAN = self.config.getboolean('settings', 'remove_on_b3ban')
         except:
-            self._SKIP_B3_BAN = True
+            self._REMOVE_B3_BAN = False
         try:
             self._MIN_PENALTY_DURATION = self.config.getint('settings', 'remove_ban_minduration')
         except:
-            self._MIN_PENALTY_DURATION = 30
+            self._MIN_PENALTY_DURATION = 43829
             
     def getCmd(self, cmd):
         cmd = 'cmd_%s' % cmd
@@ -220,9 +220,8 @@ class FollowPlugin(b3.plugin.Plugin):
         if cursor.rowcount > 0:
             # check if the ban is from an admin and is greater than 30 minutes (if not, it should be removed)
             penalty = client.lastBan
-            if (penalty
-                and (self._SKIP_B3_BAN and penalty.adminId is not None)
-                and penalty.duration > self._MIN_PENALTY_DURATION):
+            if (penalty and penalty.duration > self._MIN_PENALTY_DURATION
+                and (penalty.adminId != None or self._REMOVE_B3_BAN)):
                 self.debug('Banned client (%s) found in follow list DB table. Removing...' % client.name)
                 cursor2 = self.console.storage.query(self._DEL_QUERY % client.id)
                 cursor2.close()
