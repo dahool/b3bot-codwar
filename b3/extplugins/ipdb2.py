@@ -202,6 +202,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.console.cron - self._updateCrontab
         if self._remotePermission > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
+        if self._showAdInterval > 0:
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
 
         self.debug("will send heartbeat at %02d:%02d every day" % (rhour,rmin))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateName, 0, rmin, rhour, '*', '*', '*'))
@@ -243,7 +245,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._remotePermission = self.config.getint('settings', 'remotepermission')
         except:
             pass
-                        
+        try:
+            self._showAdInterval = self.config.getint('settings', 'showmessageinterval')
+        except:
+            self._showAdInterval = 30
+                                    
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
             self.onClientConnect(event.client)
@@ -356,6 +362,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._eventqueue.append(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
             
     # =============================== Processing ===============================
+    def consoleMessage(self):
+        self.console.say('^5IPDB ^7is watching you')
+        
     def _hash(self, text):
         return hash('%s%s' % (text, self._key)).hexdigest()
         
