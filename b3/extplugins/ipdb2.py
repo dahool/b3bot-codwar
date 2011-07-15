@@ -59,9 +59,11 @@
 # Link user command
 # 2011-07-10 - SGT - 1.2.2
 # Add alive cron
+# 2011-07-15 - SGT - 1.2.3
+# Collect unban info
 
 __author__  = 'SGT'
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -131,7 +133,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.time_expire=-1 OR p.time_expire > %(now)d) "\
     "AND p.time_edit >= %(since)d AND p.inactive=0 AND keyword <> 'ipdb2'"
-        
+
+    _UNBAN_QUERY = "SELECT c.id as client_id, p.id as id "\
+    "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
+    "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.inactive = 1 OR (p.time_expire > 0 AND p.time_expire < %(now)d)) "\
+    "AND (keyword = 'ipdb2' or keyword = 'ipdb')"
+            
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
@@ -188,25 +195,31 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return None
             
     def setupCron(self):
-        rhour = random.randint(0,23)
-        rmin = random.randint(5,59)
+        self.debug("will send update every %02d minutes" % self._interval)
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10'))
         if self._banInfoInterval > 0:
-            self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15)
+            rmin = random.randint(5,59)
+            self.debug("will send ban info every %02d:%02d hours" % (self._banInfoInterval,rmin))
+            self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15+rmin)
             self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval))
         if self._banInfoDumpTime >= 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, rmin, self._banInfoDumpTime))
-        if self._updateCrontab:
-            self.console.cron - self._updateCrontab
+            self.debug("will dump ban info at %02d" % (self._banInfoDumpTime))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpUnbanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
         if self._remotePermission > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
         if self._showAdInterval > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
 
+        rhour = random.randint(0,23)
+        rmin = random.randint(5,59)
         self.debug("will send heartbeat at %02d:%02d every day" % (rhour,rmin))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateName, 0, rmin, rhour, '*', '*', '*'))
+
+        if self._updateCrontab:
+            self.console.cron - self._updateCrontab
         
         self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12')
         self.console.cron + self._updateCrontab
@@ -606,6 +619,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 penalty.timeAdd = r['time_add']
                 status = self._buildBanInfo(penalty, client)
                 list.append(status)
+            keys.append(r['id'])
             cursor.moveNext()
         
         if len(list) > 0:
@@ -615,10 +629,42 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             try:
                 self._running = True
                 self.send_update(list)
+                cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb2' WHERE id IN (%s)" % ",".join(keys))
             except:
                 pass
-            else:
-                cursor = self.console.storage.query("UPDATE penalties SET keyword = 'ipdb2' WHERE id IN (%s)" % ",".join(keys))
+            self._running = False
+        else:
+            self.debug('No ban info to send')
+
+    def dumpUnbanInfo(self):
+        self.debug('Collect unban info')
+        now = int(time.time())
+        since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+        q = self._UNBAN_QUERY + " LIMIT 25"
+        cursor = self.console.storage.query(q % {'now': now,
+                                                'since': since})
+                                                                  
+        list = []
+        keys = []
+        while not cursor.EOF:
+            r = cursor.getRow()
+            client = self._adminPlugin.findClientPrompt("@%s" % r['client_id'], None)
+            if client:
+                status = self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit):
+                list.append(status)
+            keys.append(r['id'])
+            cursor.moveNext()
+        
+        if len(list) > 0:
+            self.debug('Update unban info')
+            if self._running:
+                time.sleep(self._timeout)
+            try:
+                self._running = True
+                self.send_update(list)
+                cursor = self.console.storage.query("UPDATE penalties SET keyword = '' WHERE id IN (%s)" % ",".join(keys))
+            except:
+                pass
             self._running = False
         else:
             self.debug('No ban info to send')
