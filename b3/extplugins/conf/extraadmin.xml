@@ -12,7 +12,7 @@
     <settings name="commands">
       <set name="pamap-map">40</set>
       <set name="pasetnextmap-setnextmap">40</set>
-      <set name="pashuffleteams-shuffleteams">20</set>
+      <!--set name="pashuffleteams-shuffleteams">20</set-->
       <set name="pasetpassword">60</set>
       <set name="pasetteamname-setteamname">80</set>
       <set name="pabandetail-bandetail">80</set>

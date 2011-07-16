@@ -1,17 +1,5 @@
 <configuration plugin="poweradmin">
     <settings name="commands">
-        <set name="pahotpotato-hotpotato">60</set>
-        <set name="patimelimit-timelimit">60</set>
-        <set name="pafraglimit-fraglimit">60</set>
-        <set name="pacaplimit-caplimit">60</set>
-        <set name="parespawndelay-respawndelay">60</set>
-        <set name="parespawngod-respawngod">60</set>
-        <set name="paredwave-redwave">60</set>
-        <set name="pabluewave-bluewave">60</set>
-        <!--set name="pasetnextmap-setnextmap">40</set-->
-        <set name="pawaverespawns-wave">40</set>
-        <set name="pasetwave-setwave">40</set>
-    
         <set name="pacyclemap-cyclemap">40</set>
         <set name="pamaprestart-maprestart">40</set>
         <set name="pamapreload-mapreload">40</set>
@@ -31,6 +19,10 @@
         <set name="paexec">100</set>
 
         <set name="pateams-teams">2</set>
+        <set name="paskuffle-shuffleteams">20</set>
+        <set name="paunskuffle-unsk">60</set>
+        <set name="pabalance-bal">20</set>
+        <set name="paminmoves-min">2</set>
         
         <!--  by Courgette -->
         <set name="pamoon-moon">40</set>
@@ -51,6 +43,17 @@
         
         <set name="paident-id">0</set>
     <!--  END by Courgette -->
+        <set name="pahotpotato-hotpotato">60</set>
+        <set name="patimelimit-timelimit">60</set>
+        <set name="pafraglimit-fraglimit">60</set>
+        <set name="pacaplimit-caplimit">60</set>
+        <set name="parespawndelay-respawndelay">60</set>
+        <set name="parespawngod-respawngod">60</set>
+        <set name="paredwave-redwave">60</set>
+        <set name="pabluewave-bluewave">60</set>
+        <!--set name="pasetnextmap-setnextmap">40</set-->
+        <set name="pawaverespawns-wave">40</set>
+        <set name="pasetwave-setwave">40</set>
     </settings>
 
   <settings name="namechecker">

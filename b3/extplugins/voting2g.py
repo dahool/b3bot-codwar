@@ -597,7 +597,7 @@ class NextMapVote(MapVote):
 
 class ShuffleVote(Vote):
 
-    _schedullerPlugin = None
+    _powerAdminPlugin = None
     _extraAdminPlugin = None
     shuffle_now = False
     
@@ -609,6 +609,10 @@ class ShuffleVote(Vote):
         except:
             self.shuffle_now = False
 
+        self._powerAdminPlugin = self.console.getPlugin('poweradminurt')
+        if not self._powerAdminPlugin:
+            self.console.debug('PowerAdmin not available')
+
         self._extraAdminPlugin = self.console.getPlugin('extraadmin')
         if not self._extraAdminPlugin:
             self.console.debug('Extra admin not available')
@@ -618,7 +622,10 @@ class ShuffleVote(Vote):
             
     def _doShuffle(self):
         self._parent.bot("Performing shuffle")
-        if self._extraAdminPlugin:
+        if self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
+            self._parent.debug("Using poweradmin shuffle")
+            self._powerAdminPlugin.cmd_paskuffle(None, None, None)
+        elif self._extraAdminPlugin:
             self._parent.debug("Using extraadmin shuffle")
             self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
         else:
