@@ -621,6 +621,7 @@ class ShuffleVote(Vote):
         self._shuffle_diff_percent = self.config.getint('voteshuffle', 'shuffle_diff_percent')
             
     def _doShuffle(self):
+        self.console.say("^7Shuffling teams")
         self._parent.bot("Performing shuffle")
         if self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
             self._parent.debug("Using poweradmin shuffle")
@@ -633,10 +634,14 @@ class ShuffleVote(Vote):
             self.console.write('shuffleteams')
         
     def _shuffle(self):
-        self.console.say("Shuffle is about to perfom. Waiting for players.")
         self._parent.debug("Shuffle init timer")
-        b = threading.Timer(30, self._doShuffle, None)
-        b.start()
+        self.console.say("^7Shuffle is about to perfom. Waiting for players.")
+        for i in range(30,0,-1):
+            if i % 5 == 0:
+                self.console.say("^7Performing shuffle in ^5%d ^7seconds." % i)
+            self._parent.verbose("Wait %d" % i)
+            time.sleep(1)
+        self._doShuffle()
                      
     def run_vote(self, data, client, cmd=None):
         """\
