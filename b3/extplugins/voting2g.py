@@ -59,7 +59,7 @@
 # 2011-06-29 - 1.1.5
 # Fix shuffle message
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 __author__  = 'SGT'
 
 import sys
