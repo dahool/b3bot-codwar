@@ -61,9 +61,11 @@
 # Add alive cron
 # 2011-07-15 - SGT - 1.2.3
 # Collect unban info
+# 2011-08-29 - SGT - 1.2.4
+# Include admin name and admin id in penalty
 
 __author__  = 'SGT'
-__version__ = '1.2.3'
+__version__ = '1.2.4'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -484,14 +486,16 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             else:
                 pType = "tb"
 
+            admin_name = None;
             admin_id = 0
             if self._showBanAdmin:
                 if penalty.adminId and penalty.adminId > 0:
                     admin = self._adminPlugin.findClientPrompt('@%s' % str(penalty.adminId), None)
                     if admin:
+                        admin_name = admin.name
                         admin_id = self._hash(admin.guid)
-                
-            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, self.sanitize(penalty.reason), admin_id]
+
+            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, self.sanitize(penalty.reason), admin_name, admin_id]
             status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
             self.verbose(baninfo)
             status.append(baninfo)
@@ -701,7 +705,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def add_notice(self, data, client, admin):
         status = self._buildEventInfo(self._EVENT_ADDNOTE, client, client.timeEdit)
-        status.append([int(time.time()), data, self._hash(admin.guid)])
+        status.append([int(time.time()), data, admin.name, self._hash(admin.guid)])
         self._eventqueue.append(status)
                     
     def cmd_dbaddnote(self ,data , client, cmd=None):
