@@ -63,9 +63,11 @@
 # Collect unban info
 # 2011-08-29 - SGT - 1.2.4
 # Include admin name and admin id in penalty
+# 2011-08-30 - SGT - 1.2.5
+# Some minor fixes in queue processing
 
 __author__  = 'SGT'
-__version__ = '1.2.4'
+__version__ = '1.2.5'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -654,7 +656,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             r = cursor.getRow()
             client = self._adminPlugin.findClientPrompt("@%s" % r['client_id'], None)
             if client:
-                status = self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit):
+                status = self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit)
                 list.append(status)
             keys.append(r['id'])
             cursor.moveNext()
@@ -840,7 +842,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             list = self.getEventQueue()
         except:
-            pass
+            list = []
         if len(list) > 0:
             self.debug('Received %d events. Processing' % len(list))
             for event in list:
@@ -863,7 +865,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             m, client_id, duration, reason, admin_id = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
-                if admin_id = 0:
+                if admin_id == 0:
                     admin = None
                 else:
                     admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
@@ -881,7 +883,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             m, client_id, reason, admin_id = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
-                if admin_id = 0:
+                if admin_id == 0:
                     admin = None
                 else:
                     admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)                
@@ -896,7 +898,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             m, client_id, reason, admin_id, key = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
-                if admin_id = 0:
+                if admin_id == 0:
                     admin = None
                 else:
                     admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
