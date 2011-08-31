@@ -75,7 +75,7 @@ import b3.plugin
 import b3.cron
 import random, datetime
 import socket
-from b3.clients import ClientNotice
+from b3.clients import ClientNotice, ClientBan
 from b3.querybuilder import QueryBuilder
 
 try:
