@@ -488,7 +488,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             else:
                 pType = "tb"
 
-            admin_name = None;
+            admin_name = "";
             admin_id = 0
             if self._showBanAdmin:
                 if penalty.adminId and penalty.adminId > 0:
