@@ -255,8 +255,8 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
     except:
       self._origgear = 0 # allow all weapons
     
+    self.installCrontabs()
     self.debug('Started')
-
 
   def onLoadConfig(self):
     self.LoadNameChecker()
@@ -664,6 +664,8 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
     else:
         self.debug('Rotation Manager is disabled')
 
+
+  def installCrontabs(self):
     # CRONTABS INSTALLATION
     # Cleanup and Create the crontabs
     if self._ncronTab:
@@ -683,8 +685,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
       self.console.cron + self._tcronTab
     if self._sinterval > 0:
       self._scronTab = b3.cron.PluginCronTab(self, self.speccheck, 0, '*/%s' % (self._sinterval))
-      self.console.cron + self._scronTab
-
+      self.console.cron + self._scronTab    
 
   def getCmd(self, cmd):
     cmd = 'cmd_%s' % cmd
@@ -1787,7 +1788,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
 
     # 10/22/2008 - 1.4.0b10 - mindriot
     # if gametype is unknown when B3 is started in the middle of a game
-    if self.console.game.gameType == None:
+    if self.console.game and self.console.game.gameType == None:
       try:
         # find and set current gametype
         self.console.game.gameType = self.console.defineGameType( self.console.getCvar('g_gametype').getString() )

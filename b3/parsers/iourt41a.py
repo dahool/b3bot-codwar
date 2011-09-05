@@ -37,9 +37,10 @@ import os
 
 import b3
 import b3.events
+import re
 from b3.parsers.iourt41 import Iourt41Parser
 
-class Iourt41aParser(Iourt41Parser):
+class Iourt41AParser(Iourt41Parser):
 
     _lineFormats = (
         #Generated with ioUrbanTerror v4.1:
