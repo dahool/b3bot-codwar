@@ -63,8 +63,8 @@
 # Collect unban info
 # 2011-08-29 - SGT - 1.2.4
 # Include admin name and admin id in penalty
-# 2011-08-30 - SGT - 1.2.5
-# Some minor fixes in queue processing
+# 2011-09-05 - SGT - 1.2.5
+# Minor fixes
 
 __author__  = 'SGT'
 __version__ = '1.2.5'
@@ -482,13 +482,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def _buildBanInfo(self, penalty, client):
         status = None
-        if penalty and penalty.duration < 1 or penalty.duration > 30: # no tempban less than 30 minutes
+        if penalty and (penalty.duration < 1 or penalty.duration > 30): # no tempban less than 30 minutes
             if penalty.duration == -1 or penalty.duration == 0:
                 pType = "pb"
             else:
                 pType = "tb"
 
-            admin_name = "";
+            admin_name = ""
             admin_id = 0
             if self._showBanAdmin:
                 if penalty.adminId and penalty.adminId > 0:
@@ -624,7 +624,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 penalty.reason = r['reason']
                 penalty.timeAdd = r['time_add']
                 status = self._buildBanInfo(penalty, client)
-                list.append(status)
+                if status: list.append(status)
             keys.append(r['id'])
             cursor.moveNext()
         

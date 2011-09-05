@@ -122,10 +122,6 @@
 #    * reflect that cid are not converted to int anymore in the clients module
 # v1.7.17 - 03/05/2011 - Courgette
 #     * reflect changes in inflictCustomPenalty method signature
-# v1.7.16b - 04/05/2010 - SGT
-#    * try to fix issue with OnSay when something like this come and the match could find the name group
-#    say: 7 -crespino-:
-#
 # v1.8.0 - 31/05/2011 - Courgette
 #     * Damage event now carry correct damage points
 #     * Damage event weapon code is now the same as the one used for Kill events
@@ -139,9 +135,8 @@
 # 14/06/2011 - 1.11.0 - Courgette
 # * cvar code moved to q3a AbstractParser
 #
-
 __author__  = 'xlr8or, Courgette'
-__version__ = '1.11.0b'
+__version__ = '1.11.0'
 
 
 from b3.parsers.q3a.abstractParser import AbstractParser
@@ -213,7 +208,7 @@ class Iourt41Parser(AbstractParser):
         #15:37 say: 9 .:MS-T:.BstPL: this name is quite a challenge
         #2:28 sayteam: 12 New_UrT_Player_v4.1: woekele
         #16:33 Flag: 2 0: team_CTF_redflag
-        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s*(?P<text>.*))$', re.IGNORECASE),
+        re.compile(r'^(?P<action>[a-z]+):\s(?P<data>(?P<cid>[0-9]+)\s(?P<name>[^ ]+):\s+(?P<text>.*))$', re.IGNORECASE),
 
         #15:42 Flag Return: RED
         #15:42 Flag Return: BLUE
@@ -288,6 +283,7 @@ class Iourt41Parser(AbstractParser):
     UT_MOD_M4='38'
     UT_MOD_FLAG='39'
     UT_MOD_GOOMBA='40'
+    
     ## weapons id on Hit: lines are different than the one
     ## on the Kill: lines. Here the translation table
     hitweapon2killweapon = {
@@ -361,7 +357,6 @@ class Iourt41Parser(AbstractParser):
         # add UrT specific events
         self.Events.createEvent('EVT_GAME_FLAG_RETURNED', 'Flag returned')
         self.Events.createEvent('EVT_CLIENT_GEAR_CHANGE', 'Client gear change')
-        self.Events.createEvent('EVT_SURVIVOR_WIN', 'Survivor Winner')
 
         # add the world client
         self.clients.newClient('-1', guid='WORLD', name='World', hide=True, pbid='WORLD')
@@ -1004,19 +999,12 @@ class Iourt41Parser(AbstractParser):
         return b3.events.Event(b3.events.EVT_CLIENT_PRIVATE_SAY, data, client, tclient)
         -------------------------------------------------------------------------------"""
 
-    # survivor winner
-    def OnSurvivorwinner(self, action, data, match=None):
-        self.debug('EVENT: OnSurvivorwinner')
-        return b3.events.Event(b3.events.EVT_SURVIVOR_WIN, data)  
-
     # endmap/shutdown
     def OnShutdowngame(self, action, data=None, match=None):
         self.debug('EVENT: OnShutdowngame')
         self.game.mapEnd()
         # self.clients.sync()
         # self.debug('Synchronizing client info')
-        # set data to true to differentiaty from the EXIT event sent by abstract
-        data = True
         self._maplist = None # when UrT server reloads, newly uploaded maps get available: force refresh
         return b3.events.Event(b3.events.EVT_GAME_EXIT, data)
 
