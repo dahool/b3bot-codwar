@@ -1122,7 +1122,7 @@ class Iourt41Parser(AbstractParser):
         if admin:
             admin.message('^3banned^7: ^1%s^7 (^2@%s^7). His last ip (^1%s^7) has been added to banlist'%(client.exactName, client.id, client.ip))
 
-        self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_BAN, reason, client))
+        self.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_BAN, {'reason': reason, 'admin': admin}, client))
         client.disconnect()
 
     def unban(self, client, reason='', admin=None, silent=False, *kwargs):
