@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA    02110-1301    USA
 #
 # CHANGELOG
+# 19/07/2011 - 1.4.9 - Freelander
+# * fix errors during map change
 # 25/04/2011 - 1.4.8 - Courgette
 # * in config file, settings/output_file can now use shortcuts such as @b3 and @conf
 # 17/04/2011 - 1.4.7 - Courgette
@@ -55,7 +57,7 @@
 # Converted to use new event handlers
 
 __author__    = 'ThorN'
-__version__ = '1.4.8a'
+__version__ = '1.4.9a'
 
 import b3, time, os, StringIO
 import b3.plugin
@@ -253,6 +255,7 @@ class StatusPlugin(b3.plugin.Plugin):
         b3clients = xml.createElement("Clients")
         b3clients.setAttribute("Total", str(len(clients)))
         b3status.appendChild(b3clients)
+
         if self._enableDBclientSaving:
             # empty table current_clients
             sql = "TRUNCATE TABLE `current_clients`;"
@@ -313,8 +316,8 @@ class StatusPlugin(b3.plugin.Plugin):
                         self.console.storage.query(sql)
                     except:
                         self.error('Error: inserting clients. sqlqry=%s' % (sql))
-                b3clients.appendChild(client)
 
+                b3clients.appendChild(client)
                 for k,v in c.data.iteritems():
                     data = xml.createElement("Data")
                     data.setAttribute("Name", "%s" % k)

@@ -50,6 +50,20 @@
 # * do not rely on RETRIEVE BANLIST response to unban
 # 2011-05-22 : 1.0
 # * fix onServerVotestart
+# 2011-05-24 : 1.0.1
+# * "kill" penalty rcon command now uses SteamID instead of player name
+# 2011-05-27 : 1.0.2
+# * KILL event correctly parsed with player names or player SteamID
+# 2011-06-05 : 1.1.0
+# * change data format for EVT_CLIENT_BAN_TEMP and EVT_CLIENT_BAN events
+# 2011-07-14 : 1.1.1
+# * changes to support new dedicated server version 420003
+# * implemented getPlayerPings()
+# * added new DLC map names
+# 2011-08-27 : 1.1.2
+# * Added DLC maps that come with patch 1.0.5
+# 2011-08-31 : 1.1.3
+# * Fixed typo in mapname
 #
 from b3 import functions
 from b3.clients import Client
@@ -71,7 +85,7 @@ import time
 
 
 __author__  = 'Courgette, xlr8or, Freelander, 82ndab-Bravo17'
-__version__ = '1.0'
+__version__ = '1.1.3'
 
 
 
@@ -92,6 +106,7 @@ class HomefrontParser(b3.parser.Parser):
     _ini_file = None
     _currentmap = None
     _mapline = re.compile(r'^(?P<start>Map=)(?P<mapname>[^\?]+)\?(?P<sep>GameMode=)(?P<gamemode>.*)$', re.IGNORECASE)
+    _reSteamId64 = re.compile(r'^[0-9]{17}$')
     ftpconfig = None
     _ftplib_debug_level = 0 # 0: no debug, 1: normal debug, 2: extended debug
     _connectionTimeout = 30
@@ -185,10 +200,11 @@ class HomefrontParser(b3.parser.Parser):
             if packet.channel == ChannelType.SERVER:
                 if packet.data == "PONG":
                     return
-                match = re.search(r"^(?P<event>[A-Z ]+): (?P<data>.*)$", packet.data)
+                match = re.search(r"^(?P<event>[A-Z ]+): (?P<data>.*)$", packet.data, re.MULTILINE | re.DOTALL)
                 if match:
                     func = 'onServer%s' % (string.capitalize(match.group('event').replace(' ','_')))
                     data = match.group('data')
+                    #self.debug('DATA: %s' % data)
                     #self.debug("-==== FUNC!!: " + func)
                     
                     if hasattr(self, func):
@@ -376,23 +392,32 @@ class HomefrontParser(b3.parser.Parser):
     def onServerKill(self, data):
         # [string: Killer Name] [string: DamageType] [string: Victim Name]
         # kill example: courgette EXP_Frag Freelander
+        # kill example: 1100012402D1245 EXP_Frag 1100012402D1217
         # suicide example#1: Freelander Suicided Freelander (triggers when player leaves the server)
         # suicide example#2: Freelander EXP_Frag Freelander
-        match = re.search(r"^(?P<data>(?P<aname>[^;]+)\s+(?P<aweap>[A-z0-9_-]+)\s+(?P<vname>[^;]+))$", data)
+        match = re.search(r"^(?P<data>(?P<attacker>[^;]+)\s+(?P<aweap>[A-z0-9_-]+)\s+(?P<victim>[^;]+))$", data)
         ## [int: Killer SteamID] [string: DamageType] [int: Victim SteamID]
         #match = re.search(r"^(?P<data>(?P<auid>.*)\s+(?P<aweap>[A-z0-9_-]+)\s+(?P<vuid>.*))$", data)
         if not match:
             self.error("Can't parse kill line: %s" % data)
             return
         else:
-            attacker = self.getClient(match.group('aname'))
-            #attacker = self.clients.getByGUID(match.group('auid'))
+            attackerid = match.group('attacker')
+            if self._reSteamId64.match(attackerid):
+                attacker = self.clients.getByGUID(attackerid)
+            else:
+                # not a SteamID ? must be a player name
+                attacker = self.getClient(attackerid)
             if not attacker:
                 self.debug('No attacker!')
                 return
 
-            victim = self.getClient(match.group('vname'))
-            #victim = self.clients.getByGUID(match.group('vuid'))
+            victimid = match.group('victim')
+            if self._reSteamId64.match(victimid):
+                victim = self.clients.getByGUID(victimid)
+            else:
+                # not a SteamID ? must be a player name
+                victim = self.getClient(victimid)
             if not victim:
                 self.debug('No victim!')
                 return
@@ -450,6 +475,20 @@ class HomefrontParser(b3.parser.Parser):
         self._currentmap = levelname.lower()
         self.game.mapName = levelname.lower()
         return self.getEvent('EVT_GAME_ROUND_START', levelname)
+
+    def onServerPlayerping(self, data):
+        # [int: SteamID] [int: Ping]
+        # example: 74569798001346241 48
+        match = re.search(r"^(?P<uid>[0-9]+) (?P<ping>[0-9]+)$", data)
+        if not match:
+            self.error('onServerPlayerping failed match')
+            return
+
+        guid = match.group('uid')
+        ping = match.group('ping')
+        client = self.clients.getByGUID(guid)
+        if client:
+            client.ping = ping
 
     def onChatterBroadcast(self, data):
         # [string: Name] [string: Context]: [string: Text]
@@ -512,7 +551,8 @@ class HomefrontParser(b3.parser.Parser):
 
     def onServerPlayer(self, data):
         # [string: Uid] [int: Team] [string: Clan] [string: Name] [int: Kills] [int: Deaths]
-        match = re.search(r"^(?P<data>(?P<uid>[0-9]+) (?P<team>[0-9]) (?P<clan>.*) (?P<name>[^ ]+) (?P<kills>[0-9]+) (?P<deaths>[0-9]+))$", data)
+        # example: 71897609803318218\n1\nB3bot\nFreelander\n0\n0
+        match = re.search(r"^(?P<data>(?P<uid>[0-9]+)\n(?P<team>[0-9])\n(?P<clan>.*)\n(?P<name>[^ ]+)\n(?P<kills>[0-9]+)\n(?P<deaths>[0-9]+))$", data)
         if not match:
             self.error("onServerPlayer failed match")
             return
@@ -719,7 +759,7 @@ class HomefrontParser(b3.parser.Parser):
             client._name = banid
             client.save()
         self.write(self.getCommand('ban', playerid=banid, admin=admin.name.replace('"','\"'), reason=reason))
-        self.queueEvent(self.getEvent('EVT_CLIENT_BAN', reason, client))
+        self.queueEvent(self.getEvent('EVT_CLIENT_BAN', {'reason': reason, 'admin': admin}, client))
         client.disconnect()
 
     ## @todo Need to test response from the server
@@ -757,7 +797,10 @@ class HomefrontParser(b3.parser.Parser):
             self.write(self.getCommand('kick', playerid=client.guid))
         else:
             self.write(self.getCommand('kick', playerid=client.cid))
-        self.queueEvent(self.getEvent('EVT_CLIENT_BAN_TEMP', reason, client))
+        self.queueEvent(self.getEvent('EVT_CLIENT_BAN_TEMP', {'reason': reason, 
+                                                              'duration': duration, 
+                                                              'admin': admin}
+                                      , client))
         client.disconnect()
 
     def getMap(self):
@@ -857,6 +900,25 @@ class HomefrontParser(b3.parser.Parser):
 
         elif mapname == 'fl-borderlands':
             return 'Borderlands'
+
+        elif mapname == 'fl-spillway':
+            return 'Spillway'
+
+        elif mapname == 'fl-bigbox':
+            return 'Big Box'
+
+        elif mapname == 'fl-alcatraz':
+            return 'Alcatraz'
+
+        elif mapname == 'fl-bridge':
+            return 'Bridge'
+
+        elif mapname == 'fl-tdmspillway':
+            return 'Waterway'
+
+        elif mapname == 'fl-overpass':
+            return 'Overpass'
+
         else:
             self.warning('unknown level name \'%s\'. Please report this on B3 forums' % mapname)
             return mapname
@@ -865,7 +927,14 @@ class HomefrontParser(b3.parser.Parser):
         """\
         returns a dict having players' id for keys and players' ping for values
         """
-        return {}
+        pings = {}
+        clients = self.clients.getList()
+        for c in clients:
+            try:
+                pings[c.name] = int(c.ping)
+            except AttributeError:
+                pass
+        return pings
 
     def getPlayerScores(self):
         """\
@@ -905,7 +974,7 @@ class HomefrontParser(b3.parser.Parser):
         /!\ This method must return True if the penalty was inflicted.
         """
         if type == 'kill' and client:
-            self.write('admin kill "%s"' % client.name)
+            self.write('admin kill "%s"' % client.guid)
             if reason:
                 client.message("%s" % reason)
             return True
@@ -1002,4 +1071,3 @@ class HomefrontParser(b3.parser.Parser):
         """
         self.verbose2('Retrieving Playerlist')
         self.write('RETRIEVE PLAYERLIST')
-

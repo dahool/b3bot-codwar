@@ -18,8 +18,14 @@
 #
 #
 # CHANGELOG
-#   2011/06/01 - SGT
-#   Handle each event in separated thread
+#   2011/06/05 - 1.26.1 - Courgette
+#   * fix periodic events stats dumping blocking B3 restart/shutdown
+#   2011/05/03 - 1.24.8 - Courgette
+#   * event queue size can be set in b3.xml in section 'b3/event_queue_size'
+#   2011/05/03 - 1.24.7 - Courgette
+#   * add periodic events stats dumping to detect slow plugins
+#   2011/05/03 - 1.24.6 - Courgette
+#   * do not run update sql queries on startup
 #   2011/05/03 - 1.24.5 - Courgette
 #   * fix bug regarding rcon_ip introduced in 1.24.4
 #   2011/04/31 - 1.24.4 - Courgette
@@ -124,10 +130,10 @@
 #    Added warning, info, exception, and critical log handlers
 
 __author__  = 'ThorN, Courgette, xlr8or, Bakes'
-__version__ = '1.24.5a'
+__version__ = '1.26.1'
 
 # system modules
-import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket
+import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket, threading
 
 import b3
 import b3.storage
@@ -140,6 +146,7 @@ import b3.parsers.q3a.rcon
 import b3.clients
 import b3.functions
 import b3.timezones
+from ConfigParser import NoOptionError
 from b3.functions import main_is_frozen, getModule, executeSql
 
 
@@ -304,6 +311,8 @@ class Parser(object):
 
         # get events
         self.Events = b3.events.eventManager
+        self._eventsStats = b3.events.EventsStats(self)
+        
 
         self.bot('--------------------------------------------')
 
@@ -420,22 +429,16 @@ class Parser(object):
         self.loadArbPlugins()
 
         self.game = b3.game.Game(self, self.gameName)
-        self.queue = Queue.Queue(30)    # event queue
-
-        # try to update the databasetables
+        
         try:
-            _sqlfiles = ['@b3/sql/b3-update.sql', 'b3/sql/b3-update.sql', 'sql/b3-update.sql']
-            _sqlc = 0
-            _sqlresult = 'notfound'
-            while _sqlresult == 'notfound' and _sqlc < len(_sqlfiles):
-                self.debug('Checking: %s' % _sqlfiles[_sqlc] )
-                _sqlresult = executeSql(self.storage.db, _sqlfiles[_sqlc])
-                _sqlc += 1
-            self.debug('Updating database tables finished')
-        except Exception:
-            # if we fail, do nothing
-            self.error('Updating database tables failed')
-            pass
+            queuesize = self.config.getint('b3', 'event_queue_size')
+        except NoOptionError:
+            queuesize = 15
+        except Exception, err:
+            self.warning(err)
+            queuesize = 15
+        self.debug("creating the event queue with size %s", queuesize)
+        self.queue = Queue.Queue(queuesize)    # event queue
 
         atexit.register(self.shutdown)
 
@@ -445,12 +448,21 @@ class Parser(object):
         """Return an absolute path name and expand the user prefix (~)"""
         return b3.getAbsolutePath(path)
 
+    def _dumpEventsStats(self):
+        self._eventsStats.dumpStats()
+
     def start(self):
         """Start B3"""
+        self.bot("Starting parser")
         self.startup()
         self.say('%s ^2[ONLINE]' % b3.version)
+        self.bot("Starting plugins")
         self.startPlugins()
+        self.bot("all plugins started")
+        self.pluginsStarted()
+        self.bot("starting event dispatching thread")
         thread.start_new_thread(self.handleEvents, ())
+        self.bot("start reading game events")
         self.run()
 
     def die(self):
@@ -493,6 +505,13 @@ class Parser(object):
         """\
         Called after the parser is created before run(). Overwrite this
         for anything you need to initialize you parser with.
+        """
+        pass
+
+    def pluginsStarted(self):
+        """\
+        Called after the parser loaded and started all plugins. 
+        Overwrite this in parsers to take actions once plugins are ready
         """
         pass
 
@@ -831,7 +850,6 @@ class Parser(object):
 
     def run(self):
         """Main worker thread for B3"""
-        self.bot('Start reading...')
         self.screen.write('Startup Complete : B3 is running! Let\'s get to work!\n\n')
         self.screen.write('(If you run into problems, check %s in the B3 root directory for detailed log info)\n' % self.config.getpath('b3', 'logfile'))
         #self.screen.flush()
@@ -914,7 +932,7 @@ class Parser(object):
             self._handlers[eventName] = []
         self._handlers[eventName].append(eventHandler)
 
-    def queueEvent(self, event, expire=15):
+    def queueEvent(self, event, expire=10):
         """Queue an event for processing"""
         if not hasattr(event, 'type'):
             return False
@@ -937,37 +955,40 @@ class Parser(object):
             if event.type == b3.events.EVT_EXIT or event.type == b3.events.EVT_STOP:
                 self.working = False
 
+            eventName = self.Events.getName(event.type)
+            self._eventsStats.add_event_wait((self.time() - added)*1000)
             if self.time() >= expire:    # events can only sit in the queue until expire time
-                self.error('**** Event sat in queue too long: %s %s', self.Events.getName(event.type), self.time() - expire)
+                self.error('**** Event sat in queue too long: %s %s', eventName, self.time() - expire)
             else:
-                thread.start_new_thread(self.handleEvent, (event,))
+                nomore = False
+                for hfunc in self._handlers[event.type]:
+                    if not hfunc.isEnabled():
+                        continue
+                    elif nomore:
+                        break
 
+                    self.verbose('Parsing Event: %s: %s', eventName, hfunc.__class__.__name__)
+                    timer_plugin_begin = time.clock()
+                    try:
+                        hfunc.parseEvent(event)
+                        time.sleep(0.001)
+                    except b3.events.VetoEvent:
+                        # plugin called for event hault, do not continue processing
+                        self.bot('Event %s vetoed by %s', eventName, str(hfunc))
+                        nomore = True
+                    except SystemExit, e:
+                        self.exitcode = e.code
+                    except Exception, msg:
+                        self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, eventName, msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))
+                    finally:
+                        elapsed = time.clock() - timer_plugin_begin
+                        self._eventsStats.add_event_handled(hfunc.__class__.__name__, eventName, elapsed*1000)
+                    
         self.bot('Shutting down event handler')
 
         if self.exiting.locked():
             self.exiting.release()
 
-    def handleEvent(self, event):
-        nomore = False
-        for hfunc in self._handlers[event.type]:
-            if not hfunc.isEnabled():
-                continue
-            elif nomore:
-                break
-
-            self.verbose('Parsing Event: %s: %s', self.Events.getName(event.type), hfunc.__class__.__name__)
-            try:
-                hfunc.parseEvent(event)
-                time.sleep(0.001)
-            except b3.events.VetoEvent:
-                # plugin called for event hault, do not continue processing
-                self.bot('Event %s vetoed by %s', self.Events.getName(event.type), str(hfunc))
-                nomore = True
-            except SystemExit, e:
-                self.exitcode = e.code
-            except Exception, msg:
-                self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, self.Events.getName(event.type), msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))        
-        
     def write(self, msg, maxRetries=None):
         """Write a message to Rcon/Console"""
         if self.replay:
@@ -1034,7 +1055,7 @@ class Parser(object):
         text = re.split(r'\s+', text)
 
         lines = []
-        color = '^7';
+        color = '^7'
 
         line = text[0]
         for t in text[1:]:
@@ -1191,19 +1212,23 @@ class Parser(object):
 
     def ban(self, client, reason='', admin=None, silent=False, *kwargs):
         """\
-        ban a given player
+        ban a given player on the game server and in case of success
+        fire the event ('EVT_CLIENT_BAN', data={'reason': reason, 
+        'admin': admin}, client=target)
         """
         raise NotImplementedError
 
     def unban(self, client, reason='', admin=None, silent=False, *kwargs):
         """\
-        unban a given player
+        unban a given player on the game server
         """
         raise NotImplementedError
 
     def tempban(self, client, reason='', duration=2, admin=None, silent=False, *kwargs):
         """\
-        tempban a given player
+        tempban a given player on the game server and in case of success
+        fire the event ('EVT_CLIENT_BAN_TEMP', data={'reason': reason, 
+        'duration': duration, 'admin': admin}, client=target)
         """
         raise NotImplementedError
 

@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   2011/05/31 - 1.11.0 - Courgette
+#   * refactoring
 #   2011/04/30 - 1.10.3 - Courgette
 #   * !help response won't include !register if already registered
 #   2011/02/26 - 1.10.2 - Courgette
@@ -84,20 +86,19 @@
 #    Added data field to warnClient(), warnKick(), and checkWarnKick()
 #
 
-__version__ = '1.10.3a'
+__version__ = '1.11.0'
 __author__  = 'ThorN, xlr8or, Courgette'
 
-import string, re, time, threading, sys, traceback, thread, random
+import re, time, threading, sys, traceback, thread, random
 import ConfigParser
 
 from b3 import functions
 from b3 import clients
-from b3.events import EVT_CLIENT_SAY, EVT_CLIENT_PRIVATE_SAY
-import b3.events
 import b3.plugin
 import copy
 
 #--------------------------------------------------------------------------------------------------
+# pylint: disable-msg=E1103
 class AdminPlugin(b3.plugin.Plugin):
     _commands = {}
     _parseUserCmdRE = re.compile(r"^(?P<cid>'[^']{2,}'|[0-9]+|[^\s]{2,}|@[0-9]+)(\s+(?P<parms>.*))?$")
@@ -114,8 +115,8 @@ class AdminPlugin(b3.plugin.Plugin):
     PENALTY_BAN = 'ban'
 
     def startup(self):
-        self.registerEvent(EVT_CLIENT_SAY)
-        self.registerEvent(EVT_CLIENT_PRIVATE_SAY)
+        self.registerEvent(self.console.getEventID('EVT_CLIENT_SAY'))
+        self.registerEvent(self.console.getEventID('EVT_CLIENT_PRIVATE_SAY'))
         self.createEvent('EVT_ADMIN_COMMAND', 'Admin Command')
 
         try:
@@ -218,9 +219,9 @@ class AdminPlugin(b3.plugin.Plugin):
             return False
 
     def handle(self, event):
-        if event.type == EVT_CLIENT_SAY:
+        if event.type == self.console.getEventID('EVT_CLIENT_SAY'):
             self.OnSay(event)
-        elif event.type == EVT_CLIENT_PRIVATE_SAY and event.target and event.client.id == event.target.id:
+        elif event.type == self.console.getEventID('EVT_CLIENT_PRIVATE_SAY') and event.target and event.client.id == event.target.id:
             self.OnSay(event, True)
 
     def aquireCmdLock(self, cmd, client, delay, all=True):
@@ -310,7 +311,7 @@ class AdminPlugin(b3.plugin.Plugin):
                 cmd = 'say'
                 data = event.data[2:]
             else:
-                cmd = string.split(event.data[1:], ' ', 1)
+                cmd = event.data[1:].split(' ', 1)
 
                 if len(cmd) == 2:
                     cmd, data = cmd
@@ -320,7 +321,7 @@ class AdminPlugin(b3.plugin.Plugin):
 
             try:
                 command = self._commands[cmd.lower()]
-            except Exception:
+            except KeyError:
                 if self._warn_command_abusers and event.client.authed and event.client.maxLevel < self.config.getint('settings', 'admins_level'):
                     if event.client.var(self, 'fakeCommand').value:
                         event.client.var(self, 'fakeCommand').value += 1
@@ -357,11 +358,7 @@ class AdminPlugin(b3.plugin.Plugin):
                     event.client.message('^7You do not have sufficient access to do silent commands')
                     return False
 
-            command.setConsole(self.console)
             if command.canUse(event.client):
-                if not command.isEnabled(event.client):
-                     event.client.message('^7%s%s command is disabled' % (self.cmdPrefix, cmd))
-                     return
                 try:
                     if event.data[:1] == self.cmdPrefixLoud and event.client.maxLevel >= 9:
                         results = command.executeLoud(data, event.client)
@@ -369,7 +366,7 @@ class AdminPlugin(b3.plugin.Plugin):
                         results = command.executeBig(data, event.client)
                     else:
                         results = command.execute(data, event.client)
-                except Exception, msg:
+                except:
                     event.client.message('^7There was an error processing your command')
                     raise
                 else:
@@ -402,22 +399,22 @@ class AdminPlugin(b3.plugin.Plugin):
     def getAdmins(self):
         return self.console.clients.getClientsByLevel(self.config.getint('settings', 'admins_level'))
 
-    def findClientPrompt(self, id, client=None):
-        matches = self.console.clients.getByMagic(id)
+    def findClientPrompt(self, client_id, client=None):
+        matches = self.console.clients.getByMagic(client_id)
         if matches:
             if len(matches) > 1:
                 names = []
-                for p in matches:
-                    names.append('[^2%s^7] %s' % (p.cid, p.name))
+                for _p in matches:
+                    names.append('[^2%s^7] %s' % (_p.cid, _p.name))
 
                 if client:
-                    client.message(self.getMessage('players_matched', id, string.join(names, ', ')))
+                    client.message(self.getMessage('players_matched', client_id, ', '.join(names)))
                 return False
             else:
                 return matches[0]
         else:
             if client:
-                client.message(self.getMessage('no_players', id))
+                client.message(self.getMessage('no_players', client_id))
             return None
 
     def parseUserCmd(self, cmd, req=False):
@@ -494,10 +491,7 @@ class AdminPlugin(b3.plugin.Plugin):
         try:
             s = self.config.getTextTemplate('spamages', spam)
 
-            if s[:9] == '/warning#':
-                expire, warning = self.getWarning(s[9:]).split(',', 1)
-                s = warning.strip()
-            elif s[:1] == '/':
+            if s[:1] == '/':
                 s = self.config.getTextTemplate('spamages', s[1:])
                 if s[:1] == '/':
                     self.error('getSpam: Possible spam recursion %s, %s', spam, s)
@@ -621,8 +615,6 @@ class AdminPlugin(b3.plugin.Plugin):
                 client.message('^7Un-Masked %s' % sclient.name)
             sclient.message('^7Un-Masked')
 
-
-
     def cmd_clear(self, data, client, cmd=None):
         """\
         [<player>] - clear all tk points and warnings
@@ -632,13 +624,11 @@ class AdminPlugin(b3.plugin.Plugin):
 
             if sclient:
                 self.clearAll(sclient, client)
-
-                self.console.say('%s^7 has cleared %s^7 of all points' % (client.exactName, sclient.exactName))
+                self.console.say('%s^7 has cleared %s^7 of all tk-points and warnings' % (client.exactName, sclient.exactName))
         else:
             for cid,c in self.console.clients.items():
                 self.clearAll(c, client)
-
-            self.console.say('%s^7 has cleared everyones points' % client.exactName)
+            self.console.say('%s^7 has cleared everyones tk-points and warnings' % client.exactName)
 
     def clearAll(self, sclient, client=None):
         for w in sclient.warnings:
@@ -670,7 +660,7 @@ class AdminPlugin(b3.plugin.Plugin):
             return
         suggestions = self.console.changeMap(data)
         if type(suggestions) == list:
-            client.message('do you mean : %s ?' % string.join(suggestions,', '))
+            client.message('do you mean : %s ?' % ', '.join(suggestions))
 
     def cmd_maprotate(self, data, client, cmd=None):
         """\
@@ -805,14 +795,14 @@ class AdminPlugin(b3.plugin.Plugin):
         commands = []
         if re.match(r'^[0-9]+$', data):
             mlevel = int(data)
-            for c, cmd in self._commands.iteritems():
+            for cmd in self._commands.values():
                 if cmd.level != None and cmd.level[0] == mlevel and cmd.canUse(client):
                     if cmd.command not in commands:
                         commands.append(cmd.command)
         elif data[:1] == '*':
             search = data[1:]
-            for c, cmd in self._commands.iteritems():
-                if string.find(cmd.command, search) != -1 and cmd.canUse(client) and cmd.command not in commands:
+            for cmd in self._commands.values():
+                if cmd.command.find(search) != -1 and cmd.canUse(client) and cmd.command not in commands:
                     if cmd.command not in commands:
                         commands.append(cmd.command)
         elif data:
@@ -836,7 +826,7 @@ class AdminPlugin(b3.plugin.Plugin):
             if 'register' in commands and int(client.maxLevel) > 0:
                 commands.remove('register')
             commands.sort()
-            cmd.sayLoudOrPM(client, self.getMessage('help_available', string.join(commands, ', ')))
+            cmd.sayLoudOrPM(client, self.getMessage('help_available', ', '.join(commands)))
 
     def cmd_list(self, data, client, cmd=None):
         """\
@@ -849,7 +839,7 @@ class AdminPlugin(b3.plugin.Plugin):
         for c in self.console.clients.getClientsByLevel():
             names.append(self.getMessage('player_id', c.cid, c.name))
 
-        cmd.sayLoudOrPM(client, string.join(names, ', '))
+        cmd.sayLoudOrPM(client, ', '.join(names))
         return True
 
 
@@ -868,9 +858,10 @@ class AdminPlugin(b3.plugin.Plugin):
                 else:
                     nlist.append('%s^7 [^3%s^7]' % (c.exactName, c.maxLevel))
 
-            cmd.sayLoudOrPM(client, self.getMessage('admins', string.join(nlist, ', ')))
+            cmd.sayLoudOrPM(client, self.getMessage('admins', ', '.join(nlist)))
         else:
             self.debug('no admins found')
+            cmd.sayLoudOrPM(client, 'There are no admins online')
 
     def cmd_rebuild(self, data, client, cmd=None):
         """\
@@ -908,7 +899,6 @@ class AdminPlugin(b3.plugin.Plugin):
             sclient = self.findClientPrompt(m[0], client)
         else:
             sclient = client
-
         if sclient:
             if m and sclient.maskGroup:
                 cmd.sayLoudOrPM(client, self.getMessage('leveltest', sclient.exactName, sclient.id, sclient.maskGroup.name, sclient.maskGroup.level, self.console.formatTime(sclient.timeAdd)))
@@ -916,7 +906,6 @@ class AdminPlugin(b3.plugin.Plugin):
                 cmd.sayLoudOrPM(client, self.getMessage('leveltest_nogroups', sclient.exactName, sclient.id))
             else:
                 cmd.sayLoudOrPM(client, self.getMessage('leveltest', sclient.exactName, sclient.id, sclient.maxGroup.name, sclient.maxLevel, self.console.formatTime(sclient.timeAdd)))
-
         return True
 
 
@@ -951,7 +940,7 @@ class AdminPlugin(b3.plugin.Plugin):
 
                 cmd.sayLoudOrPM(client, self.getMessage('groups_put', sclient.exactName, group.name))
                 return True
-
+        
     def cmd_putgroup(self, data, client, cmd=None):
         """\
         <client> <group> - add a client to a group
@@ -1430,7 +1419,7 @@ class AdminPlugin(b3.plugin.Plugin):
 
         sclient = self.findClientPrompt(m[0], client)
         if sclient:
-            self.OnSay(b3.events.Event(EVT_CLIENT_SAY, m[1], sclient))
+            self.OnSay(self.console.getEvent('EVT_CLIENT_SAY', m[1], sclient))
 
     def cmd_unban(self, data, client=None, cmd=None):
         """\
@@ -1482,7 +1471,7 @@ class AdminPlugin(b3.plugin.Plugin):
                         break
 
                 if len(myaliases):
-                    cmd.sayLoudOrPM(client, self.getMessage('aliases', sclient.exactName, string.join(myaliases, ', ')))
+                    cmd.sayLoudOrPM(client, self.getMessage('aliases', sclient.exactName, ', '.join(myaliases)))
                 else:
                     cmd.sayLoudOrPM(client, '^7%s^7 has no aliases' % sclient.exactName)
 
@@ -1495,7 +1484,7 @@ class AdminPlugin(b3.plugin.Plugin):
             if w != 'default' and w != 'generic':
                 ws.append(w)
 
-        client.message('^7Warnings: %s' % string.join(ws, ', '))
+        client.message('^7Warnings: %s' % ', '.join(ws))
 
 
 
@@ -1577,7 +1566,7 @@ class AdminPlugin(b3.plugin.Plugin):
         warnings = sclient.numWarnings
         try:
             pmglobal = self.config.get('warn', 'pm_global')
-        except:
+        except ConfigParser.NoOptionError:
             pmglobal = '0'
         if pmglobal == '1':
             msg = self.config.getTextTemplate('warn', 'message', warnings=warnings, reason=warning)
@@ -1770,7 +1759,7 @@ class AdminPlugin(b3.plugin.Plugin):
 
         maps = self.console.getMaps()
         if maps:
-            cmd.sayLoudOrPM(client, '^7Map Rotation: ^2%s' % string.join(maps, '^7, ^2'))
+            cmd.sayLoudOrPM(client, '^7Map Rotation: ^2%s' % '^7, ^2'.join(maps))
         else:
             client.message('^7Error: could not get map list')
 
@@ -1782,9 +1771,9 @@ class AdminPlugin(b3.plugin.Plugin):
             client.message('^7Do not spam commands')
             return
 
-        map = self.console.getNextMap()
-        if map:
-            cmd.sayLoudOrPM(client, '^7Next Map: ^2%s' % map)
+        mapname = self.console.getNextMap()
+        if mapname:
+            cmd.sayLoudOrPM(client, '^7Next Map: ^2%s' % mapname)
         else:
             client.message('^7Error: could not get map list')
 
@@ -1878,7 +1867,7 @@ class AdminPlugin(b3.plugin.Plugin):
         for w in self.config.options('spamages'):
             ws.append(w)
 
-        client.message('^7Spamages: %s' % string.join(ws, ', '))
+        client.message('^7Spamages: %s' % ', '.join(ws))
 
     def cmd_tempban(self, data, client=None, cmd=None):
         """\
@@ -1902,7 +1891,7 @@ class AdminPlugin(b3.plugin.Plugin):
         #      * Removed hard code of 1 day for long_tempban_level - now controlled with new setting 'long_tempban_max_duration'
         try:
             long_tempban_max_duration = self.config.getDuration('settings', 'long_tempban_max_duration')
-        except:
+        except ConfigParser.NoOptionError:
             long_tempban_max_duration = self._long_tempban_max_duration
             self.debug('Using default value (%s) for long_tempban_max_duration', self._long_tempban_max_duration)
 
@@ -1970,7 +1959,6 @@ class Command:
     prefixLoud = '@'
     prefixBig = '&'
 
-    console = None
     PLAYER_DATA = re.compile(r'^([\w\d\s-]+|@\d+|\d+)$', re.I)
     _reType = type(re.compile('.*'))
 
@@ -2002,9 +1990,6 @@ class Command:
         #commandstxt.write('%s (%s) %s, levels %s - %s\n' % (self.command, self.alias, self.help, self.level[0], self.level[1]))
         #commandstxt.flush()
 
-    def setConsole(self, console):
-        self.console = console
-        
     def canUse(self, client):
         if self.level == None:
             return False
@@ -2012,23 +1997,6 @@ class Command:
             return True
         else:
             return False
-            
-    def isEnabled(self, client):
-        if client.maxLevel >= 90:
-            return True
-        if self.console:
-            sql = "SELECT until FROM disabledcmd WHERE cmd = '%s' or cmd = '%s'" % (self.command, self.alias)
-            try:
-                cursor = self.console.storage.query(sql)
-                if cursor.rowcount > 0:
-                    until = cursor.getRow()['until']
-                    if until == 0 or until > self.console.time():
-                        return False
-            except:
-                pass
-            return True
-        else:
-            return True
 
     def execute(self, data, client):
         self.func(data, client, copy.copy(self))
@@ -2055,18 +2023,19 @@ class Command:
             client.message(message)
 
     def parseData(self, data, *args):
-        p = self.splitData(data)
+        _p = self.splitData(data)
 
         if not len(args):
-            return p
+            return _p
 
         params = {}
 
-        for i in range(0, min(len(args), len(p))):
-            params[args[i][0]] = p[i]
+        i = 0
+        for i in range(0, min(len(args), len(_p))):
+            params[args[i][0]] = _p[i]
 
-        if len(p) > i:
-            params[args[i][0]] = ' '.join(p[i:])
+        if len(_p) > i:
+            params[args[i][0]] = ' '.join(_p[i:])
 
         badfield = None
         valid = True
@@ -2167,7 +2136,6 @@ class Command:
 if __name__ == '__main__':
     from b3.fake import FakeConsole
     from b3.fake import joe, simon
-    import time
     
     print "___________________________________"
     fakeConsole = FakeConsole('@b3/conf/b3.distribution.xml')

@@ -50,7 +50,7 @@ import ConfigParser
 
 versionOs = os.name
 versionId = 'v%s [%s]' % (__version__, versionOs)
-version = '^8www.bigbrotherbot.net ^0(^8b3^0) ^9%s ^9[^3Sedici^9]^3' % versionId
+version = '^8www.bigbrotherbot.net ^0(^8b3^0) ^9%s ^9[^3Myrthe^9]^3' % versionId
 
 
 console = None
@@ -109,7 +109,8 @@ def getAbsolutePath(path):
     if path[0:4] == '@b3/':
         #print "B3 path: %s" % getB3Path()
         path = os.path.join(getB3Path(), path[4:])
-
+    elif path[0:6] == '@conf/':
+        path = os.path.join(getConfPath(), path[6:])
     return os.path.normpath(os.path.expanduser(path))
 
 def start(configFile, nosetup=False):

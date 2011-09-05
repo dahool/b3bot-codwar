@@ -18,6 +18,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    16/07/2011 - 1.3.6 - xlr8or
+#    * Client.bot added - ability to identify a bot
 #    08/04/2011 - 1.3.5 - Courgette
 #    * make sure Clients.empty() does not delete hidden clients
 #    08/04/2011 - 1.3.4 - Courgette
@@ -36,8 +38,6 @@
 #    21/05/2010 - 1.2.12 - xlr8or
 #    * Catch ValueError in clients.getByCID to allow names as CID's, but still
 #      fix the previous exploit in q3a based games 
-#    20/05/2010 - 1.2.11 - SGT
-#    add ip to aliasses
 #    11/05/2010 - 1.2.11 - Courgette
 #    * fix exploit by using player cid prefixed with '0' for commands making use
 #      of clients.getByCID
@@ -65,11 +65,19 @@
 #     Added data field to Penalty
 #     Added data parameter to Client.warn()
 #     Added data parameter to Client.tempban()
+import b3
+import b3.events
+import functions
+import re
+import string
+import sys
+import threading
+import time
+import traceback
 
 __author__  = 'ThorN'
-__version__ = '1.3.5a'
+__version__ = '1.3.6'
 
-import b3, string, re, time, functions, threading, traceback, sys
 
 class ClientVar(object):
     value = None
@@ -120,7 +128,8 @@ class Client(object):
     team = b3.TEAM_UNKNOWN
     maxGroup = None
     authed = False
-    hide = False
+    hide = False # set to true for non-player clients (world entities)
+    bot = False
 
     state = None
     authorizing = False
@@ -217,6 +226,11 @@ class Client(object):
         return self.console.storage.getClientAliases(self)
 
     aliases = property(getAliases)
+
+    def getIpAddresses(self):
+        return self.console.storage.getClientIpAddresses(self)
+
+    ip_addresses = property(getIpAddresses)
 
     def getattr(self, name, default=None):
         return getattr(self, name, default)
@@ -351,10 +365,9 @@ class Client(object):
     _ip = ''
     def _set_ip(self, ip):
         if ':' in ip:
-            self._ip = ip[0:ip.find(':')]
-        else:
-            self._ip = ip
-
+            ip = ip[0:ip.find(':')]
+        if self._ip != ip:
+            self.makeIpAlias(self._ip)
         self._ip = ip
 
     def _get_ip(self):
@@ -363,11 +376,8 @@ class Client(object):
     ip = property(_get_ip, _set_ip)
 
     #------------------------
-    def _set_timeAdd(self, tim):
-        try:
-            self._timeAdd = int(tim)
-        except:
-            self._timeAdd = int(time.time())
+    def _set_timeAdd(self, time):
+        self._timeAdd = int(time)
 
     def _get_timeAdd(self):
         return self._timeAdd
@@ -644,10 +654,28 @@ class Client(object):
         else:
             alias = Alias(clientId=self.id, alias=name)
 
-        alias.ip = self.ip
-
         alias.save(self.console)
         self.console.bot('New alias for %s: %s', str(self.id), alias.alias)
+
+    def makeIpAlias(self, ip):
+        if not self.id or not ip:
+            return
+
+        try:
+            alias = self.console.storage.getClientIpAddress(IpAlias(clientId=self.id, ip=ip))
+        except KeyError:
+            alias = None
+
+        if alias:
+            if alias.numUsed > 0:
+                alias.numUsed += 1
+            else:
+                alias.numUsed = 1
+        else:
+            alias = IpAlias(clientId=self.id, ip=ip)
+
+        alias.save(self.console)
+        self.console.bot('New alias for %s: %s', str(self.id), alias.ip)
 
     def save(self, console=None):
         self.timeEdit = time.time()
@@ -812,7 +840,6 @@ class ClientKick(Penalty):
 #-----------------------------------------------------------------------------------------------------------------------
 class Alias(Struct):
     alias    = ''
-    ip       = ''
     timeAdd  = 0
     timeEdit = 0
     numUsed  = 1
@@ -824,6 +851,24 @@ class Alias(Struct):
         if not self.id:
             self.timeAdd = console.time()
         return console.storage.setClientAlias(self)
+
+#-----------------------------------------------------------------------------------------------------------------------
+class IpAlias(Struct):
+    ip = None
+    timeAdd  = 0
+    timeEdit = 0
+    numUsed  = 1
+    clientId = 0
+
+    def save(self, console):
+        self.timeEdit = console.time()
+
+        if not self.id:
+            self.timeAdd = console.time()
+        return console.storage.setClientIpAddresse(self)
+    
+    def __str__(self):
+        return "IpAlias(id=%s, ip=\"%s\", clientId=%s, numUsed=%s)" % (self.id, self.ip, self.clientId, self.numUsed)
 
 #-----------------------------------------------------------------------------------------------------------------------
 class Group(Struct):
@@ -924,7 +969,6 @@ class Clients(dict):
             cleanname = re.sub(r'\s', '', c.name.lower())
             if not c.hide and needle in cleanname:
                 clist.append(c)
-
         return clist
 
     def getClientLikeName(self, name):
@@ -1065,7 +1109,7 @@ class Clients(dict):
         client.connected = False
         if client.cid == None:
             return
-
+        
         cid = client.cid
         if self.has_key(cid):
             self[cid] = None
@@ -1129,34 +1173,15 @@ class Clients(dict):
     def _authorizeClients(self):
         self.console.authorizeClients()
         self._authorizing = False
-        
-        
+
 if __name__ == '__main__':
-    import unittest
     from b3.fake import fakeConsole
-    
-    class TestClients(unittest.TestCase):
-        clients = None
-        joe = None
-        def setUp(self):
-            self.clients = Clients(fakeConsole)
-            self.clients.newClient(1, name='joe')
-            self.clients.newClient(2, name=' H a    x\t0r')
-        def test_getClientsByName(self):
-            clients = self.clients.getClientsByName('joe')
-            self.assertEqual(1, len(clients))
-            self.assertEqual('1', clients[0].cid)
-            
-            clients = self.clients.getClientsByName('oe')
-            self.assertEqual(1, len(clients))
-            self.assertEqual('1', clients[0].cid)
-            
-            clients = self.clients.getClientsByName('hax')
-            self.assertEqual(1, len(clients))
-            self.assertEqual('2', clients[0].cid)
-            
-            clients = self.clients.getClientsByName('qsdfqsdf fqsd fsqd fsd f')
-            self.assertEqual([], clients)
+    from b3.fake import joe
 
+    game = b3.game.Game(fakeConsole, 'fakegamename')
+    joe.connects(cid=3)
 
-    unittest.main()
+    print 'maxLevel: '
+    print joe.maxLevel
+    print type(joe.maxLevel)
+

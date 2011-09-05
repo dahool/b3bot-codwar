@@ -27,9 +27,11 @@
 #      stderr
 # 20/04/2011 - 1.6.1 - Courgette
 #    * should get rid of UnicodeDecodeError
-
+# 20/04/2011 - 1.6.2 - Courgette
+#    * again getting rid of UnicodeDecodeError
+#
 __author__  = 'ThorN'
-__version__ = '1.6.1a'
+__version__ = '1.6.2a'
 
 import sys
 import logging
@@ -132,7 +134,7 @@ def getInstance(logfile='b3.log', loglevel=21, log2console=False):
         __output = logging.getLogger('output')
 
         handler = logging.FileHandler(logfile, encoding="UTF-8")
-        handler.setFormatter(logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s', '%y%m%d %H:%M:%S'))
+        handler.setFormatter(logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)r', '%y%m%d %H:%M:%S'))
         __output.addHandler(handler)
         
         if log2console:
@@ -150,7 +152,7 @@ def getInstance(logfile='b3.log', loglevel=21, log2console=False):
 
 if __name__ == '__main__':
     # test output handler
-    log = getInstance('test.log', 1, False, True)
+    log = getInstance('test.log', 1, True)
     log.error('Test error')
     log.debug('Test debug')
     log.console('Test console')
