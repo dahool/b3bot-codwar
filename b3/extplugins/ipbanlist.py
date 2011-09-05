@@ -52,8 +52,8 @@ class IpbanlistPlugin(b3.plugin.Plugin):
                         
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
-        self.registerEvent(b3.events.EVT_CLIENT_BAN)
-        self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
+        #self.registerEvent(b3.events.EVT_CLIENT_BAN)
+        #self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.createEvent('EVT_BAN_BREAK', 'Ban Break Event')
         
     def onLoadConfig(self):
