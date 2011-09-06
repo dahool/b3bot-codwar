@@ -101,9 +101,11 @@
 # * add tests
 # 20/09/2010 - 1.5.7 - BlackMamba
 # * fix !pamute - http://www.bigbrotherbot.net/forums/xlr-releases/poweradminurt-1-4-0-for-urban-terror!/msg15296/#msg15296
-#
+# 20/09/2010 - 1.5.8 - SGT
+# * minor fix for b3 1.7 compatibility
+# * fix method onKillTeam
 
-__version__ = '1.5.7'
+__version__ = '1.5.8'
 __author__  = 'xlr8or'
 
 import b3, time, thread, threading, re
@@ -256,6 +258,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
       self._origgear = 0 # allow all weapons
     
     self.installCrontabs()
+    
     self.debug('Started')
 
   def onLoadConfig(self):
@@ -772,7 +775,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
     killer.var(self, 'kills', 0).value  += 1
     victim.var(self, 'deaths', 0).value += 1
     
-  def onTeamKill(self, killer, victim, points):
+  def onKillTeam(self, killer, victim, points):
     killer.var(self, 'teamkills', 0).value += 1
     
   def dumpEvent(self, event):
