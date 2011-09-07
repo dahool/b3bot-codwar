@@ -838,7 +838,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def encodeEntities(self, data):
         #return data.replace("<", "\<").replace(">","\>")
-        return data;
+        return data
         
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
