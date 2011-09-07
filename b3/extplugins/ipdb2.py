@@ -65,9 +65,11 @@
 # Include admin name and admin id in penalty
 # 2011-09-05 - SGT - 1.2.5
 # Minor fixes
+# 2011-09-07 - SGT - 1.2.6
+# Minor encoding fix
 
 __author__  = 'SGT'
-__version__ = '1.2.5'
+__version__ = '1.2.6'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -431,7 +433,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.increaseFail()
             raise Exception()
         except xmlrpclib.Fault, applicationError:
-            self.error(str(applicationError))
+            self.error(applicationError.faultString)
             self.increaseFail()
             raise Exception()
         except socket.timeout, timeoutError:
@@ -818,7 +820,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client.message('^7An error occured while linking your user. Please try again later.')
         except xmlrpclib.Fault, applicationError:
             client.message('^7An error occured while linking your user. Please try again later.')
-            client.message('^7%s' % str(applicationError))
+            client.message('^7%s' % applicationError.faultString)
         except socket.timeout, timeoutError:
             self.warning("Connection timed out")
             client.message('^7An error occured while linking your user. Please try again later.')
@@ -835,7 +837,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return self.encodeEntities(self._color_re.sub('',data))
         
     def encodeEntities(self, data):
-        return data.replace("<", "\<").replace(">","\>")
+        #return data.replace("<", "\<").replace(">","\>")
+        return data;
         
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
@@ -935,7 +938,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.increaseFail()
             raise Exception()
         except xmlrpclib.Fault, applicationError:
-            self.error(str(applicationError))
+            self.error(applicationError.faultString)
             self.increaseFail()
             raise Exception()
         except socket.timeout, timeoutError:
