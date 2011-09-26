@@ -67,9 +67,11 @@
 # Minor fixes
 # 2011-09-07 - SGT - 1.2.6
 # Minor encoding fix
+# 2011-09-26 - SGT - 1.2.7
+# Change update url
 
 __author__  = 'SGT'
-__version__ = '1.2.6'
+__version__ = '1.2.7'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -89,7 +91,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://www.ipdburt.com.ar/api/v3/xmlrpc'
+    _url = 'http://api.ipdburt.com.ar/api/v3/xmlrpc'
 
     _timeout = 15
     
