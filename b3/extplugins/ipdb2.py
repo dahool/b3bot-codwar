@@ -148,7 +148,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "AND (keyword = 'ipdb2' or keyword = 'ipdb')"
             
     def onStartup(self):
-        self._rpc_proxy = xmlrpclib.ServerProxy(self._url, verbose=True)
+        self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
         self._eventqueue = []
         self._banqueue = []
