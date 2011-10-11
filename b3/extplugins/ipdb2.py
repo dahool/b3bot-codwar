@@ -68,7 +68,7 @@
 # 2011-09-07 - SGT - 1.2.6
 # Minor encoding fix
 # 2011-09-26 - SGT - 1.2.7
-# Change update url
+# Change link user command to handle new API
 
 __author__  = 'SGT'
 __version__ = '1.2.7'
@@ -91,7 +91,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://api.ipdburt.com.ar/api/v3/xmlrpc'
+    _url = 'http://www.ipdburt.com.ar/api/v3/xmlrpc'
 
     _timeout = 15
     
@@ -148,7 +148,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "AND (keyword = 'ipdb2' or keyword = 'ipdb')"
             
     def onStartup(self):
-        self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
+        self._rpc_proxy = xmlrpclib.ServerProxy(self._url, verbose=True)
         
         self._eventqueue = []
         self._banqueue = []
@@ -813,16 +813,22 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             socket.setdefaulttimeout(self._timeout)
             r = self._rpc_proxy.server.register(self._key, username, data)
-            if r:
-                client.message('^7Your user has been linked.')
+            if r == 0:
+                client.message('^7You have been linked succesfully to the username %s.' % username)
+            elif r == 1:
+                client.message('^7Please try again after some minutes.')
+            elif r == 2:
+                client.message('^7The username you entered is not valid.')
+            elif r == 3:
+                client.message('^7This player is already linked.')
             else:
-                client.message('^7Username %s is not registered in ipdb.' % username)
+                client.message('^7Unknown error. Ask your administrator to update ipdb [%d]' % r)
         except xmlrpclib.ProtocolError, protocolError:
             self.error(str(protocolError))
             client.message('^7An error occured while linking your user. Please try again later.')
         except xmlrpclib.Fault, applicationError:
+            self.error(str(applicationError))
             client.message('^7An error occured while linking your user. Please try again later.')
-            client.message('^7%s' % applicationError.faultString)
         except socket.timeout, timeoutError:
             self.warning("Connection timed out")
             client.message('^7An error occured while linking your user. Please try again later.')
@@ -1061,11 +1067,21 @@ if __name__ == '__main__':
     fakeConsole.setCvar('sv_hostname','IPDB Test Server')    
     
     p = Ipdb2Plugin(fakeConsole,'conf/ipdb.xml')
+    p._url = 'http://www.iddb.com.ar/api/v3/xmlrpc'
     p.onStartup()
     time.sleep(2)
     
-    p.checkNewVersion()
+    joe.connects(cid=1)
+    time.sleep(1)
+    simon.connects(cid=2)
+    time.sleep(1)
+    moderator.connects(cid=3)
+    time.sleep(1)
+    superadmin.connects(cid=4)
+    time.sleep(2)
     
-    time.sleep(10)
-    
-    superadmin.connects(cid=10)
+    moderator.says('!link mod@sgmail.com.ar')
+    #time.sleep(1)
+    #superadmin.says('!link super@sgmail.com.ar')
+    #time.sleep(1)
+    #joe.says('!link joe@sgmail.com.ar')
