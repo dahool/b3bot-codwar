@@ -16,10 +16,10 @@
         <set name="key">--------</set>
     </settings>
     <settings name="commands">
-        <set name="userlink-link">2</set>
-        <set name="dbaddnote-addnote">40</set>
-        <set name="dbdelnote-delnote">40</set>
-        <set name="dbclearban-clearban">60</set>
+        <set name="userlink">2</set>
+        <set name="dbaddnote">40</set>
+        <set name="dbdelnote">40</set>
+        <set name="dbclearban">60</set>
     </settings>
    	
 </configuration>

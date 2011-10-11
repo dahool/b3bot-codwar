@@ -69,6 +69,7 @@
 # Minor encoding fix
 # 2011-09-26 - SGT - 1.2.7
 # Change link user command to handle new API
+# Put default commands in code
 
 __author__  = 'SGT'
 __version__ = '1.2.7'
@@ -147,6 +148,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     "WHERE (p.type='Ban' OR p.type='TempBan') AND (p.inactive = 1 OR (p.time_expire > 0 AND p.time_expire < %(now)d)) "\
     "AND (keyword = 'ipdb2' or keyword = 'ipdb')"
             
+    # keep commands here in case conf file is outdated
+    _commands = {"userlink-link": 2,
+                 "dbaddnote-addnote": 40,
+                 "dbdelnote-delnote": 40,
+                 "dbclearban-clearban": 60,
+                 "showqueue-ipdb": 1,
+                 "iddbupdate-ipdbup", 80}
+                 
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
@@ -176,19 +185,21 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.error('Could not find admin plugin')
         else:
             # register our commands
-            if 'commands' in self.config.sections():
-                for cmd in self.config.options('commands'):
+            for cmd, level in self._commands:
+                sp = cmd.split('-')
+                alias = None
+                if len(sp) == 2:
+                    cmd, alias = sp
+                try:
                     level = self.config.get('commands', cmd)
-                    sp = cmd.split('-')
-                    alias = None
-                    if len(sp) == 2:
-                        cmd, alias = sp
-                    func = self.getCmd(cmd)
-                    if func:
-                        self._adminPlugin.registerCommand(self, cmd, level, func, alias)
+                except:
+                    pass
+                func = self.getCmd(cmd)
+                if func:
+                    self._adminPlugin.registerCommand(self, cmd, level, func, alias)
 
-            self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
-            self._adminPlugin.registerCommand(self, 'ipdbup', 80, self.cmd_update, None)
+            #self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
+            #self._adminPlugin.registerCommand(self, 'ipdbup', 80, self.cmd_update, None)
             
         self._twitterPlugin = self.console.getPlugin('twity')
         if not self._twitterPlugin:
@@ -783,7 +794,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._eventqueue.append(status)
         client.message('^7Done.')
 
-    def cmd_update(self ,data , client, cmd=None):
+    def cmd_iddbupdate(self ,data , client, cmd=None):
         """\
         Force a check for new ipdb version
         """
