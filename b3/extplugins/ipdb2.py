@@ -154,7 +154,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                  "dbdelnote-delnote": 40,
                  "dbclearban-clearban": 60,
                  "showqueue-ipdb": 1,
-                 "iddbupdate-ipdbup", 80}
+                 "iddbupdate-ipdbup": 80}
                  
     def onStartup(self):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
@@ -185,7 +185,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.error('Could not find admin plugin')
         else:
             # register our commands
-            for cmd, level in self._commands:
+            for cmd, level in self._commands.items():
                 sp = cmd.split('-')
                 alias = None
                 if len(sp) == 2:
@@ -1090,7 +1090,10 @@ if __name__ == '__main__':
     time.sleep(1)
     superadmin.connects(cid=4)
     time.sleep(2)
-    
+   
+    moderator.says('!ipdb')
+    time.sleep(2)
+ 
     moderator.says('!link mod@sgmail.com.ar')
     #time.sleep(1)
     #superadmin.says('!link super@sgmail.com.ar')
