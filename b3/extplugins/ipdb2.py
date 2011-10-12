@@ -70,9 +70,11 @@
 # 2011-09-26 - SGT - 1.2.7
 # Change link user command to handle new API
 # Put default commands in code
+# 2011-10-12 - SGT - 1.2.8
+# Increase update list size
 
 __author__  = 'SGT'
-__version__ = '1.2.7'
+__version__ = '1.2.8'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -116,6 +118,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _banInfoDumpTime = 7
     #_clientInfoDumpTime = 7
     _color_re = re.compile(r'\^[0-9]')
+    _maxOneTimeUpdate = 50
     
     _updated = False
     _notifyUpdateLevel = 80
@@ -552,7 +555,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if not self._running:
             self._running = True
             last = len(self._eventqueue)-1
-            if last > 20: last = 20
+            if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
             status = self._eventqueue[0:last]
             if len(status) > 0:
                 self.debug("Updating")
@@ -562,6 +565,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     pass
                 else:
                     del self._eventqueue[0:last]
+            else:
+                try:
+                    self.send_update([])
+                except:
+                    pass
             self._running = False
         else:
             self.debug("Already running")
