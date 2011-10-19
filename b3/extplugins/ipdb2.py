@@ -239,8 +239,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpUnbanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
         if self._remotePermission > 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.remoteEventStatus, minute='*/15'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/20'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.remoteEventStatus, minute='*/10'))
         if self._showAdInterval > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
 
@@ -902,8 +902,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.debug('No events received')
             
     def processRemoteBan(self, event):
+        m, ev, client_id, duration, reason, admin_id = event
         if self._remotePermission & 1:
-            m, client_id, duration, reason, admin_id = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
                 if admin_id == 0:
@@ -914,29 +914,35 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     sclient.tempban(duration=duration, reason=reason, admin=admin, silent=True, data='Banned from IPDB')
                 else:
                     sclient.ban(reason=reason, admin=admin, silent=True, data='Banned from IPDB')
+                self.confirmRemoteEvent(ev)
             else:
+                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
                 self.warning("Remote ban: client %s not found" % client_id)
         else:
+            self.confirmRemoteEvent(ev, "Not enough permission for remote ban")
             self.warning("Not enough permission for remote ban")
 
     def processRemoteUnBan(self, event):
+        m, ev, client_id, reason, admin_id = event
         if self._remotePermission & 2:
-            m, client_id, reason, admin_id = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
                 if admin_id == 0:
                     admin = None
                 else:
-                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)                
+                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
                 sclient.unban(reason=reason, admin=admin, silent=True)
+                self.confirmRemoteEvent(ev)
             else:
+                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
                 self.warning("Remote unban: client %s not found" % client_id)
         else:
+            self.confirmRemoteEvent(ev, "Not enough permission for remote unban")
             self.warning("Not enough permission for remote unban")
                         
     def processRemoteNotice(self, event):
+        m, ev, client_id, reason, admin_id = event
         if self._remotePermission & 4:
-            m, client_id, reason, admin_id, key = event
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
                 if admin_id == 0:
@@ -951,19 +957,23 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 else:
                     p.adminId = 0
                 p.reason = reason
-                p.data = key
+                p.data = ev
                 p.save(self.console)
-                
+                self.confirmRemoteEvent(ev)
             else:
+                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
                 self.warning("Remote ban: client %s not found" % client_id)
         else:
+            self.confirmRemoteEvent(ev, "Not enough permission for remote notice")
             self.warning("Not enough permission for remote notice")
           
     def processRemoteUnNotice(self, event):
+        m, key = event
         if self._remotePermission & 8:
-            m, key = event
             self.console.storage.query(QueryBuilder(self.console.storage.db).UpdateQuery( { 'inactive' : 1 }, 'penalties', { 'data' : key } ))
+            self.confirmRemoteEvent(key)
         else:
+            self.confirmRemoteEvent(key, 'Not enough permission for remote notice remove')
             self.warning("Not enough permission for remote notice remove")
                 
     def confirmRemoteEvent(self, eventId, msg = ''):
