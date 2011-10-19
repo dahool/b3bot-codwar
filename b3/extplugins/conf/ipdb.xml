@@ -2,7 +2,7 @@
     <settings name="settings">
         <set name="baninfodump">7</set> <!-- FIXED HOUR EJ: RUN EVERY DAY AT 7AM UTC || -1 DISABLE -->
         <set name="baninfointerval">2</set> <!-- EVERY 2 HOURS  || 0 DISABLE -->
-        <set name="interval">5</set> <!-- EVERY 5 MINUTES -->
+        <set name="interval">2</set> <!-- EVERY 2 MINUTES -->
         <!--
 		remote permissions
 		0 = disable remote actions
@@ -13,6 +13,7 @@
 		add numbers, 15 = all
 		-->
 		<set name="remotepermission">15</set>
+        <set name="admins_level">40</set> <!-- minimun level to allow remote permissions -->
         <set name="key">--------</set>
     </settings>
     <settings name="commands">

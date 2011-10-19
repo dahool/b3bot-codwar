@@ -72,9 +72,13 @@
 # Put default commands in code
 # 2011-10-12 - SGT - 1.2.8
 # Increase update list size
+# 2011-10-18 - SGT - 1.3.0
+# Implement time diff
+# Add event confirmation
+# Custom admin level for remote actions
 
 __author__  = 'SGT'
-__version__ = '1.2.8'
+__version__ = '1.3.0'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -94,7 +98,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://www.ipdburt.com.ar/api/v3/xmlrpc'
+    _url = 'http://api.iddb.com.ar/api/v4/xmlrpc'
 
     _timeout = 15
     
@@ -129,9 +133,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _updateCrontab = None
     _showBanAdmin = True
     
+    _remotequeue = []
+    
     _clientCache = {}
     
     _remotePermission = 15 # all
+    
+    _adminLevel = 40
     
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
@@ -232,6 +240,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpUnbanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
         if self._remotePermission > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.remoteEventStatus, minute='*/15'))
         if self._showAdInterval > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
 
@@ -284,7 +293,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._showAdInterval = self.config.getint('settings', 'showmessageinterval')
         except:
             self._showAdInterval = 30
-                                    
+        try:
+            self._adminLevel = self.config.getint('settings', 'admins_level')
+        except:
+            self._adminLevel = 40
+                                                    
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
             self.onClientConnect(event.client)
@@ -442,7 +455,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def send_update(self, list):
         try:
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.update(self._key, list)
+            self._rpc_proxy.server.update(self._key, list, int(time.time()))
             self._failureCount = 0
         except xmlrpclib.ProtocolError, protocolError:
             self.error(str(protocolError))
@@ -541,30 +554,28 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.debug('Update server name')
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission])
+            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission, self._adminLevel])
+            self.do_enable()
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
             if self.increaseFail():
                 self.console.cron + b3.cron.OneTimeCronTab(self.updateName, '*/30')
-        else:
-            self.do_enable()
         socket.setdefaulttimeout(None)
         
     def update(self):
         self.bot('Update')
         if not self._running:
             self._running = True
-            last = len(self._eventqueue)-1
-            if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
-            status = self._eventqueue[0:last]
-            if len(status) > 0:
+            if len(self._eventqueue) > 0:
+                last = len(self._eventqueue)-1
+                if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
+                status = self._eventqueue[0:last]
                 self.debug("Updating")
                 try:
                     self.send_update(status)
+                    del self._eventqueue[0:last]
                 except:
                     pass
-                else:
-                    del self._eventqueue[0:last]
             else:
                 try:
                     self.send_update([])
@@ -942,6 +953,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 p.reason = reason
                 p.data = key
                 p.save(self.console)
+                
             else:
                 self.warning("Remote ban: client %s not found" % client_id)
         else:
@@ -953,7 +965,40 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.console.storage.query(QueryBuilder(self.console.storage.db).UpdateQuery( { 'inactive' : 1 }, 'penalties', { 'data' : key } ))
         else:
             self.warning("Not enough permission for remote notice remove")
-                                    
+                
+    def confirmRemoteEvent(self, eventId, msg = ''):
+        self._remotequeue.append([eventId, msg])
+        
+    def remoteEventStatus(self):
+        if len(self._remotequeue) == 0: return
+        last = len(self._remotequeue)-1
+        if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
+        status = self._remotequeue[0:last]
+        try:
+            socket.setdefaulttimeout(self._timeout)
+            self._rpc_proxy.server.confirmEvent(self._key, status)
+            self._failureCount = 0
+            del self._remotequeue[0:last] 
+        except xmlrpclib.ProtocolError, protocolError:
+            self.error(str(protocolError))
+            self.increaseFail()
+            raise Exception()
+        except xmlrpclib.Fault, applicationError:
+            self.error(applicationError.faultString)
+            self.increaseFail()
+            raise Exception()
+        except socket.timeout, timeoutError:
+            self.warning("Connection timed out")
+            raise Exception()
+        except socket.error, socketError:
+            self.error(str(socketError))
+            self.increaseFail()
+            raise Exception()
+        except Exception, e:
+            self.error("General error. %s" % str(e))
+        finally:
+            socket.setdefaulttimeout(None)
+                
     def getRemoteQueue(self):
         list = []
         try:
