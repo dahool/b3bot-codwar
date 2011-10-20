@@ -76,6 +76,7 @@
 # Implement time diff
 # Add event confirmation
 # Custom admin level for remote actions
+# Use UTC for times
 
 __author__  = 'SGT'
 __version__ = '1.3.0'
@@ -413,19 +414,10 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def consoleMessage(self):
         self.console.say('^5IPDB ^7is watching you')
         
-    def _hash(self, text):
-        return hash('%s%s' % (text, self._key)).hexdigest()
-        
     def _buildClientInfo(self, client, timeEdit = None):
-        guid = self._hash(client.guid)
         if not timeEdit:
             timeEdit = int(time.time())
-        else:
-            try:
-                timeEdit = self._formatTime(timeEdit)
-            except:
-                timeEdit = int(time.time())
-        info = [self.sanitize(client.name), guid, client.id, client.ip, client.maxLevel, timeEdit]
+        info = [self.sanitize(client.name), client.guid, client.id, client.ip, client.maxLevel, timeEdit]
         return info
         
     def _buildEventInfo(self, event, client, timeEdit = None):
@@ -434,9 +426,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         info.extend(self._buildClientInfo(client, timeEdit))
         self.verbose(info)
         return info
-          
-    def _formatTime(self, tm):
-        return int(time.mktime(time.localtime(tm)))
     
     def cleanEvents(self):
         '''clean connect events in case of disabled.
@@ -526,9 +515,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     admin = self._adminPlugin.findClientPrompt('@%s' % str(penalty.adminId), None)
                     if admin:
                         admin_name = admin.name
-                        admin_id = self._hash(admin.guid)
+                        admin_id = admin.guid
 
-            baninfo = [pType, self._formatTime(penalty.timeAdd), penalty.duration, self.sanitize(penalty.reason), admin_name, admin_id]
+            baninfo = [pType, penalty.timeAdd, penalty.duration, self.sanitize(penalty.reason), admin_name, admin_id]
             status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
             self.verbose(baninfo)
             status.append(baninfo)
@@ -640,7 +629,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             since = 1262314800
             q = self._BAN_QUERY + " LIMIT 20"
         else:
-            since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+            since = int(time.mktime((datetime.datetime.utcnow() - self._delta).timetuple()))
             q = self._BAN_QUERY + " LIMIT 25"
         cursor = self.console.storage.query(q % {'now': now,
                                                 'since': since})
@@ -679,7 +668,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def dumpUnbanInfo(self):
         self.debug('Collect unban info')
         now = int(time.time())
-        since = int(time.mktime((datetime.datetime.now() - self._delta).timetuple()))
+        since = int(time.mktime((datetime.datetime.utcnow() - self._delta).timetuple()))
         q = self._UNBAN_QUERY + " LIMIT 25"
         cursor = self.console.storage.query(q % {'now': now,
                                                 'since': since})
@@ -741,7 +730,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def add_notice(self, data, client, admin):
         status = self._buildEventInfo(self._EVENT_ADDNOTE, client, client.timeEdit)
-        status.append([int(time.time()), data, admin.name, self._hash(admin.guid)])
+        status.append([int(time.time()), data, admin.name, admin.guid])
         self._eventqueue.append(status)
                     
     def cmd_dbaddnote(self ,data , client, cmd=None):
@@ -881,7 +870,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     # --- REMOTE EVENT HANDLING --- #
     def processRemoteQueue(self):
         try:
-            list = self.getEventQueue()
+            list = self.getRemoteQueue()
         except:
             list = []
         if len(list) > 0:
@@ -923,15 +912,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.warning("Not enough permission for remote ban")
 
     def processRemoteUnBan(self, event):
-        m, ev, client_id, reason, admin_id = event
+        m, ev, client_id = event
         if self._remotePermission & 2:
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
-                if admin_id == 0:
-                    admin = None
-                else:
-                    admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
-                sclient.unban(reason=reason, admin=admin, silent=True)
+                sclient.unban(silent=True)
                 self.confirmRemoteEvent(ev)
             else:
                 self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
@@ -985,7 +970,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
         status = self._remotequeue[0:last]
         try:
-            socket.setdefaulttimeout(self._timeout)
+            socket.setdefaulttimeout(self._timeout * 2)
             self._rpc_proxy.server.confirmEvent(self._key, status)
             self._failureCount = 0
             del self._remotequeue[0:last] 
@@ -1012,7 +997,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def getRemoteQueue(self):
         list = []
         try:
-            socket.setdefaulttimeout(self._timeout)
+            socket.setdefaulttimeout(self._timeout * 2)
             list = self._rpc_proxy.server.eventQueue(self._key)
             self._failureCount = 0
         except xmlrpclib.ProtocolError, protocolError:
