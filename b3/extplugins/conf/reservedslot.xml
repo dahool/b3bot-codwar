@@ -1,0 +1,18 @@
+<configuration plugin="reservedslot">
+	<settings name="settings">
+        <!-- Max time in seconds before a kicked player is allowed to connect again when server is full -->
+		<set name="cooldown">900</set>
+        <!-- Slots to keep free while unregistered players are connected -->
+		<set name="reserved_slots">2</set>
+	</settings>
+	<settings name="messages">
+		<!-- displayed to users when they are about to be kicked -->
+		<set name="kick_warn">^5$name ^7vas a ser kickeado por slot reservado. Pedi tu registro en ^3www.codwar.com.ar ^7para evitar esto. Tu id es ^3@$id</set>
+        <!-- displayed when a joinning player will be kicked because reserved slot -->
+        <set name="welcome">^5$name ^7tu id es ^3@$id^7. Para jugar pedi tu registro en ^3www.codwar.com.ar</set>
+        <!-- spam to show when unregistered players are connected -->
+        <set name="status">^5$name ^7estas jugando como invitado. Podras ser kickeado para dar lugar a un jugador registrado. Para ayuda escribi !reghelp</set>        
+        <!-- displayed on !reghelp -->
+        <set name="reghelp">^5$name ^7tu id es ^3@$id^7. Para jugar pedi tu registro en www.codwar.com.ar</set>
+	</settings>
+</configuration>
