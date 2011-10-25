@@ -51,20 +51,28 @@ class ReservedslotPlugin(b3.plugin.Plugin):
             reserved_slots = self.config.getint('settings', 'reserved_slots')
         except:
             reserved_slots = 0
+        self.debug("Reserved slots %d" % reserved_slots)
+            
         try:
             self._timeDiffGap = self.config.getint('settings', 'cooldown')
         except:
             self._timeDiffGap = 900
+        self.debug("Cooldown gap %d" % self._timeDiffGap)
+        
         try:
             sv_maxclients = int(self.console.getCvar('sv_maxclients').getString())
+            self.debug("Max clients %d" % sv_maxclients)
         except:
-            self.error("Unable to determine max server clients. Using default.")
+            self.error("Unable to determine max server clients. Using 16.")
             sv_maxclients = 16
+            
         try:
             sv_privateClients = int(self.console.getCvar('sv_privateClients').getString())
+            self.debug("Private clients %d" % sv_privateClients)
         except:
             self.error("Unable to determine private clients. Using 0.")
             sv_privateClients = 0
+            
         self._max_clients = sv_maxclients - sv_privateClients - reserved_slots
                     
     def onEvent(self,  event):
@@ -86,7 +94,8 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         clients = self.console.clients.getList()
         if len(clients) > self._max_clients:
             if client.maxLevel > 0:
-                threading.Thread(target=self.make_room).start()
+                t = threading.Thread(target=self.make_room)
+                t.start()
             else:
                 _timeDiff = 0
                 if client.lastVisit:
@@ -103,9 +112,11 @@ class ReservedslotPlugin(b3.plugin.Plugin):
             self.debug("Client can join")
 
     def make_room(self):
+        self.debug("Running make room")
         clients = self.console.clients.getList()
         last = None
         for client in clients:
+            self.verbose("Client %s level %d" % (client.name, client.maxLevel))
             if client.maxLevel == 0:
                 if last is None or client.lastVisit > last.lastVisit:
                     last = client
@@ -127,6 +138,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
                     
     def _client_connected(self, client):
         if client.connected:
+            self.debug("Warning client before kick")
             # this requires poweradmin to keep forced
             client.setvar(self, 'paforced', 'spectator')
             self.console.write('mute %s' % (client.cid))
@@ -144,27 +156,23 @@ if __name__ == '__main__':
     import time
     
     # first time user
-    user0 = FakeClient(fakeConsole, name="New1", exactName="Joe", guid="1234", groupBits=0, team=b3.TEAM_RED)
+    user0 = FakeClient(fakeConsole, name="New1", exactName="Joe", guid="guid0", groupBits=0, team=b3.TEAM_RED)
     user0.connections = 0
     # second time user
-    user1 = FakeClient(fakeConsole, name="New2", exactName="Joe", guid="12384", groupBits=0, team=b3.TEAM_RED)
+    user1 = FakeClient(fakeConsole, name="New2", exactName="Joe", guid="guid1", groupBits=0, team=b3.TEAM_RED)
     user1.connections = 1
     # registered user
-    user2 = FakeClient(fakeConsole, name="Registered", exactName="Joe", guid="1235", groupBits=1, team=b3.TEAM_RED)
+    user2 = FakeClient(fakeConsole, name="Registered", exactName="Joe", guid="guid2", groupBits=1, team=b3.TEAM_RED)
     # regular user
-    user3 = FakeClient(fakeConsole, name="Regular", exactName="Joe", guid="12365", groupBits=4, team=b3.TEAM_RED)
+    user3 = FakeClient(fakeConsole, name="Regular", exactName="Joe", guid="guid3", groupBits=4, team=b3.TEAM_RED)
     
     p = ReservedslotPlugin(fakeConsole,'conf/reservedslot.xml')
-    p._max_clients = 3
+    p._max_clients = 4
     p.onStartup()
-    time.sleep(5)
+    time.sleep(10)
     
     superadmin.connects(cid=0)
-    time.sleep(5)
     user0.connects(cid=1)
-    time.sleep(5)
     user2.connects(cid=2)
-    time.sleep(5)
     user3.connects(cid=3)
-    time.sleep(5)
     user1.connects(cid=4)
