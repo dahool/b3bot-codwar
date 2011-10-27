@@ -75,8 +75,9 @@
 # 2011-10-18 - SGT - 1.3.0
 # Implement time diff
 # Add event confirmation
-# Custom admin level for remote actions
 # Use UTC for times
+# Fix clean events
+# Add refresh event
 
 __author__  = 'SGT'
 __version__ = '1.3.0'
@@ -140,8 +141,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     _remotePermission = 15 # all
     
-    _adminLevel = 40
-    
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
     _EVENT_UPDATE = "update"
@@ -149,6 +148,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     _EVENT_ADDNOTE = "addnote" # 4
     _EVENT_DELNOTE = "delnote" # 8
     _EVENT_UNBAN = "unbanned" # 2
+    _EVENT_REFRESH = "refresh"
     
     _BAN_QUERY = "SELECT c.id as client_id, p.id as id, p.duration as duration, p.reason as reason, p.time_add as time_add, p.admin_id as admin_id "\
     "FROM penalties p INNER JOIN clients c ON p.client_id = c.id "\
@@ -294,10 +294,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._showAdInterval = self.config.getint('settings', 'showmessageinterval')
         except:
             self._showAdInterval = 30
-        try:
-            self._adminLevel = self.config.getint('settings', 'admins_level')
-        except:
-            self._adminLevel = 40
                                                     
     def onEvent(self, event):
         if event.type == b3.events.EVT_CLIENT_AUTH:
@@ -434,11 +430,15 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         tempClients = []
         self._eventqueue = []
         for event in tempList:
-            if event[0] in (self._EVENT_CONNECT, self._EVENT_UPDATE):
-                if not event[2] in tempClients:
-                    self._eventqueue.append(event)
-        if len(self._eventqueue) > 50:
-            self._eventqueue = self._eventqueue[:50:-1]
+            # check if guid is already in the list
+            if not event[2] in tempClients:
+                if event[0] in (self._EVENT_CONNECT, self._EVENT_UPDATE):
+                    event[0] = self._EVENT_REFRESH
+                self._eventqueue.append(event)
+                tempClients.append(event[2])
+        maxQueueSize = self._maxOneTimeUpdate * 2
+        if len(self._eventqueue) > maxQueueSize:
+            self._eventqueue = self._eventqueue[:maxQueueSize:-1]
            
     # =============================== UPDATE ===============================
     def send_update(self, list):
@@ -543,7 +543,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.debug('Update server name')
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission, self._adminLevel])
+            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission])
             self.do_enable()
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))

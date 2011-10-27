@@ -13,12 +13,11 @@
 		add numbers, 15 = all
 		-->
 		<set name="remotepermission">15</set>
-        <set name="admins_level">40</set> <!-- minimun level to allow remote permissions -->
         <set name="key">--------</set>
     </settings>
     <settings name="commands">
         <set name="userlink">2</set>
-        <set name="dbaddnote">40</set>
+        <set name="dbaddnote">20</set>
         <set name="dbdelnote">40</set>
         <set name="dbclearban">60</set>
     </settings>
