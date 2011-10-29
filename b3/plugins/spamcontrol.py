@@ -19,9 +19,11 @@
 # CHANGELOG
 #    8/29/2005 - 1.1.0 - ThorN
 #    Converted to use new event handlers
+#    10/28/2011 - 1.1.2a - SGT
+#    Guest user has a lower spam limit (50%)
 
 __author__  = 'ThorN'
-__version__ = '1.1.2'
+__version__ = '1.1.2a'
 
 
 
@@ -110,7 +112,10 @@ class SpamcontrolPlugin(b3.plugin.Plugin):
         event.client.setvar(self, 'last_message_time', self.console.time())
         event.client.setvar(self, 'last_message', event.data)
 
-        if spamins >= self._maxSpamins:
+        if event.client.maxLevel == 0: maxSpamins = self._maxSpamins / 2
+        else: maxSpamins = self._maxSpamins
+        
+        if spamins >= maxSpamins:
             event.client.setvar(self, 'ignore_till', self.console.time() + 30)
             self._adminPlugin.warnClient(event.client, 'spam')
             spamins = int(spamins / 1.5)

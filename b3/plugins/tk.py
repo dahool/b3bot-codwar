@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    10/28/2011 - 1.2.7 - SGT
+#    * For guest attackers forgive only 50%
 #    06/27/2011 - 1.2.6 - SGT
 #    * Auto forgive
 #    03/30/2011 - 1.2.5 - SGT
@@ -373,19 +375,27 @@ class TkPlugin(b3.plugin.Plugin):
 
     def forgive(self, acid, victim, silent=False):
         v = self.getClientTkInfo(victim)
-        points = v.forgive(acid)
-
         attacker = self.console.clients.getByCID(acid)
+        if attacker and attacker.maxLevel == 0:
+            points = v._attackers[acid]
+            points = int(points * 0.5)
+            v._attackers[acid] = points 
+        else:
+            points = v.forgive(acid)
+        
         if attacker:
-            a = self.getClientTkInfo(attacker)
-            a.forgiven(victim.cid)
-
+            if attacker.maxLevel > 0:
+                a = self.getClientTkInfo(attacker)
+                a.forgiven(victim.cid)
+                msg = self.getMessage('forgive', { 'vname' : victim.exactName, 'aname' : attacker.name, 'points' : points })
+            else:
+                msg = self.getMessage('forgive_guest', { 'vname' : victim.exactName, 'aname' : attacker.name, 'points' : points })
             if not silent:
                 if self._private_messages:
-                    victim.message(self.getMessage('forgive', { 'vname' : victim.exactName, 'aname' : attacker.name, 'points' : points }))
-                    attacker.message(self.getMessage('forgive', { 'vname' : victim.exactName, 'aname' : attacker.name, 'points' : points }))
+                    victim.message(msg)
+                    attacker.message(msg)
                 else:
-                    self.console.say(self.getMessage('forgive', { 'vname' : victim.exactName, 'aname' : attacker.name, 'points' : points }))
+                    self.console.say(msg)
         elif not silent:
             if self._private_messages:
                 victim.message(self.getMessage('forgive', { 'vname' : victim.exactName, 'aname' : acid, 'points' : points }))
