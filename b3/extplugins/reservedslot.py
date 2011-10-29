@@ -89,9 +89,10 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         return True
         
     def process_connect_event(self, client):
-        self.debug("Client connected")
+        self.debug("Client connected. Level %s" % client.maxLevel)
 
         clients = self.console.clients.getList()
+        self.debug("Total connected %s" % len(clients))
         if len(clients) > self._max_clients:
             if client.maxLevel > 0:
                 t = threading.Thread(target=self.make_room)
@@ -103,6 +104,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
                 else:
                     _timeDiff = 1000000
                 if _timeDiff < self._timeDiffGap:
+                    self.debug("Kicked because time gap")
                     client.kick('Kick because reserved slot', silent=True)
                 else:
                     self.debug("Client will be kicked")
@@ -114,6 +116,10 @@ class ReservedslotPlugin(b3.plugin.Plugin):
     def make_room(self):
         self.debug("Running make room")
         clients = self.console.clients.getList()
+        self.debug("Clients connected %d" % len(clients))
+        if len(clients) <= self._max_clients:
+           self.debug("No need to make room")
+           return
         last = None
         for client in clients:
             self.verbose("Client %s level %d" % (client.name, client.maxLevel))
@@ -121,11 +127,12 @@ class ReservedslotPlugin(b3.plugin.Plugin):
                 if last is None or client.lastVisit > last.lastVisit:
                     last = client
         if last:
+            self.debug("%s will be kicked" % last.name)
             last.message(self.getMessage('kick_warn', {'name': last.name, 'id': last.id}))
             time.sleep(1)
             last.message(self.getMessage('kick_warn', {'name': last.name, 'id': last.id}))
             time.sleep(5)
-            client.kick('Kick because reserved slot', silent=True)
+            last.kick('Kick because reserved slot', silent=True)
         else:
             self.debug("All clients are registered")
             
@@ -176,3 +183,5 @@ if __name__ == '__main__':
     user2.connects(cid=2)
     user3.connects(cid=3)
     user1.connects(cid=4)
+
+    while True: time.sleep(5)
