@@ -240,7 +240,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpUnbanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
         if self._remotePermission > 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/20'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
             self._cronTab.append(b3.cron.PluginCronTab(self, self.remoteEventStatus, minute='*/10'))
         if self._showAdInterval > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
@@ -878,13 +878,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             for event in list:
                 try:
                     if event[0] == self._EVENT_BAN:
-                        self.processRemoteBan(self, event)
+                        self.processRemoteBan(event)
                     elif event[0] == self._EVENT_UNBAN:
-                        self.processRemoteUnBan(self, event)
+                        self.processRemoteUnBan(event)
                     elif event[0] == self._EVENT_ADDNOTE:
-                        self.processRemoteNotice(self, event)
+                        self.processRemoteNotice(event)
                     elif event[0] == self._EVENT_DELNOTE:
-                        self.processRemoteUnNotice(self, event)
+                        self.processRemoteUnNotice(event)
                 except Exception, e:
                     self.error(e)
         else:
@@ -892,6 +892,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def processRemoteBan(self, event):
         m, ev, client_id, duration, reason, admin_id = event
+        self.debug("Process ban %s" % client_id)
         if self._remotePermission & 1:
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
@@ -913,6 +914,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def processRemoteUnBan(self, event):
         m, ev, client_id = event
+        self.debug("Process unban %s" % client_id)
         if self._remotePermission & 2:
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
@@ -927,6 +929,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                         
     def processRemoteNotice(self, event):
         m, ev, client_id, reason, admin_id = event
+        self.debug("Process notice %s" % client_id)
         if self._remotePermission & 4:
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
             if sclient:
@@ -954,6 +957,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
           
     def processRemoteUnNotice(self, event):
         m, key = event
+        self.debug("Process unnotice %s" % key)
         if self._remotePermission & 8:
             self.console.storage.query(QueryBuilder(self.console.storage.db).UpdateQuery( { 'inactive' : 1 }, 'penalties', { 'data' : key } ))
             self.confirmRemoteEvent(key)
@@ -962,18 +966,21 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.warning("Not enough permission for remote notice remove")
                 
     def confirmRemoteEvent(self, eventId, msg = ''):
+        self.verbose("Queue event confirmation %s [%s]" % (eventId, msg))
         self._remotequeue.append([eventId, msg])
         
     def remoteEventStatus(self):
+        self.debug("Check remote events status [%d]" % len(self._remotequeue))
         if len(self._remotequeue) == 0: return
-        last = len(self._remotequeue)-1
+        last = len(self._remotequeue)
         if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
         status = self._remotequeue[0:last]
         try:
+            self.debug("Send remote events confirmation")
             socket.setdefaulttimeout(self._timeout * 2)
             self._rpc_proxy.server.confirmEvent(self._key, status)
             self._failureCount = 0
-            del self._remotequeue[0:last] 
+            del self._remotequeue[0:last]
         except xmlrpclib.ProtocolError, protocolError:
             self.error(str(protocolError))
             self.increaseFail()
@@ -1126,23 +1133,22 @@ if __name__ == '__main__':
     fakeConsole.setCvar('sv_hostname','IPDB Test Server')    
     
     p = Ipdb2Plugin(fakeConsole,'conf/ipdb.xml')
-    p._url = 'http://www.iddb.com.ar/api/v3/xmlrpc'
+    p._url = 'http://166.40.231.124:8080/iddb-web/api/v4/xmlrpc'
     p.onStartup()
-    time.sleep(2)
+    time.sleep(5)
     
     joe.connects(cid=1)
-    time.sleep(1)
     simon.connects(cid=2)
-    time.sleep(1)
     moderator.connects(cid=3)
-    time.sleep(1)
     superadmin.connects(cid=4)
-    time.sleep(2)
+    time.sleep(5)
    
     moderator.says('!ipdb')
     time.sleep(2)
- 
-    moderator.says('!link mod@sgmail.com.ar')
+    superadmin.says('!ipdb')
+    time.sleep(2)
+    
+    #moderator.says('!link mod@sgmail.com.ar')
     #time.sleep(1)
     #superadmin.says('!link super@sgmail.com.ar')
     #time.sleep(1)
