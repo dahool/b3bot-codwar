@@ -559,7 +559,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 last = len(self._eventqueue)-1
                 if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
                 status = self._eventqueue[0:last]
-                self.debug("Updating")
+                self.debug("Updating %d" % len(status))
                 try:
                     self.send_update(status)
                     del self._eventqueue[0:last]
