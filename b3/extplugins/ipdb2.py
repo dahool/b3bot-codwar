@@ -877,7 +877,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.debug('Received %d events. Processing' % len(list))
             for event in list:
                 try:
-                    log.debug(event)
+                    self.debug(event)
                     if event[0] == self._EVENT_BAN:
                         self.processRemoteBan(event)
                     elif event[0] == self._EVENT_UNBAN:
