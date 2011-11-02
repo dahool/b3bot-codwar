@@ -556,7 +556,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if not self._running:
             self._running = True
             if len(self._eventqueue) > 0:
-                last = len(self._eventqueue)-1
+                last = len(self._eventqueue)
                 if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
                 status = self._eventqueue[0:last]
                 self.debug("Updating %d" % len(status))
@@ -877,6 +877,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.debug('Received %d events. Processing' % len(list))
             for event in list:
                 try:
+                    log.debug(event)
                     if event[0] == self._EVENT_BAN:
                         self.processRemoteBan(event)
                     elif event[0] == self._EVENT_UNBAN:
