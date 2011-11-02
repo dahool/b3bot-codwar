@@ -78,9 +78,11 @@
 # Use UTC for times
 # Fix clean events
 # Add refresh event
+# 2011-11-02 - SGT - 1.3.1
+# Fix minor issues with remote notices
 
 __author__  = 'SGT'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -933,7 +935,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.warning("Not enough permission for remote unban")
                         
     def processRemoteNotice(self, event):
-        m, ev, client_id, reason, admin_id = event
+        m, ev, pkey, client_id, reason, admin_id = event
         self.debug("Process notice %s" % client_id)
         if self._remotePermission & 4:
             sclient = self._adminPlugin.findClientPrompt("@%s" % client_id, None)
@@ -956,7 +958,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 else:
                     p.adminId = 0
                 p.reason = reason
-                p.data = ev
+                p.data = pkey
                 p.save(self.console)
                 self.confirmRemoteEvent(ev)
             else:
@@ -967,13 +969,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.warning("Not enough permission for remote notice")
           
     def processRemoteUnNotice(self, event):
-        m, key = event
-        self.debug("Process unnotice %s" % key)
+        m, ev, pkey = event
+        self.debug("Process unnotice %s" % ev)
         if self._remotePermission & 8:
-            self.console.storage.query(QueryBuilder(self.console.storage.db).UpdateQuery( { 'inactive' : 1 }, 'penalties', { 'data' : key } ))
-            self.confirmRemoteEvent(key)
+            self.console.storage.query(QueryBuilder(self.console.storage.db).UpdateQuery( { 'inactive' : 1 }, 'penalties', { 'data' : pkey } ))
+            self.confirmRemoteEvent(ev)
         else:
-            self.confirmRemoteEvent(key, 'Not enough permission for remote notice remove')
+            self.confirmRemoteEvent(ev, 'Not enough permission for remote notice remove')
             self.warning("Not enough permission for remote notice remove")
                 
     def confirmRemoteEvent(self, eventId, msg = ''):
