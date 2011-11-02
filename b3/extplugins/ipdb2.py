@@ -141,6 +141,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     _remotePermission = 15 # all
     
+    _remoteInterval = 30
+    
     _EVENT_CONNECT = "connect"
     _EVENT_DISCONNECT = "disconnect"
     _EVENT_UPDATE = "update"
@@ -210,9 +212,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 if func:
                     self._adminPlugin.registerCommand(self, cmd, level, func, alias)
 
-            #self._adminPlugin.registerCommand(self, 'ipdb', 1, self.cmd_showqueue, None)
-            #self._adminPlugin.registerCommand(self, 'ipdbup', 80, self.cmd_update, None)
-            
         self._twitterPlugin = self.console.getPlugin('twity')
         if not self._twitterPlugin:
             self.debug("Twitter plugin not avaiable.")
@@ -240,8 +239,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpUnbanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
         if self._remotePermission > 0:
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/30'))
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.remoteEventStatus, minute='*/10'))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.processRemoteQueue, minute='*/%d' % self._remoteInterval))
         if self._showAdInterval > 0:
             self._cronTab.append(b3.cron.PluginCronTab(self, self.consoleMessage, minute='*/%d' % self._showAdInterval))
 
@@ -889,6 +887,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     self.error(e)
         else:
             self.debug('No events received')
+        self.remoteEventStatus()
             
     def processRemoteBan(self, event):
         m, ev, client_id, duration, reason, admin_id = event
@@ -900,14 +899,20 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     admin = None
                 else:
                     admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
+                
+                if admin is None:
+                    self.confirmRemoteEvent(ev, "Invalid admin @%s" % admin_id)
+                    self.warning("Remote ban: admin @%s not found" % admin_id)
+                    return
+                    
                 if duration > 0:
                     sclient.tempban(duration=duration, reason=reason, admin=admin, silent=True, data='Banned from IPDB')
                 else:
                     sclient.ban(reason=reason, admin=admin, silent=True, data='Banned from IPDB')
                 self.confirmRemoteEvent(ev)
             else:
-                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
-                self.warning("Remote ban: client %s not found" % client_id)
+                self.confirmRemoteEvent(ev, "Client @%s not found" % client_id)
+                self.warning("Remote ban: client @%s not found" % client_id)
         else:
             self.confirmRemoteEvent(ev, "Not enough permission for remote ban")
             self.warning("Not enough permission for remote ban")
@@ -921,8 +926,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 sclient.unban(silent=True)
                 self.confirmRemoteEvent(ev)
             else:
-                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
-                self.warning("Remote unban: client %s not found" % client_id)
+                self.confirmRemoteEvent(ev, "Client @%s not found" % client_id)
+                self.warning("Remote unban: client @%s not found" % client_id)
         else:
             self.confirmRemoteEvent(ev, "Not enough permission for remote unban")
             self.warning("Not enough permission for remote unban")
@@ -937,6 +942,12 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                     admin = None
                 else:
                     admin = self._adminPlugin.findClientPrompt("@%s" % admin_id, None)
+
+                if admin is None:
+                    self.confirmRemoteEvent(ev, "Invalid admin @%s" % admin_id)
+                    self.warning("Remote notice: admin @%s not found" % admin_id)
+                    return
+                                        
                 p = ClientNotice()
                 p.timeAdd = self.console.time()
                 p.clientId = sclient.id
@@ -949,8 +960,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 p.save(self.console)
                 self.confirmRemoteEvent(ev)
             else:
-                self.confirmRemoteEvent(ev, "Client %s not found" % client_id)
-                self.warning("Remote ban: client %s not found" % client_id)
+                self.confirmRemoteEvent(ev, "Client @%s not found" % client_id)
+                self.warning("Remote notice: client @%s not found" % client_id)
         else:
             self.confirmRemoteEvent(ev, "Not enough permission for remote notice")
             self.warning("Not enough permission for remote notice")
@@ -1134,6 +1145,7 @@ if __name__ == '__main__':
     
     p = Ipdb2Plugin(fakeConsole,'conf/ipdb.xml')
     p._url = 'http://166.40.231.124:8080/iddb-web/api/v4/xmlrpc'
+    p._remoteInterval = 1
     p.onStartup()
     time.sleep(5)
     
