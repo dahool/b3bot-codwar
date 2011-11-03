@@ -80,9 +80,11 @@
 # Add refresh event
 # 2011-11-02 - SGT - 1.3.1
 # Fix minor issues with remote notices
+# 2011-11-03 - SGT - 1.3.2
+# Fix minor issue with empty list update
 
 __author__  = 'SGT'
-__version__ = '1.3.1'
+__version__ = '1.3.2'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -228,14 +230,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             
     def setupCron(self):
         self.debug("will send update every %02d minutes" % self._interval)
-        self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%s' % self._interval))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%d' % self._interval))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
-        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10'))
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10')
         if self._banInfoInterval > 0:
             rmin = random.randint(5,59)
             self.debug("will send ban info every %02d:%02d hours" % (self._banInfoInterval,rmin))
             self._delta = datetime.timedelta(hours=self._banInfoInterval, minutes=15+rmin)
-            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%s' % self._banInfoInterval))
+            self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanInfo, 0, rmin, '*/%d' % self._banInfoInterval))
         if self._banInfoDumpTime >= 0:
             self.debug("will dump ban info at %02d" % (self._banInfoDumpTime))
             self._cronTab.append(b3.cron.PluginCronTab(self, self.dumpBanInfo, 0, random.randint(5,59), self._banInfoDumpTime))
@@ -563,11 +565,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 try:
                     self.send_update(status)
                     del self._eventqueue[0:last]
-                except:
-                    pass
-            else:
-                try:
-                    self.send_update([])
                 except:
                     pass
             self._running = False
