@@ -232,7 +232,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug("will send update every %02d minutes" % self._interval)
         self._cronTab.append(b3.cron.PluginCronTab(self, self.update, minute='*/%d' % self._interval))
         self._cronTab.append(b3.cron.PluginCronTab(self, self.updateBanQueue, minute='*/30'))
-        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10')
+        self._cronTab.append(b3.cron.PluginCronTab(self, self.validateOnlinePlayers, minute='*/10'))
         if self._banInfoInterval > 0:
             rmin = random.randint(5,59)
             self.debug("will send ban info every %02d:%02d hours" % (self._banInfoInterval,rmin))
