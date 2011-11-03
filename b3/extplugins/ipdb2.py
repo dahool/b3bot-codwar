@@ -84,6 +84,7 @@
 # Fix minor issue with empty list update
 # 2011-11-03 - SGT - 1.3.3
 # Refresh player on group update
+# Reload host name in each server name update
 
 __author__  = 'SGT'
 __version__ = '1.3.3'
@@ -261,7 +262,6 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.console.cron + self._updateCrontab
 
     def onLoadConfig(self):
-        self._hostname = self.sanitize(self.console.getCvar('sv_hostname').getString())
         try:
             self._key = self.config.get('settings', 'key')
         except:
@@ -559,6 +559,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         client.setvar(self, 'ipdb_warn', True)
 
     def updateName(self):
+        self._hostname = self.sanitize(self.console.getCvar('sv_hostname').getString())
         try:
             self.debug('Update server name')
             socket.setdefaulttimeout(self._timeout)
