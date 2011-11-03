@@ -82,9 +82,11 @@
 # Fix minor issues with remote notices
 # 2011-11-03 - SGT - 1.3.2
 # Fix minor issue with empty list update
+# 2011-11-03 - SGT - 1.3.3
+# Refresh player on group update
 
 __author__  = 'SGT'
-__version__ = '1.3.2'
+__version__ = '1.3.3'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -325,13 +327,27 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         else:
             command_name = command.func.func_name
         
-        if command_name == 'cmd_notice':
+        if 'cmd_notice' == command_name:
             self.handleAddNoticeCommand(data, client)
-        elif command_name == 'cmd_unban':
+        elif 'cmd_unban' == command_name:
             self.handleUnbanCommand(data, client)
-
+        elif 'cmd_ungroup' == command_name || 'cmd_putgroup' == command_name:
+            self.handleGroupCommand(data, client)
+            
+    def handleGroupCommand(self, data, client):
+        self.debug("Handle group command")
+        try:
+            cid, group = self._adminPlugin.parseUserCmd(data)
+            sclient = self._adminPlugin.findClientPrompt(cid, None)
+            if sclient:
+                self.debug("Refresh client %s" % sclient.name)
+                self._eventqueue.append(self._buildEventInfo(self._EVENT_REFRESH, sclient, sclient.timeEdit))
+        except Exception, e:
+            self.error(str(e))
+            
     def handleUnbanCommand(self, data, client):
         # if we are handling the event, discard
+        self.debug("Handle unban command")
         try:
             ev = b3.events.EVT_CLIENT_UNBAN
         except:
@@ -340,12 +356,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 sclient = self._adminPlugin.findClientPrompt(cid, None)
                 if sclient and sclient.numBans == 0:
                     self.onClientUnban(sclient)
-            except:
-                pass
+            except Exception, e:
+                self.error(str(e))
             
     def handleAddNoticeCommand(self, data, client):
         # we have no way to know if the notice was actually added
         # get the last notice from the database
+        self.debug("Handle add notice command")
         try:
             cid, notice = self._adminPlugin.parseUserCmd(data)
             sclient = self._adminPlugin.findClientPrompt(cid, None)
@@ -353,9 +370,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 penalty = self.console.storage.getClientLastPenalty(sclient, 'Notice')
                 if penalty and penalty.adminId == client.id: # check if is the same admin :)
                     self.add_notice(penalty.reason, sclient, client)
-        except:
-            pass
-        
+        except Exception, e:
+            self.error(str(e))
+                    
     def _cache_connect(self, client):
         self._onlinePlayers.append(client)
         self._clientCache[client.cid] = client
@@ -554,14 +571,14 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         socket.setdefaulttimeout(None)
         
     def update(self):
-        self.bot('Update')
+        self.debug('Try update')
         if not self._running:
             self._running = True
             if len(self._eventqueue) > 0:
                 last = len(self._eventqueue)
                 if last > self._maxOneTimeUpdate: last = self._maxOneTimeUpdate
                 status = self._eventqueue[0:last]
-                self.debug("Updating %d" % len(status))
+                self.bot("Updating %d" % len(status))
                 try:
                     self.send_update(status)
                     del self._eventqueue[0:last]
@@ -1159,6 +1176,7 @@ if __name__ == '__main__':
     time.sleep(2)
     superadmin.says('!ipdb')
     time.sleep(2)
+    moderator.says('!pugroup joe admin')
     
     #moderator.says('!link mod@sgmail.com.ar')
     #time.sleep(1)
