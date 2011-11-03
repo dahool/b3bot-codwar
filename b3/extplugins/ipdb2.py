@@ -331,7 +331,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self.handleAddNoticeCommand(data, client)
         elif 'cmd_unban' == command_name:
             self.handleUnbanCommand(data, client)
-        elif 'cmd_ungroup' == command_name || 'cmd_putgroup' == command_name:
+        elif 'cmd_ungroup' == command_name or 'cmd_putgroup' == command_name:
             self.handleGroupCommand(data, client)
             
     def handleGroupCommand(self, data, client):
@@ -1176,7 +1176,7 @@ if __name__ == '__main__':
     time.sleep(2)
     superadmin.says('!ipdb')
     time.sleep(2)
-    moderator.says('!pugroup joe admin')
+    superadmin.says('!putgroup joe admin')
     
     #moderator.says('!link mod@sgmail.com.ar')
     #time.sleep(1)
