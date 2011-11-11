@@ -830,7 +830,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def cmd_userlink(self, data, client, cmd=None):
         """\
         Register yourself in ipdb
-        <username>: you ipdb username
+        <username>: a valid e-mail address
         """
         if not self._pluginEnabled or not self.isEnabled():
             client.message('^Sorry, IPDB is disabled right now')
