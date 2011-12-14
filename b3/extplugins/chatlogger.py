@@ -21,8 +21,10 @@
 # Espace backslash
 # 28-05-2011 - 1.0.4
 # Sanitize string
+# 14-12-2011 - 1.0.5
+# Dump logs to db on intervals
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 __author__  = 'SGT'
 
 import b3
