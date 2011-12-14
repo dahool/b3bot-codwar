@@ -29,6 +29,7 @@ import b3
 import b3.plugin
 import b3, time, thread, threading
 import re
+import b3.cron
 
 class ChatloggerPlugin(b3.plugin.Plugin):
     '''
@@ -55,10 +56,21 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     
     _ALLOW_CHARS = re.compile('[^\w\?\+\*\.,:;=_\(\)\$\#!><-]')
     
+    _CACHE = []
+    
+    _crontab = None
+    
+    _interval = 15
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_PRIVATE_SAY)
+        
+        if self._cronTab:
+            self.console.cron - self._cronTab
+        self._cronTab = b3.cron.PluginCronTab(self, self.dump_logs, minute='*/%d' % self._interval)
+        self.console.cron + self._cronTab
         
     def onEvent(self,  event):
         target = None
@@ -69,7 +81,8 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_CLIENT_PRIVATE_SAY:
             target = "CLIENT: [%s] - %s" % (event.target.id,event.target.name)
         if target:
-            thread.start_new_thread(self.log, (event.data, event.client, target))
+            #thread.start_new_thread(self.log, (event.data, event.client, target))
+            self.log(event.data, event.client, target)
     
     def _sanitize(self, text):
         return self._ALLOW_CHARS.sub(' ', text).strip()
@@ -81,12 +94,18 @@ class ChatloggerPlugin(b3.plugin.Plugin):
             info = ''
         text = self._sanitize(text)
         sql = self._INSERT_QUERY % (text, client.id, self.console.time(), target, info)
-        self.debug(sql)
-        cursor = self.console.storage.query(sql)
-        try:
-            cursor.close()
-        except:
-            pass
+        self.verbose(sql)
+        self._CACHE.append(sql)
+        
+    def dump_logs(self):
+        if len(self._CACHE) > 0:
+            lista = self._CACHE[:]
+            del self._CACHE[0:len(lista)]
+            for sql in lista:
+                try:
+                    cursor = self.console.storage.query(sql)
+                except Exception, e:
+                    self.warning("Could not save to database: [%s] %s" % (e[0],e[1]))
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
