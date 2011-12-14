@@ -103,6 +103,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         if len(self._CACHE) > 0:
             lista = self._CACHE[:]
             del self._CACHE[0:len(lista)]
+            self.debug("Dumping %d chat lines" % len(lista))
             for sql in lista:
                 try:
                     cursor = self.console.storage.query(sql)
