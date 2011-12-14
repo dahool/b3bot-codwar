@@ -69,10 +69,10 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_PRIVATE_SAY)
         
-        if self._cronTab:
-            self.console.cron - self._cronTab
-        self._cronTab = b3.cron.PluginCronTab(self, self.dump_logs, minute='*/%d' % self._interval)
-        self.console.cron + self._cronTab
+        if self._crontab:
+            self.console.cron - self._crontab
+        self._crontab = b3.cron.PluginCronTab(self, self.dump_logs, minute='*/%d' % self._interval)
+        self.console.cron + self._crontab
         
     def onEvent(self,  event):
         target = None
