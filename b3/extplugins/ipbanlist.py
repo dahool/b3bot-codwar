@@ -21,8 +21,10 @@
 # Add event. Some code rework.
 # 2011-02-19 - 1.0.2 
 # Fix error in sql
+# 2011-12-15 - 1.0.3
+# Ignore admins
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __author__  = 'SGT'
 
 import b3
@@ -33,10 +35,7 @@ import datetime
 
 class IpbanlistPlugin(b3.plugin.Plugin):
 
-    _cronTab = None
     _since = 24
-    _refresh_rate = 12
-    _cache = set()
     _do_ban = False
     _do_lookupall = False
     
@@ -52,19 +51,19 @@ class IpbanlistPlugin(b3.plugin.Plugin):
                         
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
-        #self.registerEvent(b3.events.EVT_CLIENT_BAN)
-        #self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.createEvent('EVT_BAN_BREAK', 'Ban Break Event')
         
+        self._adminPlugin = self.console.getPlugin('admin')
+        if self._adminPlugin:
+            self._adminLevel = self._adminPlugin.config.getint('settings', 'admins_level')
+        else:
+            self._adminLevel = 40
+
     def onLoadConfig(self):
         try:
             self._since = self.config.getint('settings', 'penalties_since')
         except:
             self.debug('Using default value (%s) for penalties_since', self._since)
-        try:
-            self._refresh_rate = self.config.getint('settings','refresh_rate')
-        except:
-            self.debug('Using default value (%s) for refresh_rate', self._refresh_rate)
         try:
             self._do_ban = self.config.getboolean('settings','apply_ban')
         except:
@@ -73,7 +72,7 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             self._do_lookupall = self.config.getboolean('settings','lookup_all')
         except:
             self.debug('Using default value (%s) for apply_ban', self._do_lookupall)
-                                
+        
         self._delta = datetime.timedelta(hours=self._since)
 
     def onEvent(self,  event):
@@ -104,17 +103,18 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             client.pbid == 'WORLD':
             return
         
-        if self._lookup_min(client):
-            self.debug("Kicked %s (%s)" % (client.name, client.ip))
-            client.notice("Suspicion of ban break.", None)
-            if self._do_ban:
-                client.tempban("Suspicion of ban break.", "99y", silent=True)
-            #client.kick(silent=True)
-            client.kick(silent=False)
-            self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
-        elif self._do_lookupall and client.connections == 1 and self._lookup_all(client):
-            self.debug("Lookup all was positive")
-            self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
+        if client.maxLevel < self._adminLevel:
+            if self._lookup_min(client):
+                self.debug("Kicked %s (%s)" % (client.name, client.ip))
+                client.notice("Suspicion of ban breaking.", None)
+                if self._do_ban:
+                    client.tempban("Suspicion of ban breaking.", "99y", silent=True)
+                client.kick("Suspicion of ban breaking.", silent=False)
+                self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
+            elif self._do_lookupall and client.connections <= 2 and self._lookup_all(client):
+                self.debug("Lookup all was positive")
+                client.notice("Suspicion of ban breaking.", None)
+                self.console.queueEvent(self.console.getEvent('EVT_BAN_BREAK', (client,), None))
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole

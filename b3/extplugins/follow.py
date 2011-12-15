@@ -44,11 +44,13 @@
 # Fixed some bugs
 # 07-12-2011 - 1.1.7 - SGT
 # Do not remove user when ban is done by B3
+# 12-15-2011 - 1.1.8 - SGT
+# Add support for ban breaking event
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 __author__  = 'SGT'
 
-import b3, threading
+import b3, threading, thread
 import b3.plugin
 from b3 import clients
 import b3.cron
@@ -72,6 +74,11 @@ class FollowPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_BAN_TEMP)
         self.registerEvent(b3.events.EVT_GAME_ROUND_START)
         
+        try:
+            self.registerEvent(b3.events.EVT_BAN_BREAK)
+        except:
+            self.warning("Unable to register event EVT_BAN_BREAK") 
+                    
         self.createEvent('EVT_FOLLOW_CONNECTED', 'Suspicious User Connected.')
 
         self._twitter = self.console.getPlugin('twity')
@@ -157,7 +164,14 @@ class FollowPlugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_GAME_ROUND_START:
             b = threading.Timer(10, self.sync_list, (event,))
             b.start()
-            
+        else:
+            try:
+                if event.type == b3.events.EVT_BAN_BREAK:
+                    client = event.client
+                    thread.start_new_thread(self.add_follow_client, (client, None))
+            except:
+                self.verbose("EVT_BAN_BREAK not supported")
+                        
     def sync_list(self, event):
         self._following = {}
         self.debug("Syncing list")
@@ -340,19 +354,28 @@ class FollowPlugin(b3.plugin.Plugin):
         
         if not sclient:
             return False
+        
+        self.add_follow_client(sclient, client)
             
+    def add_follow_client(self, sclient, client = None):
         cursor = self.console.storage.query(self._SELECT_QUERY % sclient.id)
         if cursor.rowcount == 0:
-            cursor2 = self.console.storage.query(self._ADD_QUERY % (sclient.id, client.id, self.console.time(), reason))
+            if client:
+                admin = client.id
+            else:
+                admin = 0
+            cursor2 = self.console.storage.query(self._ADD_QUERY % (sclient.id, admin, self.console.time(), reason))
             cursor2.close()
             self.debug("%s added to watch list" % sclient.name)
-            client.message("^7%s has been added to the watch list." % sclient.name)
+            if client:
+                client.message("^7%s has been added to the watch list." % sclient.name)
         else:
             self.debug("%s already in watch list" % sclient.name)
-            client.message("^7%s already exists in watch list." % sclient.name)
+            if client:
+                client.message("^7%s already exists in watch list." % sclient.name)
         cursor.close()
         self.sync_list(None)
-        
+                
     def cmd_unfollow(self, data, client, cmd=None):
         """\
         <name> - remove user from the follow list
@@ -389,11 +412,15 @@ class FollowPlugin(b3.plugin.Plugin):
         if cursor.rowcount > 0:
             r = cursor.getRow()
             admin = self._adminPlugin.findClientPrompt("@%s" % r['admin_id'], client)
+            if admin:
+                admin_name = admin.name
+            else:
+                admin_name = 'B3'
             if r['reason'] and r['reason'] != '' and r['reason'] != 'None':
                 reason = r['reason']
             else:
                 reason = self._DEFAULT_REASON
-            client.message('%s was added by %s for %s' % (sclient.name, admin.name, reason))
+            client.message('%s was added by %s for %s' % (sclient.name, admin_name, reason))
         else:
             client.message('No follow info for %s' % sclient.name)
         cursor.close()
