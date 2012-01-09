@@ -23,8 +23,10 @@
 # Sanitize string
 # 14-12-2011 - 1.0.5
 # Dump logs to db on intervals
+# 08-01-2012 - 1.0.6
+# Use multi inserts
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 __author__  = 'SGT'
 
 import b3
@@ -50,6 +52,8 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     requiresConfigFile = False
     
     _INSERT_QUERY = "INSERT INTO chatlog (data, client_id, time_add, target, info) VALUES ('%s', %d, %d, '%s', '%s')"
+    _INSERT_QUERY_M_HEAD = "INSERT INTO chatlog (data, client_id, time_add, target, info) VALUES "
+    _INSERT_QUERY_M_TAIL = "('%s', %d, %d, '%s', '%s')"
     
     _TEAM_NAME = {-1: 'UNKNOWN',
                  1: 'SPEC',
@@ -95,7 +99,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         except:
             info = ''
         text = self._sanitize(text)
-        sql = self._INSERT_QUERY % (text, client.id, self.console.time(), target, info)
+        sql = self._INSERT_QUERY_M_TAIL % (text, client.id, self.console.time(), target, info)
         self.verbose(sql)
         self._CACHE.append(sql)
         
@@ -104,11 +108,11 @@ class ChatloggerPlugin(b3.plugin.Plugin):
             lista = self._CACHE[:]
             del self._CACHE[0:len(lista)]
             self.debug("Dumping %d chat lines" % len(lista))
-            for sql in lista:
-                try:
-                    cursor = self.console.storage.query(sql)
-                except Exception, e:
-                    self.warning("Could not save to database: [%s] %s" % (e[0],e[1]))
+            insertsql = self._INSERT_QUERY_M_HEAD + ",".join(lista)
+            try:
+                cursor = self.console.storage.query(sql)
+            except Exception, e:
+                self.warning("Could not save to database: [%s] %s" % (e[0],e[1]))
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
