@@ -67,6 +67,8 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     _crontab = None
     
     _interval = 15
+
+    _MAX_DUMP_LINES = 150
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_SAY)
@@ -108,11 +110,15 @@ class ChatloggerPlugin(b3.plugin.Plugin):
             lista = self._CACHE[:]
             del self._CACHE[0:len(lista)]
             self.debug("Dumping %d chat lines" % len(lista))
-            insertsql = self._INSERT_QUERY_M_HEAD + ",".join(lista)
-            try:
-                cursor = self.console.storage.query(sql)
-            except Exception, e:
-                self.warning("Could not save to database: [%s] %s" % (e[0],e[1]))
+            while len(lista) > 0:
+                tmplst = lista[:self._MAX_DUMP_LINES]
+                del lista[:self._MAX_DUMP_LINES]
+                insertsql = self._INSERT_QUERY_M_HEAD + ",".join(tmplst)
+                try:
+                    self.verbose(insertsql)
+                    cursor = self.console.storage.query(insertsql)
+                except Exception, e:
+                    self.warning("Could not save to database: [%s]" % str(e))
 
 if __name__ == '__main__':
     from b3.fake import fakeConsole
@@ -133,3 +139,9 @@ if __name__ == '__main__':
     joe.says('hola hola \\')
     joe.says('a donde vas. epa?')
     joe.says('==> ->><=+??!')
+
+    time.sleep(1)
+
+    p.dump_logs()
+
+    time.sleep(30)
