@@ -27,6 +27,7 @@
 # Use multi inserts
 # 14-01-2012 - 1.0.7
 # Update on shutdown
+# Make table compatible with chatlogger by Courgette (as of 1.1.3)
 
 __version__ = '1.0.7'
 __author__  = 'SGT'
@@ -39,38 +40,37 @@ import b3.cron
 
 class ChatloggerPlugin(b3.plugin.Plugin):
     '''
-    CREATE TABLE chatlog (
-        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY ,
-        data VARCHAR( 100 ) NULL ,
-        info VARCHAR( 255 ) NULL ,
-        target VARCHAR( 50 ) NULL ,
-        client_id INT( 11 ) UNSIGNED NOT NULL ,
-        time_add INT( 11 ) UNSIGNED NOT NULL
-    ) ENGINE = MYISAM;
-    ALTER TABLE chatlog ADD INDEX (client_id);
-    ALTER TABLE chatlog ADD INDEX (time_add);
-    ALTER TABLE chatlog ADD INDEX (data);
+    CREATE TABLE `chatlog` (
+      `id` int(11) unsigned NOT NULL auto_increment,
+      `msg_time` int(10) unsigned NOT NULL,
+      `msg_type` enum('ALL','TEAM','PM') NOT NULL,
+      `client_id` int(11) unsigned NOT NULL,
+      `client_name` varchar(32) NOT NULL,
+      `client_team` tinyint(1) NOT NULL,
+      `msg` varchar(528) NOT NULL,
+      `target_id` int(11) unsigned default NULL,
+      `target_name` varchar(32) default NULL,
+      `target_team` tinyint(1) default NULL,
+      PRIMARY KEY  (`id`),
+      KEY `client` (`client_id`),
+      KEY `target` (`target_id`),
+      KEY `time` (`msg_time`)
+    ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
     '''
+    
     requiresConfigFile = False
     
-    _INSERT_QUERY = "INSERT INTO chatlog (data, client_id, time_add, target, info) VALUES ('%s', %d, %d, '%s', '%s')"
-    _INSERT_QUERY_M_HEAD = "INSERT INTO chatlog (data, client_id, time_add, target, info) VALUES "
-    _INSERT_QUERY_M_TAIL = "('%s', %d, %d, '%s', '%s')"
+    _TABLE = 'chatlog'
     
     _TEAM_NAME = {-1: 'UNKNOWN',
                  1: 'SPEC',
                  2: 'RED',
                  3: 'BLUE'}
     
-    _ALLOW_CHARS = re.compile('[^\w\?\+\*\.,:;=_\(\)\$\#!><-]')
-    
-    _CACHE = []
+    _MAX_DUMP_LINES = 150
     
     _crontab = None
-    
     _interval = 15
-
-    _MAX_DUMP_LINES = 150
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_STOP)
@@ -78,75 +78,139 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_PRIVATE_SAY)
         
+        self._chatdata = ChatData(self)
+        
         if self._crontab:
             self.console.cron - self._crontab
-        self._crontab = b3.cron.PluginCronTab(self, self.dump_logs, minute='*/%d' % self._interval)
+        self._crontab = b3.cron.PluginCronTab(self, self._chatdata.save, minute='*/%d' % self._interval)
         self.console.cron + self._crontab
         
     def onEvent(self,  event):
-        target = None
         if event.type == b3.events.EVT_STOP:
             self.info('B3 stop/exit.. force dump')
-            self.dump_logs()
+            self._chatdata.save()
         elif event.type == b3.events.EVT_CLIENT_SAY:
-            target = "ALL"
+            self._chatdata.addMessage(ChatMessage(event))
         elif event.type == b3.events.EVT_CLIENT_TEAM_SAY:
-            target = "TEAM: %s" % self._TEAM_NAME.get(event.target)
+            self._chatdata.addMessage(TeamChatMessage(event))
         elif event.type == b3.events.EVT_CLIENT_PRIVATE_SAY:
-            target = "CLIENT: [%s] - %s" % (event.target.id,event.target.name)
-        if target:
-            self.log(event.data, event.client, target)
+            self._chatdata.addMessage(PrivateChatMessage(event))
+
+class ChatData:
     
+    _INSERT_QUERY_M_HEAD = "INSERT INTO {table_name} (msg_time, msg_type, client_id, client_name, client_team, msg, target_id, target_name, target_team) VALUES "
+    _chat_list = []
+    
+    def __init__(self, plugin):
+        self.plugin = plugin
+        self._insert_query = self._INSERT_QUERY_M_HEAD.format(table_name=self.plugin._TABLE)
+        
+    def addMessage(self, chat_message):
+        self._chat_list.append(str(chat_message))
+
+    def save(self):
+        if len(self._chat_list) > 0:
+            lista = self._chat_list[:]
+            del self._chat_list[0:len(lista)]
+            self.plugin.debug("Saving %d chat lines" % len(lista))
+            while len(lista) > 0:
+                tmplst = lista[:self.plugin._MAX_DUMP_LINES]
+                del lista[:self.plugin._MAX_DUMP_LINES]
+                insertsql = """%s""" % (self._insert_query + ",".join(tmplst))
+                self.plugin.verbose(insertsql)
+                if self.plugin.console.__class__.__name__ == 'FakeConsole': continue
+                try:
+                    cursor = self.plugin.console.storage.query(insertsql)
+                except Exception, e:
+                    self.plugin.warning("Could not save to database: [%s]" % str(e))
+    
+class ChatMessage:
+    
+    _ALLOW_CHARS = re.compile('[^\w\?\+\*\.,:=_\(\)\$\#!><-]')
+    _INSERT_QUERY_M_TAIL = "(%(time)s, \"%(type)s\", %(client_id)s, \"%(client_name)s\",%(client_team)s, \"%(msg)s\", %(target_id)s, \"%(target_name)s\", %(target_team)s)"
+    
+    msg_type = 'ALL' # ALL, TEAM or PM
+    client_id = None
+    client_name = None
+    client_team = None
+    msg = None
+    
+    def __init__(self, event):
+        self.client_id = event.client.id
+        self.client_name = event.client.name
+        self.client_team = event.client.team
+        self.msg = self._sanitize(event.data) 
+        self.target_id = None
+        self.target_name = None
+        self.target_team = None
+        
     def _sanitize(self, text):
         return self._ALLOW_CHARS.sub(' ', text).strip()
-        
-    def log(self, text, client, target=None):
-        try:
-            info = self.console.game.mapName
-        except:
-            info = ''
-        text = self._sanitize(text)
-        sql = self._INSERT_QUERY_M_TAIL % (text, client.id, self.console.time(), target, info)
-        self.verbose(sql)
-        self._CACHE.append(sql)
-        
-    def dump_logs(self):
-        if len(self._CACHE) > 0:
-            lista = self._CACHE[:]
-            del self._CACHE[0:len(lista)]
-            self.debug("Dumping %d chat lines" % len(lista))
-            while len(lista) > 0:
-                tmplst = lista[:self._MAX_DUMP_LINES]
-                del lista[:self._MAX_DUMP_LINES]
-                insertsql = self._INSERT_QUERY_M_HEAD + ",".join(tmplst)
-                try:
-                    self.verbose(insertsql)
-                    cursor = self.console.storage.query(insertsql)
-                except Exception, e:
-                    self.warning("Could not save to database: [%s]" % str(e))
+                
+    def __str__(self):
+        data = {'time': int(time.time()), 
+         'type': self.msg_type, 
+         'client_id': self.client_id, 
+         'client_name': self.client_name, 
+         'client_team': self.client_team,
+         'msg': self.msg,
+         'target_id': self.target_id, 
+         'target_name': self.target_name, 
+         'target_team': self.target_team
+         }
+        return (self._INSERT_QUERY_M_TAIL % data).replace("\"None\"","null").replace("None","null")
 
+class TeamChatMessage(ChatMessage):
+    msg_type = 'TEAM'
+    
+class PrivateChatMessage(ChatMessage):
+    msg_type = 'PM'
+    
+    def __init__(self, event):
+        ChatMessage.__init__(self, event)
+        self.target_id = event.target.id
+        self.target_name = event.target.name
+        self.target_team = event.target.team
+        
 if __name__ == '__main__':
-    from b3.fake import fakeConsole
-    from b3.fake import joe
+    from b3.fake import FakeClient, fakeConsole, joe, simon
     import time
     
+    def sendsPM(self, msg, target):
+        print "\n%s PM to %s : \"%s\"" % (self.name, msg, target)
+        self.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_PRIVATE_SAY, msg, self, target))
+    FakeClient.sendsPM = sendsPM    
+
     p = ChatloggerPlugin(fakeConsole)
     p.onStartup()
     
     time.sleep(2)
     
-    joe.connects(cid=1)
+    joe.connects(1)
+    simon.connects(3)
     
-    joe.says('hola')
-    joe.says('se van por >>>>>')
-    joe.says('ayuda!!!')
-    joe.says('que haces???')
-    joe.says('hola hola \\')
-    joe.says('a donde vas. epa?')
-    joe.says('==> ->><=+??!')
+    joe.says("sql injec;tion ' test")
+    joe.sendsPM("sql; injection ' test", simon)
+    joe.says("!help sql injection ' test;")
 
-    time.sleep(1)
+    joe.name = "j'oe"
+    simon.name = "s;m'n"
 
-    p.dump_logs()
-
+    joe.says("sql injection test2")
+    joe.sendsPM("sql injection test2", simon)
+    joe.says("!help sql injection test2")
+    joe.says("holas \" como va")
+    
+    joe.name = "Joe"
+    simon.name = "Simon"
+    
+    joe.says("hello")
+    simon.says2team("team test")
+    joe.sendsPM("PM test", simon)
+    
+    time.sleep(5)
+    
+    p._chatdata.save()
+    
     time.sleep(30)
+
