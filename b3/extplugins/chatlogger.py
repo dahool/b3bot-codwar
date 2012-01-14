@@ -25,8 +25,10 @@
 # Dump logs to db on intervals
 # 08-01-2012 - 1.0.6
 # Use multi inserts
+# 14-01-2012 - 1.0.7
+# Update on shutdown
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 __author__  = 'SGT'
 
 import b3
@@ -71,6 +73,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     _MAX_DUMP_LINES = 150
     
     def onStartup(self):
+        self.registerEvent(b3.events.EVT_STOP)
         self.registerEvent(b3.events.EVT_CLIENT_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_TEAM_SAY)
         self.registerEvent(b3.events.EVT_CLIENT_PRIVATE_SAY)
@@ -82,14 +85,16 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         
     def onEvent(self,  event):
         target = None
-        if event.type == b3.events.EVT_CLIENT_SAY:
+        if event.type == b3.events.EVT_STOP:
+            self.info('B3 stop/exit.. force dump')
+            self.dump_logs()
+        elif event.type == b3.events.EVT_CLIENT_SAY:
             target = "ALL"
         elif event.type == b3.events.EVT_CLIENT_TEAM_SAY:
             target = "TEAM: %s" % self._TEAM_NAME.get(event.target)
         elif event.type == b3.events.EVT_CLIENT_PRIVATE_SAY:
             target = "CLIENT: [%s] - %s" % (event.target.id,event.target.name)
         if target:
-            #thread.start_new_thread(self.log, (event.data, event.client, target))
             self.log(event.data, event.client, target)
     
     def _sanitize(self, text):
