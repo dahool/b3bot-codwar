@@ -27,9 +27,10 @@
 # Use multi inserts
 # 14-01-2012 - 1.0.7
 # Update on shutdown
+# 14-01-2012 - 1.0.8
 # Make table compatible with chatlogger by Courgette (as of 1.1.3)
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 __author__  = 'SGT'
 
 import b3
@@ -54,7 +55,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
       PRIMARY KEY  (`id`),
       KEY `client` (`client_id`),
       KEY `target` (`target_id`),
-      KEY `time` (`msg_time`)
+      KEY `time_add` (`msg_time`)
     ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
     '''
     
