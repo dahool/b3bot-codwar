@@ -58,8 +58,10 @@
 # Fix issue with shuffle now
 # 2011-06-29 - 1.1.5
 # Fix shuffle message
+# 2012-01-30 - 1.1.7
+# Shuffle all players, even specs
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 __author__  = 'SGT'
 
 import sys
@@ -623,12 +625,15 @@ class ShuffleVote(Vote):
     def _doShuffle(self):
         self.console.say("^7Shuffling teams")
         self._parent.bot("Performing shuffle")
-        if self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
+        if self.shuffle_now and self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
             self._parent.debug("Using poweradmin shuffle")
             self._powerAdminPlugin.cmd_paskuffle(None, None, None)
         elif self._extraAdminPlugin:
             self._parent.debug("Using extraadmin shuffle")
-            self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
+            if self.shuffle_now:
+                self._extraAdminPlugin.cmd_pashuffleteams(None,None,None)
+            else:
+                self._extraAdminPlugin.cmd_pashuffleteams('all',None,None)
         else:
             self._parent.debug("Using standard shuffle")
             self.console.write('shuffleteams')

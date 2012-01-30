@@ -34,8 +34,10 @@
 # Fix issue in reg command
 # 06-16-2011 - SGT - 1.1.9
 # Fix issue in reg command
+# 01-30-2012 - SGT - 1.1.10
+# Include specs in shuffling
 
-__version__ = '1.1.9'
+__version__ = '1.1.10'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -426,6 +428,10 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         elif self._announce == 2:
             self.console.write('bigtext "Shuffling Teams!"')
                  
+        shteams = [b3.TEAM_RED,b3.TEAM_BLUE]
+        if 'all' == data:
+            shteams.append(b3.TEAM_SPEC)
+            
         random.seed(os.urandom(40))
         clients = self.console.clients.getList()
         for i in range(0,3):
@@ -434,7 +440,7 @@ class ExtraadminPlugin(b3.plugin.Plugin):
         teamname = {-1:'UNKNOWN', b3.TEAM_SPEC: 'SPEC', b3.TEAM_RED: 'RED', b3.TEAM_BLUE: 'BLUE'}
         for c in clients:
             self.debug("Client %s current team %s" % (c.name, teamname[c.team]))
-            if c.team in [b3.TEAM_RED,b3.TEAM_BLUE]:
+            if c.team in shteams:
                 self.debug("Client forced to %s" % team)
                 self.console.write('forceteam %s %s' % (c.cid, team))
                 if 'red' == team: team = 'blue'

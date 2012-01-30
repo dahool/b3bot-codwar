@@ -85,9 +85,11 @@
 # 2011-11-03 - SGT - 1.3.3
 # Refresh player on group update
 # Reload host name in each server name update
+# 2012-01-30 - SGT - 1.3.4
+# Handle disconnect event using b3 1.8 way
 
 __author__  = 'SGT'
-__version__ = '1.3.3'
+__version__ = '1.3.4'
 
 import b3, time, threading, xmlrpclib, re, thread
 import b3.events
@@ -305,7 +307,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
             self.onClientUpdate(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            thread.start_new_thread(self.onClientDisconnect,(event.data,))
+            thread.start_new_thread(self.onClientDisconnect,(event.data,event.client))
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             self.onClientBanned(event.client)
         elif event.type == b3.events.EVT_ADMIN_COMMAND:
@@ -400,19 +402,19 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self.debug('Client banned: %s' % client.name)
         self._banqueue.append(client)
             
-    def onClientDisconnect(self, cid):
+    def onClientDisconnect(self, cid, client):
         self.debug('Client disconnected: %s' % cid)
-        if self._clientCache.has_key(cid):
-            client = self._clientCache[cid]
-            del self._clientCache[cid]
+        if not client:
+            if self._clientCache.has_key(cid):
+                client = self._clientCache[cid]
+                del self._clientCache[cid]
+        if client:
             self._eventqueue.append(self._buildEventInfo(self._EVENT_DISCONNECT, client))
-            
             try:
                 if client in self._onlinePlayers:            
                     self._onlinePlayers.remove(client)
             except Exception, e:
                 self.error(e)
-            
         else:
             self.debug('Not found cid %s. Try alternative method' % cid)
             self.validateOnlinePlayers()
