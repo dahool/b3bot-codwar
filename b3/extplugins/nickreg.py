@@ -36,6 +36,7 @@
 __version__ = '1.4'
 __author__  = 'Ismael, SGT'
 
+import re
 import b3
 import b3.plugin
 from b3 import clients
