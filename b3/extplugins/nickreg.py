@@ -17,6 +17,8 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 # CHANGELOG
+# 01/30/12 - SGT
+# Make comparision case insensitive
 # 01/06/11 - SGT
 # Handle event in new thread
 # Improve code
@@ -31,8 +33,8 @@
 # 25/07/09
 # Initial version
 
-__version__ = '1.3'
-__author__  = 'Ismael'
+__version__ = '1.4'
+__author__  = 'Ismael, SGT'
 
 import b3
 import b3.plugin
@@ -42,7 +44,7 @@ import thread
 
 class NickregPlugin(b3.plugin.Plugin):
     _adminPlugin = None
-
+    _color_re = re.compile(r'\^[0-9]')
     _watched = []
 
     def onStartup(self):
@@ -98,10 +100,10 @@ class NickregPlugin(b3.plugin.Plugin):
                     def warn():
                         client.message("^2Segundo aviso: ^7Cambia tu nombre, pertenece a otro usuario.")
                         def warn2():
-                            if  name == client.name:
+                            if self._normalize(name) == self._normalize(client.name):
                                 client.message("^1ULTIMO Aviso: ^7Cambia tu nombre. ^7Seras ^1expulsado!")
                                 def kick():
-                                    if  name == client.name:
+                                    if self._normalize(name) == self._normalize(client.name):
                                         client.kick("This nickname isn't yours!",  data=name)
                                     self._watched.remove(client.id)
                                 self.console.cron + b3.cron.OneTimeCronTab(kick,  "*/5")
@@ -132,8 +134,11 @@ class NickregPlugin(b3.plugin.Plugin):
         
         client.message('^7Registered nick names: %s' % ', '.join(names))
         
+    def _normalize(self, text):
+        return self._color_re.sub('',text).lower()
+        
     def _process_name(self, data):
-        return data.replace("""'""", """''""")
+        return self._color_re.sub(data.replace("""'""", """''"""))
         
     def cmd_regnick(self, data, client, cmd=None):
         """\
