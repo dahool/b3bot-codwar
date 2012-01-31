@@ -48,6 +48,8 @@ class CommandloggerPlugin(b3.plugin.Plugin):
     def onLoadConfig(self):
         self._min_level = self.config.getint('settings', 'min_level')
         self._min_cmd_level = self.config.getint('settings', 'min_command_level')
+        self.debug("Log level %s" % self._min_level)
+        self.debug("Log command level %s" % self._min_cmd_level)
         
     def onEvent(self,  event):
         if event.type == b3.events.EVT_ADMIN_COMMAND:
