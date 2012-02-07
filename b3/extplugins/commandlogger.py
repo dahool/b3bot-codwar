@@ -16,7 +16,7 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3
@@ -29,14 +29,16 @@ class CommandloggerPlugin(b3.plugin.Plugin):
         command VARCHAR( 20 ) NOT NULL ,
         data VARCHAR( 50 ) NULL ,
         client_id INT( 11 ) UNSIGNED NOT NULL ,
+        target_id INT( 11 ) UNSIGNED NULL,
         time_add INT( 11 ) UNSIGNED NOT NULL ,
     ) ENGINE = MYISAM;
     ALTER TABLE auditlog ADD INDEX (client_id);
+    ALTER TABLE auditlog ADD INDEX (target_id);
     ALTER TABLE auditlog ADD INDEX (time_add);
     ALTER TABLE auditlog ADD INDEX (command);
     '''
     
-    _INSERT_QUERY = "INSERT INTO auditlog (command, data, client_id, time_add) VALUES ('%s', '%s', %d, %d)"
+    _INSERT_QUERY = "INSERT INTO auditlog (command, data, client_id, target_id, time_add) VALUES ('%s', '%s', %d, %d, %d)"
     
     def onStartup(self):
         self._adminPlugin = self.console.getPlugin('admin')
@@ -54,17 +56,22 @@ class CommandloggerPlugin(b3.plugin.Plugin):
     def onEvent(self,  event):
         if event.type == b3.events.EVT_ADMIN_COMMAND:
             command, data, res = event.data
+            target = None
             if event.client.maxLevel >= self._min_level and command.level >= self._min_cmd_level:
                 try:
                     if self._adminPlugin and data:
                         cid, params = self._adminPlugin.parseUserCmd(data)
-                        cli = self._adminPlugin.findClientPrompt(cid)
-                        if cli:
-                            data = "%s [%s - %s]" % (data,cli.id,cli.name)
+                        target = self._adminPlugin.findClientPrompt(cid)
+                        if target:
+                            data = params
                 except:
                     pass
-                self.log(command,event.client, data)
+                self.log(command,event.client, target, data)
             
-    def log(self, command, client, data=None):
-        cursor = self.console.storage.query(self._INSERT_QUERY % (command.command, data, client.id, self.console.time()))
+    def log(self, command, client, target, data=None):
+        if target:
+            cId = target.id
+        else:
+            cId = None
+        cursor = self.console.storage.query(self._INSERT_QUERY % (command.command, data, client.id, cId, self.console.time()))
         cursor.close()
