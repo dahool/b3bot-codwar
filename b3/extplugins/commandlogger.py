@@ -57,7 +57,7 @@ class CommandloggerPlugin(b3.plugin.Plugin):
         if event.type == b3.events.EVT_ADMIN_COMMAND:
             command, data, res = event.data
             target = None
-            if event.client.maxLevel >= self._min_level and command.level >= self._min_cmd_level:
+            if event.client.maxLevel >= self._min_level and command.level[0] >= self._min_cmd_level:
                 try:
                     if self._adminPlugin and data:
                         cid, params = self._adminPlugin.parseUserCmd(data)
