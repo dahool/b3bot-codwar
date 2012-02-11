@@ -44,7 +44,7 @@
 #    7/23/2005 - 1.0.2 - ThorN
 #    * Changed temp ban duration to be based on ban_length times the number of victims
 
-__version__ = '1.2.6'
+__version__ = '1.2.6a'
 __author__  = 'ThorN'
 
 import b3, string, re, threading

@@ -41,13 +41,15 @@
 #   * Fixed rcon set command that was changed as setadmindvar in CoD7
 # 25.05.2011 - 1.1 - Courgette
 #   * kick commands now sends reason
+# 30.12.2011 - 1.2 - Bravo17
+#   * New client will now join Auth queue if slot shows as 'Disconnected' in Auth queue
 #
 
 ## @file
 #  CoD7 Parser
 
 __author__  = 'Freelander, Courgette, Just a baka, Bravo17'
-__version__ = '1.1'
+__version__ = '1.2'
 
 import re
 import string
@@ -78,7 +80,7 @@ class Cod7Parser(b3.parsers.cod5.Cod5Parser):
     _commands['set'] = 'setadmindvar %(name)s "%(value)s"'
     _commands['kick'] = 'clientkick %(cid)s "%(reason)s"'
     _commands['ban'] = 'banclient %(cid)s'
-    _commands['unban'] = 'unbanuser %(name)s'
+    _commands['unban'] = 'unbanuser "%(name)s"'
     _commands['tempban'] = 'clientkick %(cid)s "%(reason)s"'
 
     """\
@@ -286,7 +288,7 @@ class Cod7Parser(b3.parsers.cod5.Cod5Parser):
             # Join-event for mapcount reasons and so forth
             return b3.events.Event(b3.events.EVT_CLIENT_JOIN, None, client)
         else:
-            if self._counter.get(cid):
+            if self._counter.get(cid) and self._counter.get(cid) != 'Disconnected':
                 self.verbose('cid: %s already in authentication queue. Aborting Join.' %cid)
                 return None
             self._counter[cid] = 1

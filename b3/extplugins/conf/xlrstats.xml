@@ -4,7 +4,7 @@
 	Also game specific configs can be found on that website.
 -->
 	<settings name="settings">
-		<set name="minplayers">3</set>
+		<set name="minplayers">4</set>
 		<set name="suicide_penalty_percent">0.05</set>
 		<set name="tk_penalty_percent">0.1</set>
 		<set name="defaultskill">1000</set>
@@ -28,7 +28,7 @@
   The webfronturl should point to your xlrstats website, ie: http://www.yoursite.com/xlrstats
   The servernumber is the confignumber of the webfront install when you're using multiple servers and one xlrstats install
 -->
-		<set name="webfronturl"></set>
+		<set name="webfronturl">http://stats.codwar.com.ar</set>
 		<set name="servernumber">0</set>
 
 <!-- *** assist bonus settings ***
@@ -44,7 +44,7 @@
 		<!-- <set name="assist_timespan">2</set> -->
 	</settings>
 	<settings name="commands">
-		<set name="xlrstats">1</set>
+		<set name="xlrstats">2</set>
 		<set name="xlrtopstats">2</set>
 		<set name="xlrhide">60</set>
 	</settings>

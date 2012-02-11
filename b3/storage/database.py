@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#   29/10/2011 - 1.11.1 - 82ndab-Bravo17
+#    Decode Reason in penalty from system encodig and recode to UTF-8 to ensure Name is correctly encoded
 #   31/05/2011 - 1.11.0 - Courgette
 #    sqlite compatible
 #    few fixes discovered doing unittests
@@ -58,7 +60,7 @@
 #   Added data column to penalties table
 
 __author__  = 'ThorN'
-__version__ = '1.11.0'
+__version__ = '1.11.1'
 
 
 from b3 import functions
@@ -165,15 +167,21 @@ class DatabaseStorage(Storage):
 
         if protocol == 'mysql':
             try:
-                import MySQLdb
-                return MySQLdb.connect(
-                                       host=self.dsnDict['host'], 
-                                       port=self.dsnDict['port'], 
-                                       user=self.dsnDict['user'], 
-                                       passwd=self.dsnDict['password'], 
-                                       db=self.dsnDict['path'][1:], 
-                                       charset = "utf8", 
-                                       use_unicode = True) 
+                # validate dsnDict
+                if not self.dsnDict['host']:
+                    self.console.critical("invalid MySQL host in %(protocol)s://%(user)s:******@%(host)s:%(port)s%(path)s" % self.dsnDict)
+                elif not self.dsnDict['path'] or not self.dsnDict['path'][1:]:
+                    self.console.critical("missing MySQL database name in %(protocol)s://%(user)s:******@%(host)s:%(port)s%(path)s" % self.dsnDict)
+                else:
+                    import MySQLdb
+                    return MySQLdb.connect(
+                                           host=self.dsnDict['host'],
+                                           port=self.dsnDict['port'],
+                                           user=self.dsnDict['user'],
+                                           passwd=self.dsnDict['password'],
+                                           db=self.dsnDict['path'][1:],
+                                           charset = "utf8",
+                                           use_unicode = True)
             except ImportError, err:
                 self.console.critical("%s. You need to install python-mysqldb. Look for 'dependencies' in B3 documentation.",err)
         elif protocol == 'sqlite':
@@ -673,6 +681,19 @@ class DatabaseStorage(Storage):
 
         if penalty.keyword and not re.match(r'^[a-z0-9]+$', penalty.keyword, re.I):
             penalty.keyword = ''
+            
+        if penalty.reason:
+            # decode the reason data, as the name may need it
+            if hasattr(self.console, "encoding") and self.console.encoding:
+                try:
+                    penalty.reason = penalty.reason.decode(self.console.encoding)
+                except Exception, msg:
+                    self.console.warning('ERROR Decoding reason: %r', msg)
+                    
+                try:
+                    penalty.reason = penalty.reason.encode('UTF-8', 'replace')
+                except Exception, msg:
+                    self.console.warning('ERROR Encoding reason: %r', msg)
 
         for f in fields:
             if hasattr(penalty, self.getVar(f)):

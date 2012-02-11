@@ -59,11 +59,12 @@
 # 2011-07-14 : 1.1.1
 # * changes to support new dedicated server version 420003
 # * implemented getPlayerPings()
-# * added new DLC map names
 # 2011-08-27 : 1.1.2
 # * Added DLC maps that come with patch 1.0.5
 # 2011-08-31 : 1.1.3
 # * Fixed typo in mapname
+# 2011-11-05 - 1.1.4 - Courgette
+# * makes sure to release the self.exiting lock
 #
 from b3 import functions
 from b3.clients import Client
@@ -85,7 +86,7 @@ import time
 
 
 __author__  = 'Courgette, xlr8or, Freelander, 82ndab-Bravo17'
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 
 
@@ -291,7 +292,7 @@ class HomefrontParser(b3.parser.Parser):
                     asyncore.loop(timeout=3, use_poll=True, count=1)
         self.bot('Stop listening.')
 
-        if self.exiting.acquire(1):
+        with self.exiting:
             self._serverConnection.close()
             if self.exitcode:
                 sys.exit(self.exitcode)
