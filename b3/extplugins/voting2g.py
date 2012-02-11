@@ -60,8 +60,10 @@
 # Fix shuffle message
 # 2012-01-30 - 1.1.7
 # Shuffle all players, even specs
+# 2012-02-11 - 1.1.8
+# Add player who launched the vote to penalty
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 __author__  = 'SGT'
 
 import sys
@@ -461,13 +463,13 @@ class KickVote(Vote):
         if self._victim.connected:
             self._parent.bot("^1KICKING ^3%s" % self._victim.exactName)
             self.console.say("^1KICKING ^3%s" % self._victim.exactName)
-            self._victim.kick("by popular vote (%s)" % self._reason,  None)
+            self._victim.kick("by popular vote (%s)" % self._reason, admin=self.client)
 
             player_count = int(round(len(self.get_players_able_to_vote()) * 
                                 (self._tempban_percent / 100.0)))
             if (self._tempban_interval and (yes + no) >= player_count and
                 yes >= int(round(((yes + no) * self._tempban_percent_diff / 100.0)))):
-                self._victim.tempban("Voted out (%s)" % self._reason, duration=self._tempban_interval)
+                self._victim.tempban("Voted out (%s)" % self._reason, duration=self._tempban_interval, admin=self.client)
             self._victim = None
 
     def end_vote_no(self,  yes,  no):
