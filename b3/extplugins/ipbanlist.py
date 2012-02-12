@@ -23,8 +23,10 @@
 # Fix error in sql
 # 2011-12-15 - 1.0.3
 # Ignore admins
+# 2012-02-12 - 1.0.4
+# Configurable min level
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 __author__  = 'SGT'
 
 import b3
@@ -49,15 +51,15 @@ class IpbanlistPlugin(b3.plugin.Plugin):
     "SELECT distinct(c.id) FROM clients c LEFT JOIN aliases a ON c.id = a.client_id "\
     "WHERE c.ip = '%(ip)s' or a.ip = '%(ip)s')"
                         
+    _min_level = None
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         self.createEvent('EVT_BAN_BREAK', 'Ban Break Event')
         
         self._adminPlugin = self.console.getPlugin('admin')
-        if self._adminPlugin:
-            self._adminLevel = self._adminPlugin.config.getint('settings', 'admins_level')
-        else:
-            self._adminLevel = 40
+        if self._adminPlugin and self._min_level is None:
+            self._min_level = self._adminPlugin.config.getint('settings', 'admins_level')
 
     def onLoadConfig(self):
         try:
@@ -72,7 +74,11 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             self._do_lookupall = self.config.getboolean('settings','lookup_all')
         except:
             self.debug('Using default value (%s) for apply_ban', self._do_lookupall)
-        
+        try:
+            self._min_level = self.config.getint('settings','min_level')
+        except:
+            pass
+            
         self._delta = datetime.timedelta(hours=self._since)
 
     def onEvent(self,  event):
@@ -103,10 +109,10 @@ class IpbanlistPlugin(b3.plugin.Plugin):
             client.pbid == 'WORLD':
             return
         
-        if client.maxLevel < self._adminLevel:
+        if client.maxLevel < self._min_level:
             if self._lookup_min(client):
                 self.debug("Kicked %s (%s)" % (client.name, client.ip))
-                client.notice("Suspicion of ban breaking.", None)
+                #client.notice("Suspicion of ban breaking.", None)
                 if self._do_ban:
                     client.tempban("Suspicion of ban breaking.", "99y", silent=True)
                 client.kick("Suspicion of ban breaking.", silent=False)

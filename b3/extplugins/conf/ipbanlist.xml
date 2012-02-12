@@ -4,5 +4,6 @@
         <set name="refresh_rate">0</set>
         <set name="apply_ban">false</set>
         <set name="lookup_all">true</set>
+        <set name="min_level">1</set>
 	</settings>
 </configuration>
