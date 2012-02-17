@@ -62,8 +62,10 @@
 # Shuffle all players, even specs
 # 2012-02-11 - 1.1.8
 # Add player who launched the vote to penalty
+# 2012-02-17 - 1.1.9
+# Add min level to ban instead of kick
 
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 __author__  = 'SGT'
 
 import sys
@@ -96,7 +98,8 @@ class Voting2GPlugin(b3.plugin.Plugin):
     # config
     _vote_times = 3
     _vote_interval = 600
-    _minLevel_vote = 2
+    _minLevel_vote = 1
+    _level_vote = 2
     _min_votes = 1
     _veto_level = 20
     _cancel_level = 40
@@ -128,6 +131,10 @@ class Voting2GPlugin(b3.plugin.Plugin):
         except:
             pass
         try:
+            self._level_vote = self.config.getint('settings', 'level_vote')
+        except:
+            pass            
+        try:
             self._minLevel_vote = self.config.getint('settings', 'min_level_vote')
         except:
             pass
@@ -143,7 +150,7 @@ class Voting2GPlugin(b3.plugin.Plugin):
             self._min_votes = self.config.getint('settings', 'min_votes')
         except:
             pass
-        
+                    
     def onLoadConfig(self):
         """\
         Initialize plugin settings
@@ -173,9 +180,9 @@ class Voting2GPlugin(b3.plugin.Plugin):
             if len(sp) == 2:
                 cmd, alias = sp
             try:
-                level = self.config.getint(cmd,'min_level_vote')
+                level = self.config.getint(cmd,'level_vote')
             except:
-                level = self._minLevel_vote
+                level = self._level_vote
             try:
                 self.debug("Registering vote %s" % cmd)
                 self._votes[cmd] = self.load_instance(claz)()
@@ -403,17 +410,41 @@ class KickVote(Vote):
     _reason = None
 
     _tempban_interval = 0
-    _tempban_percent    = 0
+    _tempban_percent = 0
     _tempban_minvotes = 0
 
+    _min_ban_level = 0
+    _min_ban_duration = 1
+    _min_ban_threshold = 50
+    
     def startup(self, parent, adminPlugin,  console,  config, cmd):
         super(KickVote, self).startup(parent, adminPlugin,  console,  config, cmd)
 
-        self._tempban_percent_diff = self.config.getint('votekick', 'tempban_percent_diff')
-        self._tempban_interval = self.config.getint('votekick', 'tempban_interval')
-        self._tempban_percent = self.config.getint('votekick', 'tempban_percent')
-        self._allow_spec = self.config.getint('votekick', 'allow_spec')
-        
+        try:
+            self._tempban_percent_diff = self.config.getint('votekick', 'tempban_percent_diff')
+        except:
+            pass
+        try:
+            self._tempban_interval = self.config.getint('votekick', 'tempban_interval')
+        except:
+            pass
+        try:
+            self._tempban_percent = self.config.getint('votekick', 'tempban_percent')
+        except:
+            pass
+        try:
+            self._allow_spec = self.config.getint('votekick', 'allow_spec')
+        except:
+            pass
+        try:
+            self._min_ban_level = self.config.getint('votekick', 'ban_min_level')
+        except:
+            pass
+        try:
+            self._min_ban_duration = self.config.getint('votekick', 'ban_min_level_duration')
+        except:
+            pass
+                                    
     def run_vote(self, data, client, cmd=None):
         """\
         <name> <reason> - call a votekick on 'player' for 'reason'
@@ -465,11 +496,16 @@ class KickVote(Vote):
             self.console.say("^1KICKING ^3%s" % self._victim.exactName)
             self._victim.kick("by popular vote (%s)" % self._reason, admin=self.client)
 
-            player_count = int(round(len(self.get_players_able_to_vote()) * 
-                                (self._tempban_percent / 100.0)))
-            if (self._tempban_interval and (yes + no) >= player_count and
+            players_count = len(self.get_players_able_to_vote())
+            player_count_tb = int(round(players_count * (self._tempban_percent / 100.0)))
+            player_count_b = int(round(players_count * (self._min_ban_threshold / 100.0)))
+                                                                
+            if (self._tempban_interval and (yes + no) >= player_count_tb and
                 yes >= int(round(((yes + no) * self._tempban_percent_diff / 100.0)))):
                 self._victim.tempban("Voted out (%s)" % self._reason, duration=self._tempban_interval, admin=self.client)
+            elif (self._victim.maxLevel < self._min_ban_level and (yes + no) >= player_count_b and
+                yes >= int(round(((yes + no) * self._min_ban_threshold / 100.0)))):
+                self._victim.tempban("Voted out (%s)" % self._reason, duration=self._min_ban_duration, admin=self.client)    
             self._victim = None
 
     def end_vote_no(self,  yes,  no):

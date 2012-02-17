@@ -1,9 +1,10 @@
 <configuration plugin="voting2g">
 
     <settings name="settings">
-        <set name="min_level_vote">2</set>
-        <set name="vote_times">5</set>
-        <set name="vote_interval">600</set>
+        <set name="level_vote">2</set> <!-- min level to raise a vote -->
+        <set name="min_level_vote">1</set> <!-- min level to vote yes/no -->
+        <set name="vote_times">3</set>
+        <set name="vote_interval">300</set>
         <set name="veto_level">20</set>
         <set name="cancel_level">40</set>
         <set name="min_votes">1</set>
@@ -22,8 +23,10 @@
     <settings name="votekick">   
         <set name="tempban_percent_diff">60</set>
         <set name="tempban_interval">5</set>
-        <set name="tempban_percent">90</set>
-        <set name="allow_spec">0</set>
+        <set name="tempban_percent">90</set> <!-- how many votes are need to tempban instead of kick -->
+        <set name="allow_spec">15</set> <!-- allow to kick specs. minimun players online to allow to kick a spec. 0 to disable -->
+        <set name="ban_min_level">1</set> <!-- levels less than this will be banned instead of kick (for 50% positive votes) -->
+        <set name="ban_min_level_duration">5</set> <!-- duration of ban in minutes -->
     </settings> 
     
     <settings name="votemap">
