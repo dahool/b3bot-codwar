@@ -46,8 +46,10 @@
 # Do not remove user when ban is done by B3
 # 12-15-2011 - 1.1.8 - SGT
 # Add support for ban breaking event
+# 02-21-2012 - 1.1.9 - SGT
+# Add b3 1.8 client disconnect support
 
-__version__ = '1.1.8'
+__version__ = '1.1.9'
 __author__  = 'SGT'
 
 import b3, threading, thread
@@ -85,6 +87,8 @@ class FollowPlugin(b3.plugin.Plugin):
         if not self._twitter:
             self.warning("Twitter plugin not avaiable.")
             
+        self._onlinePlayers = {}
+        
     def onLoadConfig(self):
         """\
         Initialize plugin settings
@@ -157,7 +161,7 @@ class FollowPlugin(b3.plugin.Plugin):
                 return
             self.process_connect_event(event.client)
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.process_disconnect_event(event.data)
+            self.process_disconnect_event(event.data, event.client)
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             if self._REMOVE_BAN:
                 self.process_ban(event)
@@ -187,6 +191,7 @@ class FollowPlugin(b3.plugin.Plugin):
     
     def _client_connected(self, client):
         if client.connected:
+            self._onlinePlayers[client.cid] = client
             if client.maxLevel < self._NOTIFY_LEVEL:
                 if self._add_list(client):
                     self.console.queueEvent(self.console.getEvent('EVT_FOLLOW_CONNECTED', (client.var(self, 'follow_data').value,), client))
@@ -195,7 +200,7 @@ class FollowPlugin(b3.plugin.Plugin):
                     self._event_notify(client)
             else:
                 if len(self._following) > 0:
-                    self.debug('Notifying connecting admin (admin: %s cid: %s)' % (client.name, client.cid))
+                    self.debug('Notifying connecting admin (admin: %s id: %s)' % (client.name, client.id))
                     self.notify_connecting_admin(client)
                 else:
                     self.debug('No suspicious players online')
@@ -243,12 +248,17 @@ class FollowPlugin(b3.plugin.Plugin):
                 self.debug('Client (%s) was banned by B3 or ban duration is too short' % client.name)
         cursor.close()
 
-    def process_disconnect_event(self, client_cid):
+    def process_disconnect_event(self, client_cid, client):
         self.debug("Processing disconnect event")
-        self.debug('Disconnected client\'s cid = %s, followlist = %s' % (client_cid, self._following))
-        if self._following.has_key(client_cid):
-            self.debug("Client %s disconnected, removing from online suspect list" % (self._following[client_cid]))
-            del self._following[client_cid]
+        self.verbose('Disconnected client\'s cid = %s, followlist = %s' % (client_cid, self._following))
+        if not client:
+            try:
+                client = self._onlinePlayers.pop(client_cid, None)
+            except:
+                pass
+        if client and self._following.has_key(client.id):
+            self.debug("Client %s disconnected, removing from online suspect list" % (self._following[client.id]))
+            del self._following[client.id]
             if len(self._following) > 0:
                 self.verbose('Online suspects: %s' % self._following)
             else:
@@ -285,7 +295,7 @@ class FollowPlugin(b3.plugin.Plugin):
                 client.setvar(self, 'follow_admin_id', admin_id)
                 self.verbose('follow_admin_id: %s' % admin_id)
                 client.setvar(self, 'follow_data', {'reason': reason, 'admin': admin_name, 'admin_id': admin_id})
-                self._following[client.cid] = client
+                self._following[client.id] = client
                 self.verbose('online follow list: %s' % self._following)
                 return True
             cursor.close()
