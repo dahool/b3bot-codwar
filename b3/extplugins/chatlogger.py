@@ -29,8 +29,10 @@
 # Update on shutdown
 # 14-01-2012 - 1.0.8
 # Make table compatible with chatlogger by Courgette (as of 1.1.3)
+# 22-02-2012 - 1.0.9
+# Remove color tags
 
-__version__ = '1.0.8'
+__version__ = '1.0.9'
 __author__  = 'SGT'
 
 import b3
@@ -128,6 +130,7 @@ class ChatData:
 class ChatMessage:
     
     _ALLOW_CHARS = re.compile('[^\w\?\+\*\.,:=_\(\)\$\#!><-]')
+    _COLOR = re.compile(r'\^[0-9]')
     _INSERT_QUERY_M_TAIL = "(%(time)s, \"%(type)s\", %(client_id)s, \"%(client_name)s\",%(client_team)s, \"%(msg)s\", %(target_id)s, \"%(target_name)s\", %(target_team)s)"
     
     msg_type = 'ALL' # ALL, TEAM or PM
@@ -146,7 +149,7 @@ class ChatMessage:
         self.target_team = None
         
     def _sanitize(self, text):
-        return self._ALLOW_CHARS.sub(' ', text).strip()
+        return self._ALLOW_CHARS.sub(' ',self._COLOR.sub('',text)).strip()
                 
     def __str__(self):
         data = {'time': int(time.time()), 
