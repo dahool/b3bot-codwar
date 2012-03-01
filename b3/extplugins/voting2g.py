@@ -64,8 +64,10 @@
 # Add player who launched the vote to penalty
 # 2012-02-17 - 1.1.9
 # Add min level to ban instead of kick
+# 2012-03-01 - 1.1.10
+# Use skshuffle when available
 
-__version__ = '1.1.9'
+__version__ = '1.1.10'
 __author__  = 'SGT'
 
 import sys
@@ -663,7 +665,7 @@ class ShuffleVote(Vote):
     def _doShuffle(self):
         self.console.say("^7Shuffling teams")
         self._parent.bot("Performing shuffle")
-        if self.shuffle_now and self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
+        if self._powerAdminPlugin and hasattr(self._powerAdminPlugin,'cmd_paskuffle'):
             self._parent.debug("Using poweradmin shuffle")
             self._powerAdminPlugin.cmd_paskuffle(None, None, None)
         elif self._extraAdminPlugin:
