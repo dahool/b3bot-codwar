@@ -112,8 +112,10 @@ class SpamcontrolPlugin(b3.plugin.Plugin):
         event.client.setvar(self, 'last_message_time', self.console.time())
         event.client.setvar(self, 'last_message', event.data)
 
-        if event.client.maxLevel == 0: maxSpamins = self._maxSpamins / 2
-        else: maxSpamins = self._maxSpamins
+        if event.client.maxLevel == 0:
+	    maxSpamins = int(self._maxSpamins / 2)
+        else:
+            maxSpamins = self._maxSpamins
         
         if spamins >= maxSpamins:
             event.client.setvar(self, 'ignore_till', self.console.time() + 30)

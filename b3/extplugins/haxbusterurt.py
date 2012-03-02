@@ -218,13 +218,13 @@ class HaxbusterurtPlugin(b3.plugin.Plugin):
             reasons_msg = ', '.join(reasons)
             if penalty == PENALTY_KICK:
                 self.info('kicking client because of : %s' % reasons_msg)
-                client.kick(reason='Not welcome on this server', keyword="haxbusterurt", silent=True, data=reasons_msg)
+                client.kick(reason='Not welcome on this server (%s)' % reasons_msg, keyword="haxbusterurt", silent=True, data=reasons_msg)
             elif penalty == PENALTY_TEMPBAN:
                 self.info('tempban client because of : %s' % reasons_msg)
-                client.tempban(duration=self.tempban_duration, reason='Not welcome on this server', keyword="haxbusterurt", silent=True, data=reasons_msg)
+                client.tempban(duration=self.tempban_duration, reason='Not welcome on this server (%s)' % reasons_msg, keyword="haxbusterurt", silent=True, data=reasons_msg)
             elif penalty == PENALTY_PERMBAN:
                 self.info('permban client because of : %s' % reasons_msg)
-                client.ban(reason='Not welcome on this server', keyword="haxbusterurt", silent=True, data=reasons_msg)
+                client.ban(reason='Not welcome on this server (%s)' % reasons_msg, keyword="haxbusterurt", silent=True, data=reasons_msg)
 
         
     def isBadGuid(self, client):
