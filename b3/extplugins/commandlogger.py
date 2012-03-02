@@ -16,7 +16,7 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3
@@ -38,7 +38,7 @@ class CommandloggerPlugin(b3.plugin.Plugin):
     ALTER TABLE auditlog ADD INDEX (command);
     '''
     
-    _INSERT_QUERY = "INSERT INTO auditlog (command, data, client_id, target_id, time_add) VALUES ('%s', '%s', %d, %d, %d)"
+    _INSERT_QUERY = "INSERT INTO auditlog (command, data, client_id, target_id, time_add) VALUES ('%s', '%s', %d, %s, %d)"
     
     def onStartup(self):
         self._adminPlugin = self.console.getPlugin('admin')

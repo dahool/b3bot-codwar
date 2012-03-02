@@ -33,7 +33,7 @@
 # 25/07/09
 # Initial version
 
-__version__ = '1.4'
+__version__ = '1.4.1'
 __author__  = 'Ismael, SGT'
 
 import re
@@ -47,6 +47,8 @@ class NickregPlugin(b3.plugin.Plugin):
     _adminPlugin = None
     _color_re = re.compile(r'\^[0-9]')
     _watched = []
+
+    _SELECT_QUERY = "SELECT n.clientid FROM nicks n WHERE n.name like '%s'"
 
     def onStartup(self):
         """\
@@ -81,11 +83,8 @@ class NickregPlugin(b3.plugin.Plugin):
             return
 
         if client.id not in self._watched:
-            cursor = self.console.storage.query("""
-            SELECT n.clientid
-            FROM nicks n 
-            WHERE n.name like '%s'
-            """ % (self._process_name(client.name))) #Have to escape quotes (')
+            
+            cursor = self.console.storage.query("""SELECT n.clientid FROM nicks n WHERE n.name like '%s'""" % self._process_name(client.name))
             
             if cursor.rowcount > 0: #This nick is registered
                 r = cursor.getRow()
@@ -120,7 +119,7 @@ class NickregPlugin(b3.plugin.Plugin):
             SELECT n.nickid,n.name
             FROM nicks n
             WHERE n.clientid = %s
-            """ % (client.id))
+            """ % client.id)
         
         if cursor.rowcount == 0:
             client.message('^7You don\'t have any registered nick name')
@@ -139,7 +138,7 @@ class NickregPlugin(b3.plugin.Plugin):
         return self._color_re.sub('',text).lower()
         
     def _process_name(self, data):
-        return self._color_re.sub(data.replace("""'""", """''"""))
+        return self._color_re.sub('',data.replace('\'', ''))
         
     def cmd_regnick(self, data, client, cmd=None):
         """\
@@ -164,7 +163,7 @@ class NickregPlugin(b3.plugin.Plugin):
         SELECT n.nickid
         FROM nicks n 
         WHERE n.clientid = %s
-        """ % (client.id))
+        """ % client.id)
         
         if cursor.rowcount > self.maxnicks:
             client.message('^7You already have %d registered nicks' % self.maxnicks)
@@ -174,7 +173,7 @@ class NickregPlugin(b3.plugin.Plugin):
         cursor = self.console.storage.query("""
         SELECT max(n.nickid) as maxid FROM nicks n
         WHERE n.clientid = %s
-        """ % (client.id))
+        """ % client.id)
         max = cursor.getRow()['maxid']
         cursor.close()
         if max is None:
