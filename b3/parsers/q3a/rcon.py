@@ -102,9 +102,9 @@ class Rcon:
         try:
             if isinstance(data, str):
                 data=unicode(data, errors='ignore')
-                self.console.debug('Data was a string')
+                self.console.verbose('Data was a string')
             else:
-                self.console.debug('Data was a unicode')
+                self.console.verbose('Data was a unicode')
             data=data.encode(self.console.encoding, 'replace')
         except Exception, msg:
             self.console.warning('%s: ERROR encoding data: %r', source, msg)

@@ -14,7 +14,7 @@
 	<settings name="messages">
 		<set name="ban">^7demasiados team kill</set>
 		<set name="forgive">^7$vname^7 perdona a $aname (^3$points^7)</set>
-        <set name="forgive_guest">^7$vname^7 perdona a $aname (^3$points^7). Por ser invitado solo se reducen los puntos a la mitad.</set>
+        	<set name="forgive_guest">^7$vname^7 perdona a $aname (^3$points^7). Por ser invitado solo se reducen los puntos a la mitad.</set>
 		<set name="grudged">^7$vname^7 tiene ^1rencor ^7contra $aname (^3$points^7)</set>
 		<set name="forgive_many">^7$vname^7 perdono $attackers</set>
 		<set name="forgive_warning">^1ATENCION^7: $name^7 auto-kick si no es perdonado. Escribe ^3!forgive $cid ^7para perdonar. (^3puntos: $points^7)</set>

@@ -146,7 +146,7 @@
 # * players's team get refreshed after unpausing the bot (useful when used with FTP and B3 lose the connection for a while)
 #
 __author__  = 'xlr8or, Courgette'
-__version__ = '1.11.4'
+__version__ = '1.11.5'
 
 from b3.parsers.q3a.abstractParser import AbstractParser
 import re, string, threading, time, os, thread

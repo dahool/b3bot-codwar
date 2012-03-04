@@ -23,15 +23,17 @@
 # 2010-05-12 - SGT
 # Initial version
 # 04/05/2010 - SGT
-# try to fix issue with OnSay when something like this come and the match could find the name group
+# try to fix issue with OnSay when something like this come and the match could'nt find the name group
 # say: 7 -crespino-:
 #
 # 2011-02-19 - SGT
 # Create Survivor Winner Event
 # Create Unban event
 
+from b3.parsers.iourt41 import __version__ as parent_version
+
 __author__  = 'SGT'
-__version__ = '1.11.0A'
+__version__ = parent_version + "A"
 
 import os
 
@@ -109,7 +111,7 @@ class Iourt41AParser(Iourt41Parser):
         self.game.mapEnd()
         # self.clients.sync()
         # self.debug('Synchronizing client info')
-        # set data to true to differentiaty from the EXIT event sent by abstract
+        # set data to true to differentiate it from the EXIT event sent by abstract
         data = True
         self._maplist = None # when UrT server reloads, newly uploaded maps get available: force refresh
         return b3.events.Event(b3.events.EVT_GAME_EXIT, data)
