@@ -1107,7 +1107,6 @@ class EventQueue:
     
     def __init__(self, filename):
         self._file = open(filename,'a+b')
-        self.load()
     
     def load(self):
         self.lock.acquire()
