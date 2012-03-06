@@ -267,11 +267,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         return None
     
     def get_service_path(self):
-        #_confpath = self.console.getCvar('fs_homepath')
-        #if _confpath != None:
-        #    self._confpath = _confpath.getString()
-        #return os.path.join(confpath, 'q3ut4')
-        return os.path.normpath(os.path.dirname(inspect.getfile(inspect.currentframe())))
+        _confpath = self.console.getCvar('fs_homepath')
+        if _confpath != None:
+            self._confpath = _confpath.getString()
+        return os.path.normpath(os.path.join(confpath, 'q3ut4'))
+        #return os.path.normpath(os.path.dirname(inspect.getfile(inspect.currentframe())))
                 
     def setupCron(self):
         self.debug("will send update every %02d minutes" % self._interval)
@@ -665,24 +665,26 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         b.start()
         
     def do_disable(self):
-        self.debug('IPDB disabled')
+        if self._pluginEnabled: self.debug('IPDB disabled')
         self._pluginEnabled = False
         for ct in self._cronTab:
             self.console.cron - ct
         # remove connect and duplicated events before save
-        self.cleanEvents()
-        self._queue.save()
+        if not self._queue.empty():
+            self.cleanEvents()
+            self._queue.save()
         
     def increaseFail(self):
         self._failureCount += 1
         self.debug('Update failed %d' % self._failureCount)
         if self._failureCount >= self._failureMax:
+            if self._pluginEnabled:
+                if self._twitterPlugin:
+                    self._twitterPlugin.post_update('IPDB too many failures. Disabled.')
+                self.bot('Too many failures. Disabled')
             self.do_disable()
             self.console.cron + b3.cron.OneTimeCronTab(self.updateName, second=0, minute='*/15')
             self._failureCount = 0
-            if self._twitterPlugin:
-                self._twitterPlugin.post_update('IPDB too many failures. Disabled.')
-            self.bot('Too many failures. Disabled')
             return False
         return True
         
