@@ -1116,7 +1116,10 @@ class EventQueue:
             self.queue = []
             self._file.seek(os.SEEK_SET)
             for line in self._file:
-                self.queue.append(pickle.loads(base64.b64decode(line)))
+                try:
+                    self.queue.append(pickle.loads(base64.b64decode(line)))
+                except:
+                    pass
             self.queue.extend(current)
             self._file.truncate(0)
         finally:
@@ -1177,7 +1180,10 @@ class EventQueue:
         self.lock.acquire()
         try:
             for event in self.queue:
-                self._file.write(base64.b64encode(pickle.dumps(event)) + '\n')
+                try:
+                    self._file.write(base64.b64encode(pickle.dumps(event)) + '\n')
+                except:
+                    pass
             self._file.flush()
             self.queue = []
         finally:
