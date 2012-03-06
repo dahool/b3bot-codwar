@@ -89,7 +89,7 @@
 # Handle disconnect event using b3 1.8 way
 # 2012-01-30 - SGT - 1.3.5
 # Add local cached queue
-# Better update location
+# Better update replace handler
 
 __author__  = 'SGT'
 __version__ = '1.3.5'
