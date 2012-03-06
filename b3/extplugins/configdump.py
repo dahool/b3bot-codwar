@@ -21,7 +21,7 @@
 # Initial
 
 __author__    = 'SGT'
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import b3, time, os, StringIO
 import b3.plugin
@@ -38,21 +38,22 @@ class ConfigdumpPlugin(b3.plugin.Plugin):
     _cvars = []
     _crontab = None
 
+    def onStartup(self):
+        self.registerEvent(b3.events.EVT_STOP)
+
+        if self._crontab:
+            self.console.cron - self._crontab
+        self._crontab = b3.cron.PluginCronTab(self, self.update, 0, self.dump[1], self.dump[0])
+        self.console.cron + self._crontab
+        
     def onLoadConfig(self):
         if self.config.get('settings','output_file')[0:6] == 'ftp://':
             self._ftpinfo = functions.splitDSN(self.config.get('settings','output_file'))
             self._ftpstatus = True
         else:        
             self._outputFile = os.path.expanduser(self.config.get('settings', 'output_file'))
-        
         self._cvars = [var.strip() for var in self.config.get('settings', 'cvars').split(',')]
-    
-        dump = self.config.get('settings','time').split(':')
-
-        if self._crontab:
-            self.console.cron - self._crontab
-        self._crontab = b3.cron.PluginCronTab(self, self.update, 0, dump[1], dump[0])
-        self.console.cron + self._crontab
+        self.dump = self.config.get('settings','time').split(':')
 
     def onEvent(self, event):
         if event.type == b3.events.EVT_STOP:
