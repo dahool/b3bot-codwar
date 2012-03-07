@@ -149,10 +149,9 @@ class PublistPlugin(b3.plugin.Plugin):
         self._cronTab = b3.cron.OneTimeCronTab(self.update, 0, _im, '*', '*', '*', '*')
         self.console.cron + self._cronTab
        
-      
-    def onEvent(self, event):
-        if event.type == b3.events.EVT_STOP and self._heartbeat_sent:
-            self.shutdown()
+#    def onEvent(self, event):
+#        if event.type == b3.events.EVT_STOP and self._heartbeat_sent:
+#            self.shutdown()
     
     def removeCrontab(self):
         try:
