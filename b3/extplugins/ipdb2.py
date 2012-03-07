@@ -87,12 +87,14 @@
 # Reload host name in each server name update
 # 2012-01-30 - SGT - 1.3.4
 # Handle disconnect event using b3 1.8 way
-# 2012-01-30 - SGT - 1.3.5
+# 2012-03-06 - SGT - 1.3.5
 # Add local cached queue
 # Better update replace handler
+# 2012-03-07 - SGT - 1.3.6
+# Add missing queue load on startup
 
 __author__  = 'SGT'
-__version__ = '1.3.5'
+__version__ = '1.3.6'
 
 import shutil
 import os
@@ -209,6 +211,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._rpc_proxy = xmlrpclib.ServerProxy(self._url)
         
         self._queue = EventQueue(self._dat_filename)
+        self._queue.load()
         
         if not self._queue.empty():
             self.bot('Loaded %d stored events' % self._queue.size())
@@ -344,7 +347,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             self._dat_filename = self.config.getint('settings', 'cache_file_name')
         except:
             self._dat_filename = os.path.join(self.get_service_path(),'ipdb.dat')
-                                                    
+
+        self.debug('Using store file %s' % self._dat_filename)
+        
     def onEvent(self, event):
         if event.type == b3.events.EVT_STOP:
             self.bot('B3 stop/exit.. saving queue')
@@ -617,7 +622,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         socket.setdefaulttimeout(None)
         
     def update(self):
-        self.debug('Try update')
+        self.debug('Update')
         if self.lock.acquire(0):
             try:
                 if not self._queue.empty():
