@@ -269,8 +269,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def get_service_path(self):
         _confpath = self.console.getCvar('fs_homepath')
         if _confpath != None:
-            self._confpath = _confpath.getString()
-        return os.path.normpath(os.path.join(confpath, 'q3ut4'))
+            _confpath = _confpath.getString()
+        return os.path.normpath(os.path.join(_confpath, 'q3ut4'))
         #return os.path.normpath(os.path.dirname(inspect.getfile(inspect.currentframe())))
                 
     def setupCron(self):
