@@ -31,8 +31,10 @@
 # Make table compatible with chatlogger by Courgette (as of 1.1.3)
 # 22-02-2012 - 1.0.9
 # Remove color tags
+# 07-03-2012 - 1.0.9
+# Configurable dump interval
 
-__version__ = '1.0.9'
+__version__ = '1.0.10'
 __author__  = 'SGT'
 
 import b3
@@ -73,7 +75,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
     _MAX_DUMP_LINES = 150
     
     _crontab = None
-    _interval = 15
+    _interval = 5
     
     def onStartup(self):
         self.registerEvent(b3.events.EVT_STOP)
@@ -90,7 +92,7 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         
     def onEvent(self,  event):
         if event.type == b3.events.EVT_STOP:
-            self.info('B3 stop/exit.. force dump')
+            self.bot('B3 stop/exit.. force dump')
             self._chatdata.save()
         elif event.type == b3.events.EVT_CLIENT_SAY:
             self._chatdata.addMessage(ChatMessage(event))
@@ -99,6 +101,12 @@ class ChatloggerPlugin(b3.plugin.Plugin):
         elif event.type == b3.events.EVT_CLIENT_PRIVATE_SAY:
             self._chatdata.addMessage(PrivateChatMessage(event))
 
+    def onLoadConfig(self):
+        try:
+            self._interval = self.config.getint('settings', 'interval')
+        except:
+            pass
+                
 class ChatData:
     
     _INSERT_QUERY_M_HEAD = "INSERT INTO {table_name} (msg_time, msg_type, client_id, client_name, client_team, msg, target_id, target_name, target_team) VALUES "
