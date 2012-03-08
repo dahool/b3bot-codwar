@@ -44,7 +44,7 @@
 #    7/23/2005 - 1.0.2 - ThorN
 #    * Changed temp ban duration to be based on ban_length times the number of victims
 
-__version__ = '1.2.6a'
+__version__ = '1.2.6b'
 __author__  = 'ThorN'
 
 import b3, string, re, threading
@@ -638,8 +638,7 @@ class TkPlugin(b3.plugin.Plugin):
 
         try:
             points = v.attackers[attacker.cid]
-        except Exception, e:
-            self.error(e)
+        except Exception:
             points = -1
 
         self.verbose("Current points %d" % points)

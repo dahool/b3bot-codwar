@@ -92,9 +92,11 @@
 # Better update replace handler
 # 2012-03-07 - SGT - 1.3.6
 # Add missing queue load on startup
+# 2012-03-08 - SGT - 1.3.7
+# Fix sequence on ban info dump
 
 __author__  = 'SGT'
-__version__ = '1.3.6'
+__version__ = '1.3.7'
 
 import shutil
 import os
@@ -719,7 +721,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
                 penalty.timeAdd = r['time_add']
                 status = self._buildBanInfo(penalty, client)
                 if status: list.append(status)
-            keys.append(r['id'])
+            keys.append(str(r['id']))
             cursor.moveNext()
         
         if len(list) > 0:
@@ -751,7 +753,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if client:
                 status = self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit)
                 list.append(status)
-            keys.append(r['id'])
+            keys.append(str(r['id']))
             cursor.moveNext()
         
         if len(list) > 0:
