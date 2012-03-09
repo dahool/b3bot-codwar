@@ -143,3 +143,20 @@ CREATE TABLE IF NOT EXISTS `referee` (
   KEY `following_client_id` (`client_id`),
   KEY `following_admin_id` (`admin_id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `tb_autoslap`
+--
+
+CREATE TABLE IF NOT EXISTS `tb_autoslap` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
+  `admin_id` int(11) NOT NULL,
+  `time_add` int(11) NOT NULL,
+  `reason` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `autoslap_client_id` (`client_id`),
+  KEY `autoslap_time_add` (`time_add`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;

@@ -13,15 +13,6 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 -- --------------------------------------------------------
 
 --
--- Añadir campo IP a `aliases`
---
-
-ALTER TABLE `aliases` ADD COLUMN `ip` VARCHAR( 16 ) NOT NULL default '';
-CREATE INDEX `ip` ON `aliases` (`ip`);
-
--- --------------------------------------------------------
-
---
 -- Añadir indice IP a `clients`
 --
 

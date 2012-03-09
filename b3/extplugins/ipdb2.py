@@ -355,7 +355,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def onEvent(self, event):
         if event.type == b3.events.EVT_STOP:
             self.bot('B3 stop/exit.. saving queue')
-            self._queue.save_and_close()
+            if not self._queue.empty():
+                self.bot('Saving %d events' % self._queue.size())
+                self._queue.save_and_close()
         if event.type == b3.events.EVT_CLIENT_AUTH:
             self.onClientConnect(event.client)
         elif event.type == b3.events.EVT_CLIENT_NAME_CHANGE:
