@@ -307,6 +307,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
         self._updateCrontab = b3.cron.PluginCronTab(self, self.checkNewVersion, 0, rmin, '*/12')
         self.console.cron + self._updateCrontab
+        # check for new version on startup
+        self.console.cron + b3.cron.OneTimeCronTab(self.checkNewVersion, '*/1')
 
     def onLoadConfig(self):
         try:
@@ -1263,14 +1265,14 @@ class PluginUpdater:
                     os.remove(fname)
                 shutil.move(temp, fname)
             
-    def _getFile(self, url, sum):
+    def _getFile(self, url, hsum):
         d = urllib.urlretrieve(url)
         f = file(d[0], 'rb')
         s = hash(f.read()).hexdigest()
         f.close()
-        if s == sum:
+        if s == hsum:
             return d[0]
-        raise Exception("Checksums doesn't match")
+        raise Exception("Checksums doesn't match (%s: %s != %s)" % (url, hsum, s))
     
     def _updateConfigFile(self, newFile, currentFile):
         _newConfig = ElementTree.parse(newFile)
