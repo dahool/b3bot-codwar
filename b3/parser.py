@@ -18,6 +18,9 @@
 #
 #
 # CHANGELOG
+#   2012/03/12 - SGT
+#   Added back: Handle each event in own thread (2011/06/01)
+#   removed on merge with 1.8.0.
 #   2011/06/05 - 1.27 - xlr8or
 #   * implementation of game server encoding/decoding
 #   2011/09/12 - 1.26.2 - Courgette
@@ -135,7 +138,7 @@
 #    Added warning, info, exception, and critical log handlers
 
 __author__  = 'ThorN, Courgette, xlr8or, Bakes'
-__version__ = '1.27'
+__version__ = '1.27a'
 
 # system modules
 import os, sys, re, time, thread, traceback, Queue, imp, atexit, socket, threading
@@ -984,41 +987,47 @@ class Parser(object):
             if event.type == b3.events.EVT_EXIT or event.type == b3.events.EVT_STOP:
                 self.working = False
 
-            eventName = self.Events.getName(event.type)
             self._eventsStats.add_event_wait((self.time() - added)*1000)
             if self.time() >= expire:    # events can only sit in the queue until expire time
-                self.error('**** Event sat in queue too long: %s %s', eventName, self.time() - expire)
+                self.error('**** Event sat in queue too long: %s %s', self.Events.getName(event.type), self.time() - expire)
             else:
-                nomore = False
-                for hfunc in self._handlers[event.type]:
-                    if not hfunc.isEnabled():
-                        continue
-                    elif nomore:
-                        break
+                # -- SGT --
+                if self.working:
+                    thread.start_new_thread(self.handleEvent, (event,))
+                else:
+                    # in case of an exit event, we wait until it finish
+                    self.handleEvent(event)
 
-                    self.verbose('Parsing Event: %s: %s', eventName, hfunc.__class__.__name__)
-                    timer_plugin_begin = time.clock()
-                    try:
-                        hfunc.parseEvent(event)
-                        time.sleep(0.001)
-                    except b3.events.VetoEvent:
-                        # plugin called for event hault, do not continue processing
-                        self.bot('Event %s vetoed by %s', eventName, str(hfunc))
-                        nomore = True
-                    except SystemExit, e:
-                        self.exitcode = e.code
-                    except Exception, msg:
-                        self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, eventName, msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))
-                    finally:
-                        elapsed = time.clock() - timer_plugin_begin
-                        self._eventsStats.add_event_handled(hfunc.__class__.__name__, eventName, elapsed*1000)
-                    
         self.bot('Shutting down event handler')
 
-        # releasing lock if it was set by self.shutdown() for instance
         if self.exiting.locked():
             self.exiting.release()
 
+    def handleEvent(self, event): # -- SGT --
+        nomore = False
+        for hfunc in self._handlers[event.type]:
+            if nomore:
+                break
+            elif not hfunc.isEnabled():
+                continue
+            eventName = self.Events.getName(event.type)
+            self.verbose('Parsing Event: %s: %s', eventName, hfunc.__class__.__name__)
+            timer_plugin_begin = time.clock()
+            try:
+                hfunc.parseEvent(event)
+                time.sleep(0.001)
+            except b3.events.VetoEvent:
+                # plugin called for event hault, do not continue processing
+                self.bot('Event %s vetoed by %s', eventName, str(hfunc))
+                nomore = True
+            except SystemExit, e:
+                self.exitcode = e.code
+            except Exception, msg:
+                self.error('handler %s could not handle event %s: %s: %s %s', hfunc.__class__.__name__, eventName, msg.__class__.__name__, msg, traceback.extract_tb(sys.exc_info()[2]))
+            finally:
+                elapsed = time.clock() - timer_plugin_begin
+                self._eventsStats.add_event_handled(hfunc.__class__.__name__, eventName, elapsed*1000)
+                    
     def write(self, msg, maxRetries=None):
         """Write a message to Rcon/Console"""
         if self.replay:
