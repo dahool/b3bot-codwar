@@ -16,15 +16,17 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 CREATE TABLE IF NOT EXISTS `auditlog` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `command` varchar(20) NOT NULL,
+  `command` varchar(20) DEFAULT NULL,
   `data` varchar(50) DEFAULT NULL,
   `client_id` int(11) unsigned NOT NULL,
   `time_add` int(11) unsigned NOT NULL,
+  `target_id` int(11) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `client_id` (`client_id`),
   KEY `time_add` (`time_add`),
-  KEY `command` (`command`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 ;
+  KEY `command` (`command`),
+  KEY `target_id` (`target_id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -33,17 +35,21 @@ CREATE TABLE IF NOT EXISTS `auditlog` (
 --
 
 CREATE TABLE IF NOT EXISTS `chatlog` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `data` varchar(100) COLLATE latin1_spanish_ci DEFAULT NULL,
-  `target` varchar(50) COLLATE latin1_spanish_ci DEFAULT NULL,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `msg_time` int(10) unsigned NOT NULL,
+  `msg_type` enum('ALL','TEAM','PM') DEFAULT NULL,
   `client_id` int(11) unsigned NOT NULL,
-  `time_add` int(11) unsigned NOT NULL,
-  `info` varchar(255) COLLATE latin1_spanish_ci DEFAULT NULL,
+  `client_name` varchar(32) DEFAULT NULL,
+  `client_team` tinyint(1) NOT NULL,
+  `msg` varchar(528) DEFAULT NULL,
+  `target_id` int(11) unsigned DEFAULT NULL,
+  `target_name` varchar(32) DEFAULT NULL,
+  `target_team` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `client_id` (`client_id`),
-  KEY `time_add` (`time_add`),
-  KEY `data` (`data`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 COLLATE=latin1_spanish_ci ;
+  KEY `client` (`client_id`),
+  KEY `target` (`target_id`),
+  KEY `time_add` (`msg_time`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 

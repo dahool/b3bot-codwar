@@ -94,9 +94,11 @@
 # Add missing queue load on startup
 # 2012-03-08 - SGT - 1.3.7
 # Fix sequence on ban info dump
+# 2012-03-13 - SGT - 1.3.8
+# Fix clean method error
 
 __author__  = 'SGT'
-__version__ = '1.3.7'
+__version__ = '1.3.8'
 
 import shutil
 import os
@@ -505,7 +507,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def cleanEvents(self):
         '''clean connect events in case of disabled.
         '''
-        tempList = self._queue.get(self.queue.size(), True)
+        tempList = self._queue.get(self._queue.size(), True)
         eventList = []
         tempClients = []
         for event in tempList:
