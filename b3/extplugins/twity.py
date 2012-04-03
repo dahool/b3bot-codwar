@@ -37,8 +37,10 @@
 # BAN event is raised every time the banned user connect. Workaround this.
 # 05/04/2011 - SGT - 1.0.12
 # Fix issue in ban event handling
+# 04/03/2012 - SGT - 1.0.13
+# Cut text to 140 chars
 
-__version__ = '1.0.12'
+__version__ = '1.0.13'
 __author__  = 'SGT'
 
 import re
@@ -194,7 +196,7 @@ class TwityPlugin(b3.plugin.Plugin):
                 return
         try:
             self.debug("Post update")
-            self.api.update_status(status=message)
+            self.api.update_status(status=message[:140])
             self.debug("Message posted!")
             return
         except Exception, e:
