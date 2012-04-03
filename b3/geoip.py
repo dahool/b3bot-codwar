@@ -1,6 +1,8 @@
 # 02/01/2010 - SGT - Add json import for python 2.6 compatibility
 # 05/10/2010 - SGT - Add support for memcache
 # 11/15/2010 - SGT - Add key as required for new ipinfodb API implementation
+# 03/04/2012 - SGT - Add support for local dat file (requires pygeoip by maxmind)
+
 from urllib import urlopen, quote
 import pickle
 try:   
@@ -10,6 +12,11 @@ except ImportError:
         import simplejson as json
     except ImportError:
         from b3 import xjson as json
+try:
+    from b3 import pygeoip
+    from b3.pygeoip import GeoIPError
+except:
+    pass
 try:
     import memcache # package   python-memcached
 except ImportError:
@@ -25,8 +32,16 @@ MEMCACHE_HOST = None
 GEOIP_LOOKUP_URL = 'http://api.ipinfodb.com/v2/ip_query.php?key=%(key)s&ip=%(ip)s&timezone=false&output=json'
 #GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query.php?ip=%s&output=json'
 #GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query_country.php?ip=%s&output=json'
+GEOIP_DAT = None
 DEBUG = False
+geocity = None
 
+if GEOIP_DAT:
+    try:
+        geocity = pygeoip.GeoIP(GEOIP_DAT)
+    except Exception, e:
+        print e
+    
 def debug(msg):
     if DEBUG:
         print msg
@@ -49,14 +64,30 @@ def geo_ip_lookup(ip_address):
 	    debug('Found in cache')
         
     if not json_response:
-        lookup_url = GEOIP_LOOKUP_URL % {'key': API_KEY, 'ip': ip_address}
-
-        try:
-	    debug('Try Service')
-            json_response = json.loads(urlopen(lookup_url).read())
-        except:
-            return None
-      
+        if geocity:
+            debug('Try Local DAT')
+            try:
+                value = geocity.record_by_addr(ip_address)
+            except:
+                return None
+            if value:
+                json_response = {}
+                json_response['City'] = value['city']
+                json_response['CountryCode'] = value['country_code']
+                json_response['CountryName'] = value['country_name']
+                json_response['RegionName'] = value['region_name']
+                json_response['Latitude'] = value['latitude']
+                json_response['Longitude'] = value['longitude']
+            else:
+                return None
+        else:
+            lookup_url = GEOIP_LOOKUP_URL % {'key': API_KEY, 'ip': ip_address}
+            try:
+                debug('Try Service')
+                json_response = json.loads(urlopen(lookup_url).read())
+            except:
+                return None
+        
         if cache and MEMCACHE_HOST:
             key = "IP_%s" % ip_address
             mc.set(key, pickle.dumps(json_response))
