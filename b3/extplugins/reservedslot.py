@@ -17,8 +17,10 @@
 #
 # 10-24-2011 - 1.0.0 - SGT
 # Initial version
+# 04-04-2012 - 1.0.1 - SGT
+# Minor update. Increase warns
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__  = 'SGT'
 
 import b3, threading, time, thread
@@ -128,11 +130,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
                     last = client
         if last:
             self.debug("%s will be kicked" % last.name)
-            last.message(self.getMessage('kick_warn', {'name': last.name, 'id': last.id}))
-            time.sleep(1)
-            last.message(self.getMessage('kick_warn', {'name': last.name, 'id': last.id}))
-            time.sleep(5)
-            last.kick('Kick because reserved slot', silent=True)
+            self.kick_client(last, 'kick_warn')
         else:
             self.debug("All clients are registered")
             
@@ -143,6 +141,13 @@ class ReservedslotPlugin(b3.plugin.Plugin):
             if client.maxLevel == 0:
                 client.message(self.getMessage('status', {'name': client.name, 'id': client.id}))
                     
+    def kick_client(self, client, message):
+        for i in range(0, self._warn):
+            client.message(self.getMessage(message, {'name': client.name, 'id': client.id}))
+            time.sleep(1)
+            self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
+        client.kick('Kick because reserved slot', silent=True)
+        
     def _client_connected(self, client):
         if client.connected:
             self.debug("Warning client before kick")
@@ -150,11 +155,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
             client.setvar(self, 'paforced', 'spectator')
             self.console.write('mute %s' % (client.cid))
             self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
-            for i in range(0,self._warn):
-                client.message(self.getMessage('welcome', {'name': client.name, 'id': client.id}))
-                time.sleep(2)
-                self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
-            client.kick('Kick because reserved slot', silent=True)
+            self.kick_client(client, 'welcome')
         self._working = False
         
 if __name__ == '__main__':
