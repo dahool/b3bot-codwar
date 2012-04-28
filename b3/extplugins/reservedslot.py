@@ -38,6 +38,8 @@ class ReservedslotPlugin(b3.plugin.Plugin):
     _timeDiffGap = 900
     _max_clients = 999
     
+    _currentList = []
+    
     def onStartup(self):
         self.registerEvent(b3.events.EVT_CLIENT_AUTH)
         if self._cronTab:
@@ -97,7 +99,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
 
         clients = self.console.clients.getList()
         self.debug("Total connected %s" % len(clients))
-        if len(clients) > self._max_clients:
+        if len(clients)-len(self._currentList) > self._max_clients:
             if client.maxLevel > 0:
                 t = threading.Thread(target=self.make_room)
                 t.start()
@@ -121,13 +123,13 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         self.debug("Running make room")
         clients = self.console.clients.getList()
         self.debug("Clients connected %d" % len(clients))
-        if len(clients) <= self._max_clients:
+        if len(clients)-len(self._currentList) <= self._max_clients:
            self.debug("No need to make room")
            return
         candidates = []
         for client in clients:
             self.verbose("Client %s level %d - [%d]" % (client.name, client.maxLevel, client.timeEdit))
-            if client.maxLevel == 0:
+            if client.maxLevel == 0 and client.id not in self._currentList:
                 candidates.append(client)
         candidates.sort(key=lambda elem: elem.timeEdit, reverse=True)
         if len(candidates) > 0:
@@ -145,47 +147,40 @@ class ReservedslotPlugin(b3.plugin.Plugin):
                 client.message(self.getMessage('status', {'name': client.name, 'id': client.id}))
                     
     def kick_client(self, client, message):
+        self._currentList.append(client.id)
         for i in range(0, self._warn):
             client.message(self.getMessage(message, {'name': client.name, 'id': client.id}))
             time.sleep(1)
             self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
         client.kick('Kick because reserved slot', silent=True)
+        self._currentList.remove(client.id)
         
     def _client_connected(self, client):
         if client.connected:
             self.debug("Warning client before kick")
             # this requires poweradmin to keep forced
             client.setvar(self, 'paforced', 'spectator')
-            self.console.write('mute %s' % (client.cid))
+            #self.console.write('mute %s' % (client.cid))
             self.console.write('forceteam %s %s' % (client.cid, 'spectator'))
             self.kick_client(client, 'welcome')
-        self._working = False
         
 if __name__ == '__main__':
     from b3.fake import fakeConsole
-    from b3.fake import FakeClient, superadmin
+    from b3.fake import FakeClient, superadmin, joe, simon, moderator, admin
     import time
-    
-    # first time user
-    user0 = FakeClient(fakeConsole, name="New1", exactName="Joe", guid="guid0", groupBits=0, team=b3.TEAM_RED)
-    user0.connections = 0
-    # second time user
-    user1 = FakeClient(fakeConsole, name="New2", exactName="Joe", guid="guid1", groupBits=0, team=b3.TEAM_RED)
-    user1.connections = 1
-    # registered user
-    user2 = FakeClient(fakeConsole, name="Registered", exactName="Joe", guid="guid2", groupBits=1, team=b3.TEAM_RED)
-    # regular user
-    user3 = FakeClient(fakeConsole, name="Regular", exactName="Joe", guid="guid3", groupBits=4, team=b3.TEAM_RED)
-    
+
+    user1 = FakeClient(fakeConsole, name="User1", exactName="User1", guid="sds34324", groupBits=0, team=b3.TEAM_UNKNOWN)
+  
     p = ReservedslotPlugin(fakeConsole,'conf/reservedslot.xml')
     p._max_clients = 4
     p.onStartup()
     time.sleep(10)
     
     superadmin.connects(cid=0)
-    user0.connects(cid=1)
-    user2.connects(cid=2)
-    user3.connects(cid=3)
-    user1.connects(cid=4)
+    joe.connects(cid=1)
+    user1.connects(cid=3)
+    simon.connects(cid=2)
+    moderator.connects(cid=4)
+    admin.connects(cid=5)
 
     while True: time.sleep(5)
