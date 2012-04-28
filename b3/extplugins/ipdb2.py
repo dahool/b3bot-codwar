@@ -96,9 +96,11 @@
 # Fix sequence on ban info dump
 # 2012-03-13 - SGT - 1.3.8
 # Fix clean method error
+# 2012-04-18 - SGT - 1.3.9
+# Send server port
 
 __author__  = 'SGT'
-__version__ = '1.3.8'
+__version__ = '1.3.9'
 
 import shutil
 import os
@@ -137,7 +139,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://api.iddb.com.ar/api/v4/xmlrpc'
+    _url = 'http://api.iddb.com.ar/api/v5/xmlrpc'
 
     _timeout = 15
     
@@ -523,7 +525,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def send_update(self, list):
         try:
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.update(self._key, list, int(time.time()))
+            self._rpc_proxy.server.update(self._key, list, int(time.time()), [self.console._publicIp, self.console._port])
             self._failureCount = 0
         except xmlrpclib.ProtocolError, protocolError:
             self.error(str(protocolError))
@@ -621,7 +623,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.debug('Update server name')
             socket.setdefaulttimeout(self._timeout)
-            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission])
+            self._rpc_proxy.server.updateName(self._key, self._hostname, [__version__, self._remotePermission, self.console._publicIp, self.console._port])
             self.do_enable()
         except Exception, e:
             self.error("Error updating server name. %s" % str(e))
@@ -905,7 +907,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         client.message('^7Linking ... please wait.')
         try:
             socket.setdefaulttimeout(self._timeout)
-            r = self._rpc_proxy.server.register(self._key, username, data)
+            r = self._rpc_proxy.server.register(self._key, username, data, [self.console._publicIp, self.console._port])
             if r == 0:
                 client.message('^7You have been linked succesfully to the username %s.' % username)
             elif r == 1:
@@ -1065,7 +1067,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             self.debug("Send remote events confirmation")
             socket.setdefaulttimeout(self._timeout * 2)
-            self._rpc_proxy.server.confirmEvent(self._key, status)
+            self._rpc_proxy.server.confirmEvent(self._key, status, [self.console._publicIp, self.console._port])
             self._failureCount = 0
             del self._remotequeue[0:last]
         except xmlrpclib.ProtocolError, protocolError:
@@ -1092,7 +1094,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         list = []
         try:
             socket.setdefaulttimeout(self._timeout * 2)
-            list = self._rpc_proxy.server.eventQueue(self._key)
+            list = self._rpc_proxy.server.eventQueue(self._key, [self.console._publicIp, self.console._port])
             self._failureCount = 0
         except xmlrpclib.ProtocolError, protocolError:
             self.error(str(protocolError))
