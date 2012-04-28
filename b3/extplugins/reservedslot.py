@@ -19,8 +19,10 @@
 # Initial version
 # 04-04-2012 - 1.0.1 - SGT
 # Minor update. Increase warns
+# 04-27-2012 - 1.0.2 - SGT
+# Change make room
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__  = 'SGT'
 
 import b3, threading, time, thread
@@ -122,13 +124,14 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         if len(clients) <= self._max_clients:
            self.debug("No need to make room")
            return
-        last = None
+        candidates = []
         for client in clients:
-            self.verbose("Client %s level %d" % (client.name, client.maxLevel))
+            self.verbose("Client %s level %d - [%d]" % (client.name, client.maxLevel, client.timeEdit))
             if client.maxLevel == 0:
-                if last is None or client.lastVisit > last.lastVisit:
-                    last = client
-        if last:
+                candidates.append(client)
+        candidates.sort(key=lambda elem: elem.timeEdit, reverse=True)
+        if len(candidates) > 0:
+            last = candidates[0]
             self.debug("%s will be kicked" % last.name)
             self.kick_client(last, 'kick_warn')
         else:
