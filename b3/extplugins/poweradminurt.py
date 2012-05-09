@@ -104,8 +104,12 @@
 # 20/09/2010 - 1.5.8 - SGT
 # * minor fix for b3 1.7 compatibility
 # * fix method onKillTeam
+# 07/05/2012 - 1.5.9 - SGT
+# * force balance on client disconnect
+# * force balance for current joined client
+# * do not balance players already balanced
 
-__version__ = '1.5.8'
+__version__ = '1.5.9'
 __author__  = 'xlr8or'
 
 import b3, time, thread, threading, re
@@ -221,7 +225,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
     self.createEvent('EVT_CLIENT_PUBLIC', 'Server Public Mode Changed')
     self.registerEvent(b3.events.EVT_GAME_ROUND_START)
     self.registerEvent(b3.events.EVT_GAME_EXIT)
-    #self.registerEvent(b3.events.EVT_CLIENT_JOIN)
+    self.registerEvent(b3.events.EVT_CLIENT_JOIN)
     self.registerEvent(b3.events.EVT_CLIENT_AUTH)
     self.registerEvent(b3.events.EVT_CLIENT_DISCONNECT)
     self.registerEvent(b3.events.EVT_CLIENT_TEAM_CHANGE)
@@ -708,6 +712,13 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         self._playercount -= 1
         self.debug('PlayerCount: %s' % (self._playercount))    
         self.adjustrotation(-1)
+      if not self._mapchanged:
+        t1 = threading.Timer(5, self.teambalance)
+        t1.start()
+    elif event.type == b3.events.EVT_CLIENT_JOIN:
+      if not self._mapchanged:
+        t1 = threading.Timer(5, self.teambalance, (event.client,))
+        t1.start()
     elif event.type == b3.events.EVT_CLIENT_AUTH:
       if self._hsenable:
         self.setupVars(event.client)
@@ -741,6 +752,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         t2.start()
     elif event.type == b3.events.EVT_GAME_ROUND_START:
       # check for botsupport
+      self._mapchanged = False
       if self._botenable:
         self.botsdisable()
         self.botsupport()
@@ -1811,7 +1823,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
 
     return None
 
-  def teambalance(self):
+  def teambalance(self, client=None):
     if self.isEnabled() and not self._balancing and not self._matchmode:
       #set balancing flag
       self._balancing = True
@@ -1846,49 +1858,66 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
           oldteam = b3.TEAM_BLUE
         self.verbose('Smaller team is: %s' % newteam )
         
-        #endless loop protection
-        count = 25
-        while abs(self._teamred - self._teamblue) > self._teamdiff and count > 0:
-          stime = self.console.upTime()
-          self.verbose('Uptime bot: %s' % stime)
-          forceclient = None 
-          clients = self.console.clients.getList()
-          for c in clients:
-            if not c.isvar(self, 'teamtime'):
-              self.debug('client has no variable teamtime')
-              # 10/22/2008 - 1.4.0b11 - mindriot
-              # store the time of teamjoin for autobalancing purposes 
-              c.setvar(self, 'teamtime', self.console.time())
-              self.verbose('Client variable teamtime set to: %s' % c.var(self, 'teamtime').value)
+        if client and client.team == oldteam and client.maxLevel < self._tmaxlevel:
+          if not client.isvar(self, 'teamtime'):
+            client.setvar(self, 'teamtime', self.console.time())
+          self.console.write('forceteam %s %s' % (client.cid, newteam))
+        else:
+          #endless loop protection
+          count = 25
+          while abs(self._teamred - self._teamblue) > self._teamdiff and count > 0:
+            stime = self.console.upTime()
+            self.verbose('Uptime bot: %s' % stime)
+            forceclient = None
+            clients = self.console.clients.getList()
+            self.verbose('Total clients: %s' % len(clients))
+            balanceList = []
+            for c in clients:
+              if not c.isvar(self, 'teamtime'):
+                self.debug('client has no variable teamtime')
+                # 10/22/2008 - 1.4.0b11 - mindriot
+                # store the time of teamjoin for autobalancing purposes 
+                c.setvar(self, 'teamtime', self.console.time())
+                self.verbose('Client variable teamtime set to: %s' % c.var(self, 'teamtime').value)
 
-            if self.console.time() - c.var(self, 'teamtime').value < stime and c.team == oldteam and c.maxLevel < self._tmaxlevel and not c.isvar(self, 'paforced'):
-              forceclient = c.cid
-              stime = self.console.time() - c.var(self, 'teamtime').value
+              if c.team == oldteam and c.maxLevel < self._tmaxlevel:
+                balanceList.append(c) # for later use in case is needed
+                if self.console.time() - c.var(self, 'teamtime').value < stime and not c.isvar(self, 'paforced') and not c.isvar(self, 'balanced'):
+                  forceclient = c.cid
+                  stime = self.console.time() - c.var(self, 'teamtime').value
 
-          if forceclient:
-            if newteam:
-              self.verbose('Forcing client: %s to team: %s' % (forceclient, newteam))
-              self.console.write('forceteam %s %s' % (forceclient, newteam))
+            if not forceclient and len(balanceList) > 0:
+              self.verbose('BalanceList %s' % len(balanceList))
+              for c in balanceList:
+                if self.console.time() - c.var(self, 'teamtime').value < stime:
+                  forceclient = c.cid
+                  stime = self.console.time() - c.var(self, 'teamtime').value
+              
+            if forceclient:
+              if newteam:
+                self.verbose('Forcing client: %s to team: %s' % (forceclient, newteam))
+                c.setvar(self, 'balanced', self.console.time())
+                self.console.write('forceteam %s %s' % (forceclient, newteam))
+              else:
+                self.debug('No new team to force to')
             else:
-              self.debug('No new team to force to')
-          else:
-            self.debug('No client to force')
-          count -= 1
-          #recount the teams... do we need to balance once more?
-          if not self.countteams():
-            self._balancing = False
-            self.error('Aborting teambalance. Counting teams failed!')
-            return False
+              self.debug('No client to force')
+            count -= 1
+            #recount the teams... do we need to balance once more?
+            if not self.countteams():
+              self._balancing = False
+              self.error('Aborting teambalance. Counting teams failed!')
+              return False
 
-          # 10/28/2008 - 1.4.0b13 - mindriot
-          self.verbose('Teambalance: red: %s, blue: %s (diff: %s)' %(self._teamred, self._teamblue, self._teamdiff))
-          if self._teamred > self._teamblue:
-            newteam = 'blue'
-            oldteam = b3.TEAM_RED
-          else:
-            newteam = 'red'
-            oldteam = b3.TEAM_BLUE
-          self.verbose('Smaller team is: %s' % newteam )
+            # 10/28/2008 - 1.4.0b13 - mindriot
+            self.verbose('Teambalance: red: %s, blue: %s (diff: %s)' %(self._teamred, self._teamblue, self._teamdiff))
+            if self._teamred > self._teamblue:
+              newteam = 'blue'
+              oldteam = b3.TEAM_RED
+            else:
+              newteam = 'red'
+              oldteam = b3.TEAM_BLUE
+            self.verbose('Smaller team is: %s' % newteam )
         
       #done balancing
       self._balancing = False
@@ -2463,63 +2492,85 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
       if os.path.isfile(filename):
         self.debug('Executing configfile = [%s]', cfgfile)
         self.console.write('exec %s' % cfgfile)
-
+    
 if __name__ == '__main__':
     ############# setup test environment ##################
-    from b3.fake import FakeConsole, joe, superadmin
-    from b3.parsers.iourt41 import Iourt41Parser
-    from b3.config import XmlConfigParser
+    from b3.fake import FakeConsole, FakeClient
     
     ## inherits from both FakeConsole and Iourt41Parser
-    class FakeUrtConsole(FakeConsole, Iourt41Parser):
-        def getCvar(self, cvarName):
-            if self._reCvarName.match(cvarName):
-                #"g_password" is:"^7" default:"scrim^7"
-                val = self.writercon(cvarName)
-                self.debug('Get cvar %s = [%s]', cvarName, val)
-                if val is None:
-                    return None
-                #sv_mapRotation is:gametype sd map mp_brecourt map mp_carentan map mp_dawnville map mp_depot map mp_harbor map mp_hurtgen map mp_neuville map mp_pavlov map mp_powcamp map mp_railyard map mp_rocket map mp_stalingrad^7 default:^7
+    class FakeUrtConsole(FakeConsole):
+      forceteam = re.compile('(?P<cmd>forceteam)\s(?P<cid>[0-9]*)\s(?P<team>[\w]*)')
+        
+      def queueEvent(self, event, expire=10):
+        """Queue an event for processing. NO QUEUE, NO THREAD for faking speed up"""
+        if not hasattr(event, 'type'):
+          return False
+        if event.type == b3.events.EVT_CLIENT_AUTH or event.type == b3.events.EVT_CLIENT_TEAM_CHANGE or event.type == b3.events.EVT_CLIENT_DISCONNECT:
+          self.updateClientTeam()
+        return FakeConsole.queueEvent(self, event, expire)
+                
+      def updateClientTeam(self):
+        g_redteamlist = ''
+        g_blueteamlist = ''
+        for c in self.clients.getList():
+          if c.team == b3.TEAM_BLUE:
+            g_blueteamlist += chr(len(g_blueteamlist)+65)
+          else:
+            g_redteamlist += chr(len(g_redteamlist)+65)
+        self.setCvar('g_redteamlist', g_redteamlist)
+        self.setCvar('g_blueteamlist', g_blueteamlist)
+        print "## g_redteamlist %s" % g_redteamlist
+        print "## g_blueteamlist %s" % g_blueteamlist
+        
+      def write(self, msg, maxRetries=0):
+        m = self.forceteam.match(msg)
+        print "### %s" % msg
+        if m:
+          print "Update client %s team" % m.group('cid')
+          c = self.clients.getByCID(int(m.group('cid')))
+          c.team = b3.TEAM_BLUE if m.group('team') == 'blue' else b3.TEAM_RED
     
-                for f in self._reCvar:
-                    m = re.match(f, val)
-                    if m:
-                        #self.debug('line matched %s' % f.pattern)
-                        break
-    
-                if m:
-                    #self.debug('m.lastindex %s' % m.lastindex)
-                    if m.group('cvar').lower() == cvarName.lower() and m.lastindex > 3:
-                        return b3.cvar.Cvar(m.group('cvar'), value=m.group('value'), default=m.group('default'))
-                    elif m.group('cvar').lower() == cvarName.lower():
-                        return b3.cvar.Cvar(m.group('cvar'), value=m.group('value'), default=m.group('value'))
-                else:
-                    return None
-        def writercon(self, msg, maxRetries=None):
-            """Write a message to Rcon/Console"""
-            outputrcon = b3.parsers.q3a_rcon.Rcon(self, (\
-                                 self.config.get('server', 'rcon_ip'), \
-                                 self.config.getint('server', 'port')), \
-                                 self.config.get('server', 'rcon_password'))
-            res = outputrcon.write(msg, maxRetries=maxRetries)
-            outputrcon.flush()
-            return res
-    
-    b3xml = XmlConfigParser()
-    b3xml.load('C:/Users/Thomas/workspace/b3/conf-urt-local/b3.xml')
-    fakeConsole = FakeUrtConsole(b3xml)
+    fakeConsole = FakeUrtConsole('@b3/conf/b3.distribution.xml')
+    fakeConsole.setCvar('timelimit','10')
+    fakeConsole.setCvar('sv_maxclients','16')
+    fakeConsole.setCvar('g_maxGameClients','16')
     fakeConsole.startup()
-    
-    p = PoweradminurtPlugin(fakeConsole, config=os.path.dirname(__file__)+'/conf/poweradminurt.xml')
-    p.onStartup()
-    
+    fakeConsole.game.gameType = 'ctf'
+   
     ########################## ok lets test ###########################
-    
+
+    joe = FakeClient(fakeConsole, name="Joe", exactName="Joe", guid="zaerezarezar", groupBits=1, team=b3.TEAM_RED)
+    simon = FakeClient(fakeConsole, name="Simon", exactName="Simon", guid="qsdfdsqfdsqf", groupBits=0, team=b3.TEAM_RED)
+    moderator = FakeClient(fakeConsole, name="Moderator", exactName="Moderator", guid="sdf455ezr", groupBits=8, team=b3.TEAM_RED)
+    superadmin = FakeClient(fakeConsole, name="God", exactName="God", guid="f4qfer654r", groupBits=128, team=b3.TEAM_BLUE)
+
     joe.connects(3)
+    simon.connects(2)
+    moderator.connects(4)
     superadmin.connects(1)
     
-    superadmin.says('!slap joe')
-    superadmin.says('!slap joe 5')
-    
-    time.sleep(30)
+    time.sleep(5)
 
+    p = PoweradminurtPlugin(fakeConsole, os.path.curdir+'/conf/poweradminurt.xml')
+    p.onStartup()
+    
+    p.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, data=superadmin.team, client=superadmin))
+    p.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, data=simon.team, client=simon))
+    p.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, data=moderator.team, client=moderator))
+    p.console.queueEvent(b3.events.Event(b3.events.EVT_CLIENT_JOIN, data=joe.team, client=joe))
+    
+    time.sleep(20)
+
+    joe.team = b3.TEAM_BLUE
+    simon.team = b3.TEAM_RED
+    #superadmin.says("!teams")
+
+    time.sleep(10)
+    
+    joe.disconnects()
+    
+    time.sleep(10)
+    
+    moderator.disconnects()
+
+    time.sleep(10)
