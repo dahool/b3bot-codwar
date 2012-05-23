@@ -13,10 +13,10 @@ except ImportError:
     except ImportError:
         from b3 import xjson as json
 try:
-    import pygeoip
-    from pygeoip import GeoIPError
-except Exception, e:
-    print e
+    from b3 import pygeoip
+    from b3.pygeoip import GeoIPError
+except:
+    pass
 try:
     import memcache # package   python-memcached
 except ImportError:
@@ -29,19 +29,14 @@ API_KEY = 'e664d347b9b5f0b506a599c73e2d9b76e3feea71a043abfb6a79eda09406e91f'
 # TO ENABLE MEMCACHE SUPPORT INSTALL python-memcached AND REPLACE MEMCACHE_HOST WITH YOUR MEMCACHE HOST
 # FOR EXAMPLE: MEMCACHE_HOST = '127.0.0.1:11211'
 MEMCACHE_HOST = None
-GEOIP_LOOKUP_URL = 'http://api.ipinfodb.com/v2/ip_query.php?key=%(key)s&ip=%(ip)s&timezone=false&output=json'
-#GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query.php?ip=%s&output=json'
-#GEOIP_LOOKUP_URL = 'http://ipinfodb.com/ip_query_country.php?ip=%s&output=json'
-GEOIP_DAT = '/usr/local/lib/geoip/GeoLiteCity.dat'
+GEOIP_LOOKUP_URL = 'http://api.ipinfodb.com/v3/ip-city/?key=%(key)s&ip=%(ip)s&format=json'
+GEOIP_DAT = None
 DEBUG = False
-
-# --- DO NOT TOUCH FROM HERE ----
-
 geocity = None
 
 if GEOIP_DAT:
     try:
-        geocity = pygeoip.GeoIP(GEOIP_DAT,pygeoip.MEMORY_CACHE)
+        geocity = pygeoip.GeoIP(GEOIP_DAT)
     except Exception, e:
         print e
     
@@ -73,17 +68,14 @@ def geo_ip_lookup(ip_address):
                 value = geocity.record_by_addr(ip_address)
             except:
                 return None
-            debug(value)
             if value:
                 json_response = {}
-                if value.has_key('city'):
-                    json_response['City'] = value['city']
-                json_response['City'] = ''
-                json_response['CountryCode'] = value['country_code']
-                json_response['CountryName'] = value['country_name']
-                json_response['RegionName'] = ''
-                json_response['Latitude'] = value['latitude']
-                json_response['Longitude'] = value['longitude']
+                json_response['cityName'] = value['city']
+                json_response['countryCode'] = value['country_code']
+                json_response['countryName'] = value['country_name']
+                json_response['regionName'] = value['region_name']
+                json_response['latitude'] = value['latitude']
+                json_response['longitude'] = value['longitude']
             else:
                 return None
         else:
@@ -99,18 +91,16 @@ def geo_ip_lookup(ip_address):
             mc.set(key, pickle.dumps(json_response))
         
     return {
-      'country_code': json_response['CountryCode'],
-      'country_name': json_response['CountryName'],
-      'city': json_response['City'],
-      'region': json_response['RegionName'],
-      'longitude': json_response['Longitude'],
-      'latitude': json_response['Latitude']
+      'country_code': json_response['countryCode'],
+      'country_name': json_response['countryName'].title(),
+      'city': json_response['cityName'].title(),
+      'region': json_response['regionName'].title(),
+      'longitude': json_response['longitude'],
+      'latitude': json_response['latitude']
     }
-
 
 if __name__ == '__main__':
     DEBUG=True
     print geo_ip_lookup('74.125.67.103')
     # this time it should take it from cache
     print geo_ip_lookup('174.125.67.103')
-   
