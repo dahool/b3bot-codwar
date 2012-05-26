@@ -101,8 +101,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         self.debug("Total connected %s" % len(clients))
         if len(clients)-len(self._currentList) > self._max_clients:
             if client.maxLevel > 0:
-                t = threading.Thread(target=self.make_room)
-                t.start()
+                thread.start_new_thread(self.make_room, ())
             else:
                 _timeDiff = 0
                 if client.lastVisit:

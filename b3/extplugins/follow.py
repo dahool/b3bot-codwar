@@ -178,7 +178,7 @@ class FollowPlugin(b3.plugin.Plugin):
             self.process_disconnect_event(event.data, event.client)
         elif event.type == b3.events.EVT_CLIENT_BAN or event.type == b3.events.EVT_CLIENT_BAN_TEMP:
             if self._REMOVE_BAN:
-                self.process_ban(event)
+                thread.start_new_thread(self.process_ban, (event,))
         elif event.type == b3.events.EVT_GAME_ROUND_START:
             b = threading.Timer(10, self.sync_list, (event,))
             b.start()

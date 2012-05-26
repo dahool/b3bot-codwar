@@ -13,10 +13,10 @@ except ImportError:
     except ImportError:
         from b3 import xjson as json
 try:
-    from b3 import pygeoip
-    from b3.pygeoip import GeoIPError
-except:
-    pass
+    import pygeoip
+    from pygeoip import GeoIPError
+except Exception, e:
+    print e
 try:
     import memcache # package   python-memcached
 except ImportError:
@@ -33,10 +33,11 @@ GEOIP_LOOKUP_URL = 'http://api.ipinfodb.com/v3/ip-city/?key=%(key)s&ip=%(ip)s&fo
 GEOIP_DAT = None
 DEBUG = False
 geocity = None
+CACHE_EXPIRE = 43200 # IN SECONDS
 
 if GEOIP_DAT:
     try:
-        geocity = pygeoip.GeoIP(GEOIP_DAT)
+        geocity = pygeoip.GeoIP(GEOIP_DAT,pygeoip.MEMORY_CACHE)
     except Exception, e:
         print e
     
@@ -50,16 +51,17 @@ def geo_ip_lookup(ip_address):
     """
     
     json_response = None
+    value = None
 
     if cache and MEMCACHE_HOST:
-	debug('Try cache')
+        debug('Try cache')
         # try to locate the data in the cache first
         mc = memcache.Client([MEMCACHE_HOST], debug=0)
-        key = "IP_%s" % ip_address
+        key = "GIP_%s" % ip_address
         obj = mc.get(key)
         if obj:
             json_response = pickle.loads(obj)
-	    debug('Found in cache')
+            debug('Found in cache')
         
     if not json_response:
         if geocity:
@@ -68,17 +70,19 @@ def geo_ip_lookup(ip_address):
                 value = geocity.record_by_addr(ip_address)
             except:
                 return None
+            debug(value)
             if value:
                 json_response = {}
-                json_response['cityName'] = value['city']
+                if value.has_key('city'):
+                    json_response['cityName'] = value['city']
+                else:
+                    json_response['cityName'] = ''
                 json_response['countryCode'] = value['country_code']
                 json_response['countryName'] = value['country_name']
                 json_response['regionName'] = value['region_name']
                 json_response['latitude'] = value['latitude']
                 json_response['longitude'] = value['longitude']
-            else:
-                return None
-        else:
+        if not geocity or not value:
             lookup_url = GEOIP_LOOKUP_URL % {'key': API_KEY, 'ip': ip_address}
             try:
                 debug('Try Service')
@@ -87,8 +91,8 @@ def geo_ip_lookup(ip_address):
                 return None
         
         if cache and MEMCACHE_HOST:
-            key = "IP_%s" % ip_address
-            mc.set(key, pickle.dumps(json_response))
+            key = "GIP_%s" % ip_address
+            mc.set(key, pickle.dumps(json_response), CACHE_EXPIRE)
         
     return {
       'country_code': json_response['countryCode'],

@@ -36,8 +36,10 @@
 # Fix issue in reg command
 # 01-30-2012 - SGT - 1.1.10
 # Include specs in shuffling
+# 05-26-2012 - SGT - 1.1.11
+# Add some threading
 
-__version__ = '1.1.10'
+__version__ = '1.1.11'
 __author__  = 'SGT'
 
 import b3, time, thread, threading, re
@@ -155,18 +157,21 @@ class ExtraadminPlugin(b3.plugin.Plugin):
             if self.console.game.gameType in ('ts','tdm','ctf','bomb'):
                 self.console.setCvar('g_teamScores','0:0')
             if not self.is_matchmode():
-                self.handle_rotation(event)
+                thread.start_new_thread(self.handle_rotation,(event,))
         elif event.type == b3.events.EVT_GAME_ROUND_START:
-            self.raisethedead()
-            self.checkRoundStart()
+            thread.start_new_thread(self.roundStartEvent,(event,))
         elif event.type == b3.events.EVT_SURVIVOR_WIN:
             self._survivorEnd = True
             self.do_autobalance()
         elif event.type == b3.events.EVT_GAME_ROUND_END:
             self.debug("GAME_ROUND_END EVENT")
         elif event.type == b3.events.EVT_VOTEMAP_COMMAND:
-            self.find_next_map_rotation(event.data[0])
+            thread.start_new_thread(self.find_next_map_rotation,(event.data[0],))
 
+    def roundStartEvent(self, event):
+        self.raisethedead()
+        self.checkRoundStart()
+        
     def checkRoundStart(self):
         if self._survivorEnd:
             self.debug("Survivor round end")

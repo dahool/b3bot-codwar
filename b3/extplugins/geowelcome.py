@@ -39,8 +39,10 @@
 # Added some more debugs logs
 # 11-16-2010 - 1.1.3 - SGT
 # If we can't get location allow all clients to connect
+# 05-25-2012 - 1.1.3 - SGT
+# Some changes in allow to connect
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 __author__  = 'SGT'
 
 import b3, threading, time
@@ -74,6 +76,10 @@ class GeowelcomePlugin(WelcomePlugin):
             self.debug('Using admin greeting command')
 
     def LoadFilterConfig(self):
+        try:
+            self._enablefilter = self.config.getboolean('settings', 'enablefilter')
+        except:
+            self._enablefilter = False
         try:
             self.cf_order = self.config.get('settings', 'cf_order')
         except:
@@ -133,7 +139,12 @@ class GeowelcomePlugin(WelcomePlugin):
             client.pbid == 'WORLD':
             return
         
-        if self.isAllowToConnect(client):
+        if self._enablefilter:
+            is_allowed = self.isAllowToConnect(client)
+        else:
+            is_allowed = True
+        
+        if is_allowed:
             if  self._welcomeFlags < 1 or \
                 self.console.upTime() < 300:
                 return
@@ -152,13 +163,13 @@ class GeowelcomePlugin(WelcomePlugin):
                 }             
                 message = self.getMessage('cf_deny_message', data)
                 self.console.say(message)
-                client.kick(silent=True)
+                client.kick(reason='Reject connection from %s' % data['country'], silent=True)
                 self.debug("Reject. %(name)s - %(country)s" % data)
     
     def isAllowToConnect(self, client):
         # I will use it anyway so, lets get it
         country = self.get_client_location(client)
-        if not country:
+        if not country or not country['country_code']:
             # allow all if we can't get country
             return True
         countryCode = country['country_code']
