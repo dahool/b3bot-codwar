@@ -17,6 +17,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #
 # CHANGELOG
+#    05/27/2012 - 1.2.8 - SGT
+#    * Handle some events in threads
 #    10/28/2011 - 1.2.7 - SGT
 #    * For guest attackers forgive only 50%
 #    06/27/2011 - 1.2.6 - SGT
@@ -44,10 +46,10 @@
 #    7/23/2005 - 1.0.2 - ThorN
 #    * Changed temp ban duration to be based on ban_length times the number of victims
 
-__version__ = '1.2.6b'
+__version__ = '1.2.8'
 __author__  = 'ThorN'
 
-import b3, string, re, threading
+import b3, string, re, threading, thread
 import b3.events
 import b3.plugin
 
@@ -241,43 +243,43 @@ class TkPlugin(b3.plugin.Plugin):
             return
         elif event.type == b3.events.EVT_CLIENT_DAMAGE_TEAM:
             if event.client.maxLevel <= self._maxLevel:
-                self.clientDamage(event.client, event.target, int(event.data[0]))
+                thread.start_new_thread(self.clientDamage, (event.client, event.target, int(event.data[0])))
 
         elif event.type == b3.events.EVT_CLIENT_KILL_TEAM:
             if event.client.maxLevel <= self._maxLevel:
-                self.clientDamage(event.client, event.target, int(event.data[0]), True)
+                thread.start_new_thread(self.clientDamage, (event.client, event.target, int(event.data[0]), True))
 
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            self.forgiveAll(event.data)
-            return
-
+            thread.start_new_thread(self.forgiveAll, (event.data))
+        
         elif event.type == b3.events.EVT_GAME_EXIT:
-            self.debug('Map End: cutting all tk points in half')
-            for cid,c in self.console.clients.items():
-                try:
-                    tkinfo = self.getClientTkInfo(c)
-                    for acid,points in tkinfo.attackers.items():
-                        points = int(round(points / 2))
+            thread.start_new_thread(self.onGameExit, ())
 
-                        if points == 0:
-                            self.forgive(acid, c, True)
-                        else:
-                            try: tkinfo._attackers[acid] = points
-                            except: pass
-                except:
-                    pass
+        
+    def onGameExit(self):
+        self.debug('Map End: cutting all tk points in half')
+        for cid,c in self.console.clients.items():
+            try:
+                tkinfo = self.getClientTkInfo(c)
+                for acid,points in tkinfo.attackers.items():
+                    points = int(round(points / 2))
 
-            return
-        else:
-            return
-
-        tkinfo = self.getClientTkInfo(event.client)
+                    if points == 0:
+                        self.forgive(acid, c, True)
+                    else:
+                        try: tkinfo._attackers[acid] = points
+                        except: pass
+            except:
+                pass
+    
+    def handleDamageEvent(self, client):
+        tkinfo = self.getClientTkInfo(client)
         points = tkinfo.points
         if points >= self._maxPoints:
             if points >= self._maxPoints + (self._maxPoints / 2):
-                self.forgiveAll(event.client.cid)
-                event.client.tempban(self.getMessage('ban'), 'tk', self.getMultipliers(event.client)[2])
-            elif event.client.var(self, 'checkBan').value:
+                self.forgiveAll(client.cid)
+                client.tempban(self.getMessage('ban'), 'tk', self.getMultipliers(client)[2])
+            elif client.var(self, 'checkBan').value:
                 pass
             else:            
                 msg = ''
@@ -289,17 +291,17 @@ class TkPlugin(b3.plugin.Plugin):
                             continue
                         
                         v = self.getClientTkInfo(victim)
-                        myvictims.append('%s ^7(^1%s^7)' % (victim.name, v.getAttackerPoints(event.client.cid)))
+                        myvictims.append('%s ^7(^1%s^7)' % (victim.name, v.getAttackerPoints(client.cid)))
                         
                     if len(myvictims):
                         msg += ', ^1Attacked^7: %s' % ', '.join(myvictims)
 
-                self.console.say(self.getMessage('forgive_warning', { 'name' : event.client.exactName, 'points' : points, 'cid' : event.client.cid }) + msg)
-                event.client.setvar(self, 'checkBan', True)
+                self.console.say(self.getMessage('forgive_warning', { 'name' : client.exactName, 'points' : points, 'cid' : client.cid }) + msg)
+                client.setvar(self, 'checkBan', True)
 
-                t = threading.Timer(30, self.checkTKBan, (event.client,))
+                t = threading.Timer(30, self.checkTKBan, (client,))
                 t.start()
-
+        
     def checkTKBan(self, client):
         client.setvar(self, 'checkBan', False)
         tkinfo = self.getClientTkInfo(client)
@@ -363,6 +365,8 @@ class TkPlugin(b3.plugin.Plugin):
             self.verbose("Start autoforgive timer")
             t = threading.Timer(self._forgive_delay, self.auto_forgive, (attacker,victim))
             t.start()
+            
+        self.handleDamageEvent(attacker)
         
     def getClientTkInfo(self, client):
         if not client.isvar(self, 'tkinfo'):
