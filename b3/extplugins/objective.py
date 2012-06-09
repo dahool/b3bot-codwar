@@ -24,11 +24,13 @@
 # Reload config command
 # 2011-05-04 - 1.0.3 - SGT
 # fix issue when no objetive is set
+# 2012-05-27 - 1.0.4 - SGT
+# on game exit and warmup sometimes takes to long
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 __author__  = 'SGT'
 
-import b3, threading, time
+import b3, threading, time, thread
 import b3.events
 import b3.plugin
 import b3.cron
@@ -107,15 +109,18 @@ class ObjectivePlugin(b3.plugin.Plugin):
         if self._default:
             if (self.console.game.gameType == 'ctf' and
                 event.type == b3.events.EVT_CLIENT_ACTION):
-                self.ctfAction(event.data)
+                thread.start_new_thread(self.ctfAction, (event.data,))
             if event.type == b3.events.EVT_GAME_WARMUP:
                 self._announced = False
-                self.setCurrentMapObjective()
-                t1 = threading.Timer(20, self.showMapObjective)
-                t1.start()            
+                thread.start_new_thread(self.onGameWarmup, (event, ))
             elif event.type == b3.events.EVT_GAME_EXIT and not event.data:
-                self.showMapEnd()
+                thread.start_new_thread(self.showMapEnd, ())
              
+    def onGameWarmup(self, event):
+        self.setCurrentMapObjective()
+        t1 = threading.Timer(20, self.showMapObjective)
+        t1.start()        
+        
     def bigtext(self, msg):
         self.console.write('bigtext "%s"' % (msg))
         

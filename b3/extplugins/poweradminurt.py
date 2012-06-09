@@ -108,8 +108,10 @@
 # * force balance on client disconnect
 # * force balance for current joined client
 # * do not balance players already balanced
+# 05/27/2012 - 1.5.10 - SGT
+# * onTeamChange sometimes takes to long
 
-__version__ = '1.5.9'
+__version__ = '1.5.10'
 __author__  = 'xlr8or'
 
 import b3, time, thread, threading, re
@@ -727,7 +729,7 @@ class PoweradminurtPlugin(b3.plugin.Plugin):
         self.debug('PlayerCount: %s' % (self._playercount))    
         self.adjustrotation(+1)
     elif event.type == b3.events.EVT_CLIENT_TEAM_CHANGE:
-      self.onTeamChange(event.data, event.client)          
+      thread.start_new_thread(self.onTeamChange, (event.data, event.client))
     elif event.type == b3.events.EVT_CLIENT_DAMAGE:
       self.headshotcounter(event.client, event.target, event.data)
     elif event.type == b3.events.EVT_GAME_EXIT:

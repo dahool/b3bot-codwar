@@ -250,7 +250,7 @@ class TkPlugin(b3.plugin.Plugin):
                 thread.start_new_thread(self.clientDamage, (event.client, event.target, int(event.data[0]), True))
 
         elif event.type == b3.events.EVT_CLIENT_DISCONNECT:
-            thread.start_new_thread(self.forgiveAll, (event.data))
+            thread.start_new_thread(self.forgiveAll, (event.data,))
         
         elif event.type == b3.events.EVT_GAME_EXIT:
             thread.start_new_thread(self.onGameExit, ())
