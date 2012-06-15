@@ -186,7 +186,7 @@ class FollowPlugin(b3.plugin.Plugin):
             try:
                 if event.type == b3.events.EVT_BAN_BREAK:
                     client = event.client
-                    thread.start_new_thread(self.add_follow_client, (client, None))
+                    thread.start_new_thread(self.add_follow_client, (client, None, 'Ban Break'))
             except:
                 self.verbose("EVT_BAN_BREAK not supported")
                         
@@ -389,9 +389,9 @@ class FollowPlugin(b3.plugin.Plugin):
         if not sclient:
             return False
         
-        self.add_follow_client(sclient, client)
+        self.add_follow_client(sclient, client, reason)
             
-    def add_follow_client(self, sclient, client = None):
+    def add_follow_client(self, sclient, client = None, reason = ''):
         cursor = self.console.storage.query(self._SELECT_QUERY % sclient.id)
         if cursor.rowcount == 0:
             if client:
