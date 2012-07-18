@@ -98,9 +98,11 @@
 # Fix clean method error
 # 2012-04-18 - SGT - 1.3.9
 # Send server port
+# 2012-04-18 - SGT - 1.3.10
+# Remove bots
 
 __author__  = 'SGT'
-__version__ = '1.3.9'
+__version__ = '1.3.10'
 
 import shutil
 import os
@@ -403,7 +405,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         try:
             cid, group = self._adminPlugin.parseUserCmd(data)
             sclient = self._adminPlugin.findClientPrompt(cid, None)
-            if sclient:
+            if sclient and not self.isBot(sclient):
                 self.debug("Refresh client %s" % sclient.name)
                 self._queue.put(self._buildEventInfo(self._EVENT_REFRESH, sclient, sclient.timeEdit))
         except Exception, e:
@@ -446,6 +448,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             not client.id or \
             client.cid == None or \
             client.pbid == 'WORLD' or \
+            self.isBot(client) or \
             not client.connected:
             return
     
@@ -470,7 +473,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             if self._clientCache.has_key(cid):
                 client = self._clientCache[cid]
                 del self._clientCache[cid]
-        if client:
+        if client and not self.isBot(client):
             self._queue.put(self._buildEventInfo(self._EVENT_DISCONNECT, client))
             try:
                 if client in self._onlinePlayers:            
@@ -483,11 +486,13 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
     def onClientUpdate(self, client):
         self.debug('Client updated %s' % client.name)
-        self._queue.put(self._buildEventInfo(self._EVENT_UPDATE, client))
+        if not self.isBot(client):
+            self._queue.put(self._buildEventInfo(self._EVENT_UPDATE, client))
 
     def onClientUnban(self, client):
         self.debug('Client unbanned %s' % client.name)
-        self._queue.put(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
+        if not self.isBot(client):
+            self._queue.put(self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit))
             
     # =============================== Processing ===============================
     def consoleMessage(self):
@@ -501,6 +506,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
     def _buildEventInfo(self, event, client, timeEdit = None):
         self.verbose('Queued event %s for %s' % (event, client.name))
+        if self.isBot(client):
+            return None
         info = [event]
         info.extend(self._buildClientInfo(client, timeEdit))
         self.verbose(info)
@@ -552,7 +559,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         
         clients = self.console.clients.getList()
         for client in clients:
-            if client not in self._onlinePlayers:
+            if client not in self._onlinePlayers and not self.isBot(client):
                 self._cache_connect(client)
                 self._queue.put(self._buildEventInfo(self._EVENT_CONNECT, client))
                 self.verbose('Missed connect')
@@ -598,8 +605,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
 
             baninfo = [pType, penalty.timeAdd, penalty.duration, self.sanitize(penalty.reason), admin_name, admin_id]
             status = self._buildEventInfo(self._EVENT_BAN, client, client.timeEdit)
-            self.verbose(baninfo)
-            status.append(baninfo)
+            if status:
+                self.verbose(baninfo)
+                status.append(baninfo)
         return status
         
     def updateBanQueue(self):
@@ -613,9 +621,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def notifyUpdate(self, client):
         self.verbose('Notify update')
         if self._autoUpdate:
-            client.message('^7A new version of ^5IPDB ^7has been installed. Please restart the bot.')
+            client.message('^7A new version of ^5IPDB ^7has been installed. Please restart B3.')
         else:
-            client.message('^7A new version of ^5IPDB ^7is available.')
+            client.message('^7A new version of ^5IPDB ^7is available. Use !ipdbup to update (or update manually) and restart B3.')
         client.setvar(self, 'ipdb_warn', True)
 
     def updateName(self):
@@ -655,8 +663,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         self._clientCache = {}
         clients = self.console.clients.getList()
         for client in clients:
-            self._cache_connect(client)
-            self._queue.put(self._buildEventInfo(self._EVENT_CONNECT, client))
+            if not self.isBot(client):
+                self._cache_connect(client)
+                self._queue.put(self._buildEventInfo(self._EVENT_CONNECT, client))
         try:
             self.send_update([])
         except:
@@ -664,6 +673,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         time.sleep(self._timeout)
         self.update()
 
+    def isBot(self, client):
+        return client.guid.startswith('BOT')
+        
     def do_enable(self):
         self.debug('IPDB enabled')
         self._failureCount = 0
@@ -674,10 +686,11 @@ class Ipdb2Plugin(b3.plugin.Plugin):
         if self._twitterPlugin and not current_st: # if it was disabled
             self._twitterPlugin.post_update('IPDB back on business.')
         
-        self._queue.load()
+        thread.start_new_thread(self._enable_startup,())
         
-        b = threading.Thread(target=self.doInitialUpdate)
-        b.start()
+    def _enable_startup(self):
+        self._queue.load()
+        self.doInitialUpdate()
         
     def do_disable(self):
         if self._pluginEnabled: self.debug('IPDB disabled')
@@ -760,7 +773,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             client = self._adminPlugin.findClientPrompt("@%s" % r['client_id'], None)
             if client:
                 status = self._buildEventInfo(self._EVENT_UNBAN, client, client.timeEdit)
-                list.append(status)
+                if status:
+                    list.append(status)
             keys.append(str(r['id']))
             cursor.moveNext()
         
@@ -806,8 +820,9 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     
     def add_notice(self, data, client, admin):
         status = self._buildEventInfo(self._EVENT_ADDNOTE, client, client.timeEdit)
-        status.append([int(time.time()), data, admin.name, admin.guid])
-        self._queue.put(status)
+        if status:
+            status.append([int(time.time()), data, admin.name, admin.guid])
+            self._queue.put(status)
                     
     def cmd_dbaddnote(self ,data , client, cmd=None):
         """\
@@ -853,7 +868,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             return False
         
         status = self._buildEventInfo(self._EVENT_DELNOTE, sclient, sclient.timeEdit)
-        self._queue.put(status)
+        if status:
+            self._queue.put(status)
         client.message('^7Done.')
 
     def cmd_dbclearban(self ,data , client, cmd=None):
@@ -875,7 +891,8 @@ class Ipdb2Plugin(b3.plugin.Plugin):
             return False
         
         status = self._buildEventInfo(self._EVENT_UNBAN, sclient, sclient.timeEdit)
-        self._queue.put(status)
+        if status:
+            self._queue.put(status)
         client.message('^7Done.')
 
     def cmd_iddbupdate(self ,data , client, cmd=None):
@@ -1142,9 +1159,10 @@ class EventQueue:
             self.lock.release()
         
     def put(self, data):
-        self.lock.acquire()
-        self.queue.append(data)
-        self.lock.release()
+        if data:
+            self.lock.acquire()
+            self.queue.append(data)
+            self.lock.release()
     
     def extend(self, xlist):
         self.lock.acquire()
@@ -1294,8 +1312,10 @@ if __name__ == '__main__':
     from b3.fake import fakeConsole
     from b3.fake import joe, simon, moderator, superadmin
     import time
+    import os
     
     fakeConsole.setCvar('sv_hostname','IPDB Test Server')    
+    fakeConsole.setCvar('fs_homepath',os.getcwd())    
     
     p = Ipdb2Plugin(fakeConsole,'conf/ipdb.xml')
     p._url = 'http://166.40.231.124:8080/iddb-web/api/v4/xmlrpc'
