@@ -20,6 +20,10 @@
 # $Id: q3a/abstractParser.py 103 2010-11-01 10:10:10Z xlr8or $
 #
 # CHANGELOG
+#    2012/07/07 - 1.13.2 - Courgette
+#    * ensures the config file has option 'game_log' in section 'server'
+#    2012/06/17 - 1.7.2 - Courgette
+#    * syntax
 #    18/10/2011 - 1.7.1 - 82ndab-Bravo17
 #    Check slot number go up in order in getplayerlist to weed out data errors
 #    14/06/2011 - 1.7.0 - Courgette
@@ -78,7 +82,7 @@
 
 
 __author__  = 'ThorN, xlr8or'
-__version__ = '1.7.1'
+__version__ = '1.7.3'
 
 import re, string, time
 import b3
@@ -98,19 +102,21 @@ class AbstractParser(b3.parser.Parser):
     rconTest = True
     OutputClass = rcon.Rcon
 
-    _settings = {}
-    _settings['line_length'] = 65
-    _settings['min_wrap_length'] = 100
+    _settings = {
+        'line_length': 65,
+        'min_wrap_length': 100,
+    }
 
-    _commands = {}
-    _commands['message'] = 'tell %s %s ^8[pm]^7 %s'
-    _commands['deadsay'] = 'tell %s %s [DEAD]^7 %s'
-    _commands['say'] = 'say %s %s'
-    _commands['set'] = 'set %s %s'
-    _commands['kick'] = 'clientkick %s %s'
-    _commands['ban'] = 'banid %s %s'
-    _commands['tempban'] = 'clientkick %s %s'
-    _commands['moveToTeam'] = 'forceteam %s %s'
+    _commands = {
+        'message': 'tell %s %s ^8[pm]^7 %s',
+        'deadsay': 'tell %s %s [DEAD]^7 %s',
+        'say': 'say %s %s',
+        'set': 'set %s %s',
+        'kick': 'clientkick %s %s',
+        'ban': 'banid %s %s',
+        'tempban': 'clientkick %s %s',
+        'moveToTeam': 'forceteam %s %s',
+    }
 
     _eventMap = {
         'warmup' : b3.events.EVT_GAME_WARMUP,
@@ -158,6 +164,10 @@ class AbstractParser(b3.parser.Parser):
     PunkBuster = None
 
     def startup(self):
+        if not self.config.has_option('server','game_log'):
+            self.critical("your main config file is missing the 'game_log' setting in section 'server'")
+            raise SystemExit(220)
+
         # add the world client
         client = self.clients.newClient('1022', guid='WORLD', name='World', hide=True, pbid='WORLD')
 
@@ -167,6 +177,7 @@ class AbstractParser(b3.parser.Parser):
     def getLineParts(self, line):
         line = re.sub(self._lineClear, '', line, 1)
 
+        m = None
         for f in self._lineFormats:
             m = re.match(f, line)
             if m:
@@ -176,7 +187,7 @@ class AbstractParser(b3.parser.Parser):
         if m:
             client = None
             target = None
-            return (m, m.group('action').lower(), m.group('data').strip(), client, target)
+            return m, m.group('action').lower(), m.group('data').strip(), client, target
         elif '------' not in line:
             self.verbose('line did not match format: %s' % line)
 
@@ -320,7 +331,7 @@ class AbstractParser(b3.parser.Parser):
 
         try:
             id = self._clientConnectID
-        except:
+        except Exception:
             id = None
 
         self._clientConnectID = None
@@ -412,9 +423,9 @@ class AbstractParser(b3.parser.Parser):
 
     def message(self, client, text):
         try:
-            if client == None:
+            if client is None:
                 self.say(text)
-            elif client.cid == None:
+            elif client.cid is None:
                 pass
             else:
                 lines = []
@@ -422,7 +433,7 @@ class AbstractParser(b3.parser.Parser):
                     lines.append(self.getCommand('message', cid=client.cid, prefix=self.msgPrefix, message=line))
 
                 self.writelines(lines)
-        except:
+        except Exception:
             pass
 
     def say(self, msg):
@@ -652,6 +663,7 @@ class AbstractParser(b3.parser.Parser):
             self.debug('Get cvar %s = [%s]', cvarName, val)
             #sv_mapRotation is:gametype sd map mp_brecourt map mp_carentan map mp_dawnville map mp_depot map mp_harbor map mp_hurtgen map mp_neuville map mp_pavlov map mp_powcamp map mp_railyard map mp_rocket map mp_stalingrad^7 default:^7
 
+            m = None
             for f in self._reCvar:
                 m = re.match(f, val)
                 if m:
