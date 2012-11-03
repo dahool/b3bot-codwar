@@ -37,7 +37,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
     _cronTab = None
     _timeDiffGap = 900
     _max_clients = 999
-    
+    _min_level = 1
     _currentList = []
     
     def onStartup(self):
@@ -59,6 +59,12 @@ class ReservedslotPlugin(b3.plugin.Plugin):
             reserved_slots = 0
         self.debug("Reserved slots %d" % reserved_slots)
             
+        try:
+            self._min_level = self.config.getint('settings', 'min_level')
+        except:
+            self._min_level = 1
+        self.debug("Minimum level %d" % self._min_level)
+                    
         try:
             self._timeDiffGap = self.config.getint('settings', 'cooldown')
         except:
@@ -100,7 +106,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         clients = self.console.clients.getList()
         self.debug("Total connected %s" % len(clients))
         if len(clients)-len(self._currentList) > self._max_clients:
-            if client.maxLevel > 0:
+            if client.maxLevel >= self._min_level:
                 thread.start_new_thread(self.make_room, ())
             else:
                 _timeDiff = 0
@@ -128,7 +134,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         candidates = []
         for client in clients:
             self.verbose("Client %s level %d - [%d]" % (client.name, client.maxLevel, client.timeEdit))
-            if client.maxLevel == 0 and client.id not in self._currentList:
+            if client.maxLevel < self._min_level and client.id not in self._currentList:
                 candidates.append(client)
         candidates.sort(key=lambda elem: elem.timeEdit, reverse=True)
         if len(candidates) > 0:
@@ -142,7 +148,7 @@ class ReservedslotPlugin(b3.plugin.Plugin):
         self.verbose('Process connected players')
         clients = self.console.clients.getList()
         for client in clients:
-            if client.maxLevel == 0:
+            if client.maxLevel < self._min_level:
                 client.message(self.getMessage('status', {'name': client.name, 'id': client.id}))
                     
     def kick_client(self, client, message):
