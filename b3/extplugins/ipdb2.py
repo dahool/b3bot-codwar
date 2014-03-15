@@ -100,9 +100,11 @@
 # Send server port
 # 2012-04-18 - SGT - 1.3.10
 # Remove bots
+# 2012-04-18 - SGT - 1.4.0
+# Add support for pbid
 
 __author__  = 'SGT'
-__version__ = '1.3.10'
+__version__ = '1.4.0'
 
 import shutil
 import os
@@ -141,7 +143,7 @@ except ImportError:
     
 #--------------------------------------------------------------------------------------------------
 class Ipdb2Plugin(b3.plugin.Plugin):
-    _url = 'http://api.iddb.com.ar/api/v5/xmlrpc'
+    _url = 'http://www.ipdb.com.ar/api/v6/xmlrpc'
 
     _timeout = 15
     
@@ -501,7 +503,7 @@ class Ipdb2Plugin(b3.plugin.Plugin):
     def _buildClientInfo(self, client, timeEdit = None):
         if not timeEdit:
             timeEdit = int(time.time())
-        info = [self.sanitize(client.name), client.guid, client.id, client.ip, client.maxLevel, timeEdit]
+        info = [self.sanitize(client.name), client.pbid, client.guid, client.id, client.ip, client.maxLevel, timeEdit]
         return info
         
     def _buildEventInfo(self, event, client, timeEdit = None):
